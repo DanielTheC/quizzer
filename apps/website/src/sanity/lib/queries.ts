@@ -62,3 +62,44 @@ export const FAQS_BY_CATEGORY_QUERY = `*[_type == "faq" && category == $category
   answer,
   category
 }`;
+
+// ——— Blog ———
+
+export const ALL_BLOG_POSTS_QUERY = `*[_type == "blogPost"] | order(publishedAt desc) {
+  _id,
+  title,
+  "slug": slug.current,
+  excerpt,
+  publishedAt,
+  featured,
+  featuredImage,
+  "category": category->{ title, "slug": slug.current },
+  "author": author->{ name, "slug": slug.current, role, image }
+}`;
+
+export const FEATURED_BLOG_POSTS_QUERY = `*[_type == "blogPost" && featured == true] | order(publishedAt desc) [0...3] {
+  _id,
+  title,
+  "slug": slug.current,
+  excerpt,
+  publishedAt,
+  featuredImage,
+  "category": category->{ title, "slug": slug.current },
+  "author": author->{ name, "slug": slug.current, role, image }
+}`;
+
+export const BLOG_POST_BY_SLUG_QUERY = `*[_type == "blogPost" && slug.current == $slug][0] {
+  _id,
+  title,
+  "slug": slug.current,
+  excerpt,
+  publishedAt,
+  featuredImage,
+  body,
+  "category": category->{ title, "slug": slug.current },
+  "author": author->{ name, "slug": slug.current, role, bio, image },
+  seoTitle,
+  seoDescription
+}`;
+
+export const BLOG_POST_SLUGS_QUERY = `*[_type == "blogPost"].slug.current`;

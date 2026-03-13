@@ -37,6 +37,24 @@ export default defineConfig({
             S.listItem()
               .title("Pages")
               .child(S.documentTypeList("page").title("Pages")),
+            S.divider(),
+            S.listItem()
+              .title("Blog")
+              .child(
+                S.list()
+                  .title("Blog")
+                  .items([
+                    S.listItem()
+                      .title("Posts")
+                      .child(S.documentTypeList("blogPost").title("Blog posts")),
+                    S.listItem()
+                      .title("Categories")
+                      .child(S.documentTypeList("blogCategory").title("Blog categories")),
+                    S.listItem()
+                      .title("Authors")
+                      .child(S.documentTypeList("blogAuthor").title("Blog authors")),
+                  ])
+              ),
           ]),
     }),
     visionTool({ defaultApiVersion: "2024-01-01" }),

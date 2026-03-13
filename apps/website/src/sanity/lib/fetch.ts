@@ -5,6 +5,10 @@ import {
   HOST_PAGE_QUERY,
   CITY_BY_SLUG_QUERY,
   ALL_FAQS_QUERY,
+  ALL_BLOG_POSTS_QUERY,
+  FEATURED_BLOG_POSTS_QUERY,
+  BLOG_POST_BY_SLUG_QUERY,
+  BLOG_POST_SLUGS_QUERY,
 } from "./queries";
 import type {
   SiteSettings,
@@ -12,6 +16,8 @@ import type {
   HostPage,
   CityDocument,
   FaqDocument,
+  BlogPostListItem,
+  BlogPostDocument,
 } from "./types";
 
 export async function getSiteSettings(): Promise<SiteSettings | null> {
@@ -56,5 +62,62 @@ export async function getAllFaqs(): Promise<FaqDocument[] | null> {
     return await sanityClient.fetch<FaqDocument[] | null>(ALL_FAQS_QUERY, {}, { next: { revalidate: 60 } });
   } catch {
     return null;
+  }
+}
+
+// ——— Blog ———
+
+export async function getBlogPosts(): Promise<BlogPostListItem[]> {
+  if (!isSanityConfigured()) return [];
+  try {
+    const data = await sanityClient.fetch<BlogPostListItem[] | null>(
+      ALL_BLOG_POSTS_QUERY,
+      {},
+      { next: { revalidate: 60 } }
+    );
+    return data ?? [];
+  } catch {
+    return [];
+  }
+}
+
+export async function getFeaturedBlogPosts(): Promise<BlogPostListItem[]> {
+  if (!isSanityConfigured()) return [];
+  try {
+    const data = await sanityClient.fetch<BlogPostListItem[] | null>(
+      FEATURED_BLOG_POSTS_QUERY,
+      {},
+      { next: { revalidate: 60 } }
+    );
+    return data ?? [];
+  } catch {
+    return [];
+  }
+}
+
+export async function getBlogPostBySlug(slug: string): Promise<BlogPostDocument | null> {
+  if (!isSanityConfigured()) return null;
+  try {
+    return await sanityClient.fetch<BlogPostDocument | null>(
+      BLOG_POST_BY_SLUG_QUERY,
+      { slug },
+      { next: { revalidate: 60 } }
+    );
+  } catch {
+    return null;
+  }
+}
+
+export async function getBlogPostSlugs(): Promise<string[]> {
+  if (!isSanityConfigured()) return [];
+  try {
+    const slugs = await sanityClient.fetch<string[] | null>(
+      BLOG_POST_SLUGS_QUERY,
+      {},
+      { next: { revalidate: 60 } }
+    );
+    return slugs ?? [];
+  } catch {
+    return [];
   }
 }

@@ -137,5 +137,72 @@ In `apps/website/.env.local`:
 | **/faq** | All FAQs | Default FAQ list in code |
 | **/find-a-quiz/[city]** | City by slug | Static city name/description from app data |
 | **/contact-us** | Site Settings (contact email) | hello@quizzer.app |
+| **/blog** | Blog posts (all + featured) | Empty state message |
+| **/blog/[slug]** | Blog post by slug + SEO fields | 404 |
 
 Quiz listings on **/find-a-quiz** and **/find-a-quiz/[city]** always come from the app (mock data or future Supabase), not from Sanity.
+
+---
+
+## 6. Blog
+
+Blog content lives under **Content → Blog** in the Studio. You can create **Categories**, **Authors**, and **Posts**.
+
+### Blog categories
+
+Create a **Blog category** for each topic (e.g. “Hosting tips”, “News”, “Quiz round-ups”).
+
+| Field | Required | Notes |
+|-------|----------|--------|
+| **Title** | Yes | Display name (e.g. Hosting tips). |
+| **Slug** | Yes | URL-friendly ID. Use **Generate** from title, or type e.g. `hosting-tips`. |
+| **Description** | No | Optional short description. |
+
+### Blog authors (optional)
+
+Create **Blog author** documents to attribute posts. Helpful for multi-author blogs.
+
+| Field | Required | Notes |
+|-------|----------|--------|
+| **Name** | Yes | Display name. |
+| **Slug** | Yes | Use **Generate** from name (e.g. `jane-doe`). |
+| **Role** | No | e.g. “Content lead”, “Host”. |
+| **Bio** | No | Short bio shown on the post. |
+| **Image** | No | Profile image. Recommended: square, at least 200×200. |
+
+### Blog posts
+
+| Field | Required | Notes |
+|-------|----------|--------|
+| **Title** | Yes | Post headline. |
+| **Slug** | Yes | URL path: `/blog/[slug]`. Use **Generate** from title (e.g. `how-to-host-a-pub-quiz`). Must be unique. |
+| **Excerpt** | Recommended | Short summary for cards and meta. Keep to 1–2 sentences. |
+| **Published at** | Recommended | Date shown on the site. Ordering is by this date (newest first). |
+| **Featured image** | Recommended | Shown on the listing and at the top of the post. **Recommended size:** 1200×630 (or same aspect ratio) for best results on social and layout. |
+| **Body** | Yes | Rich text: paragraphs, headings (H2, H3), lists, quotes, links, and inline images. |
+| **Category** | Recommended | One category per post. |
+| **Author** | No | Optional. Shows name, role, bio, and image on the post. |
+| **Featured** | No | If checked, the post appears in the “Featured” section on **/blog**. Up to 3 featured posts shown. |
+| **SEO title** | No | Overrides the default meta title for this post. |
+| **SEO description** | No | Overrides the default meta description (keep under ~160 characters). |
+
+### How slugs work
+
+- **Categories and authors:** Slug is for future filtering or author pages; the main use today is a stable ID.
+- **Posts:** Slug is the URL. After publishing, the post is available at **/blog/[slug]**. Changing the slug later will change the URL (old URL will 404 unless you add redirects).
+
+### Image sizes (recommendations)
+
+| Use | Size | Aspect |
+|-----|------|--------|
+| Post featured image | 1200×630 | 1.91:1 |
+| Author image | 200×200 or larger | Square |
+| Inline images in body | 800×450 or similar | 16:9 works well |
+
+### Publishing your first post – checklist
+
+1. **Create a category** (e.g. “News”) – set title and slug, Publish.
+2. **Optionally create an author** – set name and slug, Publish.
+3. **Create a blog post** – set title, slug, excerpt, published at, featured image, body, and category (and author if you created one). Use **Generate** for the slug from the title.
+4. **Publish** the post. It will appear on **/blog** and at **/blog/[your-slug]**.
+5. To feature it on the blog index, check **Featured** and Publish again.

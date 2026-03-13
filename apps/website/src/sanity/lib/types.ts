@@ -55,3 +55,36 @@ export interface FaqDocument {
   answer?: string | null;
   category?: string | null;
 }
+
+// ——— Blog (Sanity response shapes) ———
+
+export interface BlogCategoryRef {
+  title?: string | null;
+  slug?: string | null;
+}
+
+export interface BlogAuthorRef {
+  name?: string | null;
+  slug?: string | null;
+  role?: string | null;
+  bio?: string | null;
+  image?: { _type: "image"; asset?: { _ref?: string } } | null;
+}
+
+export interface BlogPostListItem {
+  _id: string;
+  title?: string | null;
+  slug?: string | null;
+  excerpt?: string | null;
+  publishedAt?: string | null;
+  featured?: boolean;
+  featuredImage?: { _type: "image"; asset?: { _ref?: string }; alt?: string } | null;
+  category?: BlogCategoryRef | null;
+  author?: BlogAuthorRef | null;
+}
+
+export interface BlogPostDocument extends BlogPostListItem {
+  body?: unknown; // Portable Text blocks
+  seoTitle?: string | null;
+  seoDescription?: string | null;
+}
