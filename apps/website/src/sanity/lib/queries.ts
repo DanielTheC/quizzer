@@ -1,0 +1,64 @@
+/** GROQ queries for Quizzer marketing content. Quiz/venue data stays in Supabase. */
+
+export const SITE_SETTINGS_QUERY = `*[_type == "siteSettings"][0] {
+  siteTitle,
+  defaultMetaTitle,
+  defaultMetaDescription,
+  contactEmail,
+  socialLinks,
+  footerTagline,
+  footerCopyright
+}`;
+
+export const HOME_PAGE_QUERY = `*[_type == "homePage"][0] {
+  heroTitle,
+  heroSubtitle,
+  statItems,
+  featureCards,
+  hostSectionTitle,
+  hostSectionCopy,
+  finalCtaTitle,
+  finalCtaCopy,
+  seoTitle,
+  seoDescription
+}`;
+
+export const HOST_PAGE_QUERY = `*[_type == "hostPage"][0] {
+  heroTitle,
+  heroIntro,
+  benefits,
+  faqIntro,
+  ctaTitle,
+  ctaCopy,
+  contactSectionTitle,
+  contactSectionCopy,
+  seoTitle,
+  seoDescription
+}`;
+
+export const CITY_BY_SLUG_QUERY = `*[_type == "city" && slug.current == $slug][0] {
+  _id,
+  cityName,
+  "slug": slug.current,
+  heroTitle,
+  heroIntro,
+  whyUseQuizzerTitle,
+  whyUseQuizzerCards,
+  popularQuizNightsIntro,
+  seoTitle,
+  seoDescription
+}`;
+
+export const ALL_FAQS_QUERY = `*[_type == "faq"] | order(order asc) {
+  _id,
+  question,
+  answer,
+  category
+}`;
+
+export const FAQS_BY_CATEGORY_QUERY = `*[_type == "faq" && category == $category] | order(order asc) {
+  _id,
+  question,
+  answer,
+  category
+}`;

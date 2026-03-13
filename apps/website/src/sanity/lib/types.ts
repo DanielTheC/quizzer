@@ -1,0 +1,57 @@
+/** Types for Sanity document responses. Used by the frontend. */
+
+export interface SiteSettings {
+  siteTitle?: string | null;
+  defaultMetaTitle?: string | null;
+  defaultMetaDescription?: string | null;
+  contactEmail?: string | null;
+  socialLinks?: { label?: string; url?: string }[] | null;
+  footerTagline?: string | null;
+  footerCopyright?: string | null;
+}
+
+export interface HomePage {
+  heroTitle?: string | null;
+  heroSubtitle?: string | null;
+  statItems?: { value?: string; label?: string }[] | null;
+  featureCards?: { title?: string; body?: string; accent?: string }[] | null;
+  hostSectionTitle?: string | null;
+  hostSectionCopy?: string | null;
+  finalCtaTitle?: string | null;
+  finalCtaCopy?: string | null;
+  seoTitle?: string | null;
+  seoDescription?: string | null;
+}
+
+export interface HostPage {
+  heroTitle?: string | null;
+  heroIntro?: string | null;
+  benefits?: { title?: string; body?: string; accent?: string }[] | null;
+  faqIntro?: string | null;
+  ctaTitle?: string | null;
+  ctaCopy?: string | null;
+  contactSectionTitle?: string | null;
+  contactSectionCopy?: string | null;
+  seoTitle?: string | null;
+  seoDescription?: string | null;
+}
+
+export interface CityDocument {
+  _id?: string;
+  cityName?: string | null;
+  slug?: string;
+  heroTitle?: string | null;
+  heroIntro?: string | null;
+  whyUseQuizzerTitle?: string | null;
+  whyUseQuizzerCards?: { title?: string; body?: string }[] | null;
+  popularQuizNightsIntro?: string | null;
+  seoTitle?: string | null;
+  seoDescription?: string | null;
+}
+
+export interface FaqDocument {
+  _id: string;
+  question?: string | null;
+  answer?: string | null;
+  category?: string | null;
+}

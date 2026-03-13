@@ -1,0 +1,71 @@
+@import "tailwindcss";
+
+/* Quizzer brand theme – bold, graphic, poster-style */
+:root {
+  /* Brand colours */
+  --color-quizzer-yellow: #ffd400;
+  --color-quizzer-black: #000000;
+  --color-quizzer-white: #ffffff;
+  --color-quizzer-pink: #ff4f93;
+  --color-quizzer-green: #00d26a;
+  --color-quizzer-orange: #ff8a00;
+  --color-quizzer-blue: #3b82f6;
+  --color-quizzer-red: #ff4d4d;
+  --color-quizzer-cream: #fff8d6;
+
+  /* UI tokens */
+  --border-thick: 3px solid var(--color-quizzer-black);
+  --shadow-card: 5px 5px 0 var(--color-quizzer-black);
+  --shadow-card-hover: 3px 3px 0 var(--color-quizzer-black);
+  --radius-card: 12px;
+  --radius-button: 12px;
+
+  --font-heading: var(--font-anton), sans-serif;
+  --font-body: var(--font-inter), sans-serif;
+}
+
+@theme inline {
+  /* Brand palette */
+  --color-quizzer-yellow: #ffd400;
+  --color-quizzer-black: #000000;
+  --color-quizzer-white: #ffffff;
+  --color-quizzer-pink: #ff4f93;
+  --color-quizzer-green: #00d26a;
+  --color-quizzer-orange: #ff8a00;
+  --color-quizzer-blue: #3b82f6;
+  --color-quizzer-red: #ff4d4d;
+  --color-quizzer-cream: #fff8d6;
+
+  /* Shadows */
+  --shadow-card: 5px 5px 0 #000000;
+  --shadow-card-hover: 3px 3px 0 #000000;
+  --shadow-button: 4px 4px 0 #000000;
+  --shadow-button-hover: 2px 2px 0 #000000;
+
+  /* Radius */
+  --radius-card: 12px;
+  --radius-button: 12px;
+  --radius-badge: 10px;
+
+  /* Fonts (set in layout via next/font) */
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-heading: var(--font-anton), ui-sans-serif, system-ui, sans-serif;
+}
+
+.font-heading {
+  font-family: var(--font-heading);
+}
+
+body {
+  font-family: var(--font-body);
+  color: var(--color-quizzer-black);
+  background-color: var(--color-quizzer-white);
+}
+
+/* Utility for pressable hover */
+.hover-press:hover {
+  transform: translate(2px, 2px);
+}
+.hover-press:hover {
+  box-shadow: var(--shadow-card-hover);
+}
