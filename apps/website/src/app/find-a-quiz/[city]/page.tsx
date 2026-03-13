@@ -26,13 +26,21 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   ]);
   const staticCity = staticCities.find((c) => c.slug === slug);
   const cityName = cityDoc?.cityName ?? staticCity?.name ?? slug;
-  return buildPageMetadata({
+  const base = buildPageMetadata({
     title: cityDoc?.seoTitle,
     description: cityDoc?.seoDescription,
     siteSettings,
     fallbackTitle: `Pub Quiz ${cityName} | Find a Quiz Near You`,
     fallbackDescription: staticCity?.description ?? `Find pub quizzes in ${cityName}.`,
   });
+
+  return {
+    ...base,
+    alternates: {
+      ...(base.alternates ?? {}),
+      canonical: `/find-a-quiz/${slug}`,
+    },
+  };
 }
 
 function accentMap(accent?: string | null): "yellow" | "cream" | "green" {

@@ -12,6 +12,9 @@ export const metadata: Metadata = {
   description:
     "Browse pub quizzes by city. Find quiz nights in London, Manchester, Birmingham, Glasgow, Edinburgh and more.",
   keywords: ["pub quiz near me", "pub quiz London", "quiz night", "find a quiz"],
+  alternates: {
+    canonical: "/find-a-quiz",
+  },
 };
 
 export default async function FindAQuizPage() {

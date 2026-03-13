@@ -31,12 +31,20 @@ const DEFAULT_FAQS = [
 
 export async function generateMetadata(): Promise<Metadata> {
   const siteSettings = await getSiteSettings();
-  return buildPageMetadata({
+  const base = buildPageMetadata({
     title: "FAQ",
     description:
       "Frequently asked questions about finding pub quizzes, using the Quizzer app, and hosting quiz nights.",
     siteSettings,
   });
+
+  return {
+    ...base,
+    alternates: {
+      ...(base.alternates ?? {}),
+      canonical: "/faq",
+    },
+  };
 }
 
 export default async function FAQPage() {

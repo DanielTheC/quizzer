@@ -6,12 +6,20 @@ import { buildPageMetadata } from "@/sanity/lib/metadata";
 
 export async function generateMetadata(): Promise<Metadata> {
   const siteSettings = await getSiteSettings();
-  return buildPageMetadata({
+  const base = buildPageMetadata({
     title: "Contact Us",
     description:
       "Get in touch with Quizzer. Questions, feedback, or venue enquiries.",
     siteSettings,
   });
+
+  return {
+    ...base,
+    alternates: {
+      ...(base.alternates ?? {}),
+      canonical: "/contact-us",
+    },
+  };
 }
 
 export default async function ContactUsPage() {

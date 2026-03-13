@@ -7,6 +7,9 @@ export const metadata: Metadata = {
   title: "About Us",
   description:
     "Quizzer helps people find pub quizzes and venues run smarter quiz nights. Learn more about us.",
+  alternates: {
+    canonical: "/about-us",
+  },
 };
 
 export default function AboutUsPage() {

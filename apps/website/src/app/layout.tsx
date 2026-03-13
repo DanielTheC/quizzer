@@ -19,10 +19,19 @@ const inter = Inter({
 
 export async function generateMetadata(): Promise<Metadata> {
   const siteSettings = await getSiteSettings();
-  return buildMetadata({
+  const base = buildMetadata({
     siteSettings,
     template: "%s | Quizzer",
   });
+
+  return {
+    ...base,
+    metadataBase: new URL("https://quizzerapp.co.uk"),
+    alternates: {
+      ...(base.alternates ?? {}),
+      canonical: "/",
+    },
+  };
 }
 
 export default async function RootLayout({

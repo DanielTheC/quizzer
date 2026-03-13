@@ -53,7 +53,7 @@ export async function generateMetadata(): Promise<Metadata> {
     getHostPage(),
     getSiteSettings(),
   ]);
-  return buildPageMetadata({
+  const base = buildPageMetadata({
     title: hostPage?.seoTitle,
     description: hostPage?.seoDescription,
     siteSettings,
@@ -61,6 +61,14 @@ export async function generateMetadata(): Promise<Metadata> {
     fallbackDescription:
       "Run quiz nights at your venue with Quizzer. Increase footfall, simplify hosting, and engage customers. Get in touch.",
   });
+
+  return {
+    ...base,
+    alternates: {
+      ...(base.alternates ?? {}),
+      canonical: "/host-a-quiz",
+    },
+  };
 }
 
 function accentMap(accent?: string | null): "yellow" | "cream" | "green" {

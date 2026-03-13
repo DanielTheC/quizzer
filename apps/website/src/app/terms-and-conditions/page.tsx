@@ -5,6 +5,9 @@ import { PageHero } from "@/components/ui/PageHero";
 export const metadata: Metadata = {
   title: "Terms and Conditions",
   description: "Quizzer terms of use. Rules for using our website and app.",
+  alternates: {
+    canonical: "/terms-and-conditions",
+  },
 };
 
 export default function TermsAndConditionsPage() {

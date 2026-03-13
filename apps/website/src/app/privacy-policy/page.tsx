@@ -5,6 +5,9 @@ import { PageHero } from "@/components/ui/PageHero";
 export const metadata: Metadata = {
   title: "Privacy Policy",
   description: "Quizzer privacy policy. How we collect, use, and protect your data.",
+  alternates: {
+    canonical: "/privacy-policy",
+  },
 };
 
 export default function PrivacyPolicyPage() {
