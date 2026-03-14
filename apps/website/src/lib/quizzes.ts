@@ -1,5 +1,6 @@
 import { getSupabaseSafe } from "./supabase";
 import type { Quiz } from "@/data/types";
+import type { City } from "@/data/types";
 
 const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
@@ -37,6 +38,13 @@ function formatEntryFee(pence: number): string {
 function toCitySlug(city: string | null): string {
   if (!city || !city.trim()) return "other";
   return city.trim().toLowerCase().replace(/\s+/g, "-");
+}
+
+function toCityName(city: string | null): string {
+  const c = (city ?? "").trim();
+  if (!c) return "Other";
+  // Keep it simple and readable (handles "london" -> "London", "Greater London" stays as is)
+  return c.replace(/\b\w/g, (ch) => ch.toUpperCase());
 }
 
 function toSlug(venueName: string, citySlug: string, id: string): string {
@@ -115,4 +123,48 @@ export async function fetchQuizzesFromSupabase(): Promise<Quiz[]> {
 export async function fetchQuizzesByCityFromSupabase(citySlug: string): Promise<Quiz[]> {
   const all = await fetchQuizzesFromSupabase();
   return all.filter((q) => q.city === citySlug);
+}
+
+type SupabaseCityRow = { city: string | null };
+
+/**
+ * Fetch distinct city list from Supabase `venues`.
+ * Returns [] if Supabase is not configured or the request fails.
+ */
+export async function getCities(): Promise<City[]> {
+  const supabase = getSupabaseSafe();
+  if (!supabase) return [];
+
+  const { data, error } = await supabase
+    .from("venues")
+    .select("city");
+
+  if (error) {
+    console.error("[website] Supabase cities fetch error:", error.message);
+    return [];
+  }
+
+  const rows = (data as unknown as SupabaseCityRow[]) ?? [];
+  const unique = new Map<string, City>();
+  for (const row of rows) {
+    const slug = toCitySlug(row.city);
+    if (!unique.has(slug)) {
+      const name = toCityName(row.city);
+      unique.set(slug, {
+        slug,
+        name,
+        description: `Find pub quizzes in ${name}.`,
+      });
+    }
+  }
+
+  return Array.from(unique.values()).sort((a, b) => a.name.localeCompare(b.name));
+}
+
+/**
+ * Fetch quizzes for a city slug from Supabase.
+ * Alias of `fetchQuizzesByCityFromSupabase` to match website query-helper naming.
+ */
+export async function getQuizzesByCity(citySlug: string): Promise<Quiz[]> {
+  return fetchQuizzesByCityFromSupabase(citySlug);
 }

@@ -7,15 +7,16 @@ import { PageHero } from "@/components/ui/PageHero";
 import { QuizCard } from "@/components/ui/QuizCard";
 import { FeatureCard } from "@/components/ui/FeatureCard";
 import { getQuizzesForCity, cities as staticCities } from "@/data/quizzes";
+import { getCities, getQuizzesByCity } from "@/lib/quizzes";
 import { getCityBySlug, getSiteSettings } from "@/sanity/lib/fetch";
 import { buildPageMetadata } from "@/sanity/lib/metadata";
-
-const citySlugs = ["london", "birmingham", "manchester", "glasgow", "edinburgh"];
 
 type Props = { params: Promise<{ city: string }> };
 
 export async function generateStaticParams() {
-  return citySlugs.map((slug) => ({ city: slug }));
+  const fromDb = await getCities();
+  const slugs = fromDb.length > 0 ? fromDb.map((c) => c.slug) : staticCities.map((c) => c.slug);
+  return slugs.map((slug) => ({ city: slug }));
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -50,19 +51,23 @@ function accentMap(accent?: string | null): "yellow" | "cream" | "green" {
 
 export default async function CityPage({ params }: Props) {
   const { city: slug } = await params;
+  const citiesFromDb = await getCities();
+  const cityFromDb = citiesFromDb.find((c) => c.slug === slug);
   const staticCity = staticCities.find((c) => c.slug === slug);
-  if (!staticCity) notFound();
+  const cityNameForFallback = cityFromDb?.name ?? staticCity?.name;
+  if (!cityNameForFallback) notFound();
 
-  const [cityDoc, cityQuizzes] = await Promise.all([
+  const [cityDoc, cityQuizzesFromDbOrStatic] = await Promise.all([
     getCityBySlug(slug),
-    getQuizzesForCity(slug),
+    // Prefer direct Supabase-by-city query; fall back to existing helper which already falls back to static.
+    getQuizzesByCity(slug).then((rows) => (rows.length > 0 ? rows : getQuizzesForCity(slug))),
   ]);
 
-  const cityName = cityDoc?.cityName ?? staticCity.name;
+  const cityName = cityDoc?.cityName ?? cityFromDb?.name ?? staticCity?.name ?? slug;
   const heroTitle =
     cityDoc?.heroTitle?.trim() ?? `Pub quiz in ${cityName}`;
   const heroIntro =
-    cityDoc?.heroIntro?.trim() ?? staticCity.description;
+    cityDoc?.heroIntro?.trim() ?? cityFromDb?.description ?? staticCity?.description ?? `Find pub quizzes in ${cityName}.`;
   const whyTitle =
     cityDoc?.whyUseQuizzerTitle?.trim() ?? `Why use Quizzer in ${cityName}?`;
   const whyCards = cityDoc?.whyUseQuizzerCards ?? [
@@ -96,7 +101,7 @@ export default async function CityPage({ params }: Props) {
           <h2 className="font-heading text-3xl text-quizzer-black mb-8">
             Quiz nights in {cityName}
           </h2>
-          {cityQuizzes.length === 0 ? (
+          {cityQuizzesFromDbOrStatic.length === 0 ? (
             <p className="text-quizzer-black/80">
               No quizzes listed yet. Check back soon or{" "}
               <Link href="/host-a-quiz" className="text-quizzer-blue underline">
@@ -106,7 +111,7 @@ export default async function CityPage({ params }: Props) {
             </p>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {cityQuizzes.map((quiz) => (
+              {cityQuizzesFromDbOrStatic.map((quiz) => (
                 <QuizCard key={quiz.id} quiz={quiz} />
               ))}
             </div>
@@ -122,9 +127,9 @@ export default async function CityPage({ params }: Props) {
           <p className="text-quizzer-black/80 max-w-2xl mb-8">
             {popularIntro}
           </p>
-          {cityQuizzes.length > 0 && (
+          {cityQuizzesFromDbOrStatic.length > 0 && (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-              {cityQuizzes.slice(0, 2).map((quiz) => (
+              {cityQuizzesFromDbOrStatic.slice(0, 2).map((quiz) => (
                 <QuizCard key={quiz.id} quiz={quiz} />
               ))}
             </div>

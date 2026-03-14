@@ -5,7 +5,8 @@ import { Container } from "@/components/ui/Container";
 import { PageHero } from "@/components/ui/PageHero";
 import { QuizCard } from "@/components/ui/QuizCard";
 import { Card } from "@/components/ui/Card";
-import { cities, getQuizzesForSite } from "@/data/quizzes";
+import { cities as staticCities, getQuizzesForSite } from "@/data/quizzes";
+import { getCities } from "@/lib/quizzes";
 
 export const metadata: Metadata = {
   title: "Find a Pub Quiz Near You",
@@ -18,7 +19,11 @@ export const metadata: Metadata = {
 };
 
 export default async function FindAQuizPage() {
-  const quizzes = await getQuizzesForSite();
+  const [quizzes, citiesFromDb] = await Promise.all([
+    getQuizzesForSite(),
+    getCities(),
+  ]);
+  const cities = citiesFromDb.length > 0 ? citiesFromDb : staticCities;
 
   return (
     <>
