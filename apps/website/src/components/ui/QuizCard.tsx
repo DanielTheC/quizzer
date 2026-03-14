@@ -17,6 +17,13 @@ export function QuizCard({ quiz }: QuizCardProps) {
       </h3>
       <p className="text-sm text-quizzer-black/80 mb-3">
         {quiz.area}, {quiz.day} · {quiz.time}
+        {quiz.distance != null && (
+          <span className="block mt-1 text-quizzer-pink font-semibold">
+            {quiz.distance < 0.1
+              ? "Under 0.1 miles away"
+              : `${quiz.distance.toFixed(1)} miles away`}
+          </span>
+        )}
       </p>
       <div className="flex flex-wrap gap-2 mb-3">
         <span className="text-sm font-semibold">Entry {quiz.entryFee}</span>

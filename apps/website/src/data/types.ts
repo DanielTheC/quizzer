@@ -10,6 +10,11 @@ export interface Quiz {
   entryFee: string;
   prize: string;
   tags: string[];
+  /** Venue coordinates (for client-side distance). */
+  lat?: number;
+  lng?: number;
+  /** Distance in miles from user (set when location available). */
+  distance?: number;
 }
 
 /** City for find-a-quiz */

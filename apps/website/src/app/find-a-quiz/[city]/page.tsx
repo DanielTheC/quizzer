@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/Button";
 import { Container } from "@/components/ui/Container";
 import { PageHero } from "@/components/ui/PageHero";
 import { QuizCard } from "@/components/ui/QuizCard";
+import { QuizListWithLocation } from "@/components/quiz/QuizListWithLocation";
 import { FeatureCard } from "@/components/ui/FeatureCard";
 import { getQuizzesForCity, cities as staticCities } from "@/data/quizzes";
 import { getCities, getQuizzesByCity } from "@/lib/quizzes";
@@ -110,11 +111,7 @@ export default async function CityPage({ params }: Props) {
               .
             </p>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {cityQuizzesFromDbOrStatic.map((quiz) => (
-                <QuizCard key={quiz.id} quiz={quiz} />
-              ))}
-            </div>
+            <QuizListWithLocation quizzes={cityQuizzesFromDbOrStatic} />
           )}
         </Container>
       </section>
@@ -128,11 +125,7 @@ export default async function CityPage({ params }: Props) {
             {popularIntro}
           </p>
           {cityQuizzesFromDbOrStatic.length > 0 && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-              {cityQuizzesFromDbOrStatic.slice(0, 2).map((quiz) => (
-                <QuizCard key={quiz.id} quiz={quiz} />
-              ))}
-            </div>
+            <QuizListWithLocation quizzes={cityQuizzesFromDbOrStatic} maxDisplay={2} />
           )}
         </Container>
       </section>

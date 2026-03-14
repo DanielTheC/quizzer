@@ -4,20 +4,24 @@ import type { City } from "@/data/types";
 
 const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
+type VenueShape = {
+  name: string | null;
+  address: string | null;
+  postcode: string | null;
+  city: string | null;
+  lat: number | null;
+  lng: number | null;
+};
+
+/** PostgREST returns FK relation as "venue" when using venue:venues(...) in select. */
 type SupabaseQuizRow = {
   id: string;
   day_of_week: number;
   start_time: string;
-  entry_fee_pence: number;
-  prize: string;
-  venues: {
-    name: string | null;
-    address: string | null;
-    postcode: string | null;
-    city: string | null;
-    lat: number | null;
-    lng: number | null;
-  } | null;
+  entry_fee_pence?: number | null;
+  prize?: string | null;
+  venues?: VenueShape | null;
+  venue?: VenueShape | null;
 };
 
 function formatTime(s: string): string {
@@ -30,9 +34,10 @@ function formatTime(s: string): string {
   return `${hour}:${m.toString().padStart(2, "0")} ${ampm}`;
 }
 
-function formatEntryFee(pence: number): string {
-  if (pence === 0) return "Free";
-  return `£${(pence / 100).toFixed(2)}`;
+function formatEntryFee(pence: number | null | undefined): string {
+  const n = Number(pence);
+  if (!Number.isFinite(n) || n === 0) return "Free";
+  return `£${(n / 100).toFixed(2)}`;
 }
 
 function toCitySlug(city: string | null): string {
@@ -57,11 +62,16 @@ function toSlug(venueName: string, citySlug: string, id: string): string {
 }
 
 function rowToQuiz(row: SupabaseQuizRow): Quiz {
-  const venue = row.venues;
+  const venue = row.venues ?? row.venue ?? null;
   const venueName = venue?.name?.trim() ?? "Unknown venue";
   const citySlug = toCitySlug(venue?.city ?? null);
   const dayName = DAY_NAMES[row.day_of_week] ?? String(row.day_of_week);
   const area = venue?.city?.trim() ?? venue?.address?.split(",")[0]?.trim() ?? "—";
+
+  const lat =
+    venue?.lat != null && Number.isFinite(venue.lat) ? venue.lat : undefined;
+  const lng =
+    venue?.lng != null && Number.isFinite(venue.lng) ? venue.lng : undefined;
 
   return {
     id: row.id,
@@ -70,40 +80,31 @@ function rowToQuiz(row: SupabaseQuizRow): Quiz {
     area,
     city: citySlug,
     day: dayName,
-    time: formatTime(row.start_time),
+    time: formatTime(row.start_time ?? ""),
     entryFee: formatEntryFee(row.entry_fee_pence),
     prize: (row.prize ?? "").replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()) || "—",
     tags: [],
+    lat,
+    lng,
   };
 }
 
 /**
  * Fetch all active quiz events with venues from Supabase.
  * Returns [] if Supabase is not configured or the request fails.
+ *
+ * Supabase query: from("quiz_events").select("...").eq("is_active", true).
+ * Relation name depends on FK: we read row.venues ?? row.venue.
  */
 export async function fetchQuizzesFromSupabase(): Promise<Quiz[]> {
   const supabase = getSupabaseSafe();
   if (!supabase) return [];
 
+  const query =
+    "id, day_of_week, start_time, entry_fee_pence, prize, venues(name, address, postcode, city, lat, lng)";
   const { data, error } = await supabase
     .from("quiz_events")
-    .select(
-      `
-      id,
-      day_of_week,
-      start_time,
-      entry_fee_pence,
-      prize,
-      venues (
-        name,
-        address,
-        postcode,
-        city,
-        lat,
-        lng
-      )
-    `
-    )
+    .select(query)
     .eq("is_active", true)
     .order("day_of_week", { ascending: true })
     .order("start_time", { ascending: true });
@@ -135,9 +136,7 @@ export async function getCities(): Promise<City[]> {
   const supabase = getSupabaseSafe();
   if (!supabase) return [];
 
-  const { data, error } = await supabase
-    .from("venues")
-    .select("city");
+  const { data, error } = await supabase.from("venues").select("city");
 
   if (error) {
     console.error("[website] Supabase cities fetch error:", error.message);
@@ -159,6 +158,38 @@ export async function getCities(): Promise<City[]> {
   }
 
   return Array.from(unique.values()).sort((a, b) => a.name.localeCompare(b.name));
+}
+
+/** Result of getQuizzesAndCitiesForFindAQuiz: quizzes + cities + which source each came from. */
+export type FindAQuizData = {
+  quizzes: Quiz[];
+  cities: City[];
+  quizSource: "supabase" | "mock";
+  citySource: "supabase" | "static";
+};
+
+/**
+ * Load quizzes and cities for the find-a-quiz page. Exposes source so the UI can show a debug banner.
+ */
+export async function getQuizzesAndCitiesForFindAQuiz(): Promise<FindAQuizData> {
+  const [fromSupabaseQuizzes, fromSupabaseCities] = await Promise.all([
+    fetchQuizzesFromSupabase(),
+    getCities(),
+  ]);
+
+  const quizSource = fromSupabaseQuizzes.length > 0 ? "supabase" : "mock";
+  const citySource = fromSupabaseCities.length > 0 ? "supabase" : "static";
+
+  const quizzes =
+    quizSource === "supabase"
+      ? fromSupabaseQuizzes
+      : await import("@/data/quizzes").then((m) => m.quizzes);
+  const cities =
+    citySource === "supabase"
+      ? fromSupabaseCities
+      : await import("@/data/quizzes").then((m) => m.cities);
+
+  return { quizzes, cities, quizSource, citySource };
 }
 
 /**

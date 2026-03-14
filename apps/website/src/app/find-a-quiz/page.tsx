@@ -5,8 +5,8 @@ import { Container } from "@/components/ui/Container";
 import { PageHero } from "@/components/ui/PageHero";
 import { QuizCard } from "@/components/ui/QuizCard";
 import { Card } from "@/components/ui/Card";
-import { cities as staticCities, getQuizzesForSite } from "@/data/quizzes";
-import { getCities } from "@/lib/quizzes";
+import { QuizListWithLocation } from "@/components/quiz/QuizListWithLocation";
+import { getQuizzesAndCitiesForFindAQuiz } from "@/lib/quizzes";
 
 export const metadata: Metadata = {
   title: "Find a Pub Quiz Near You",
@@ -18,15 +18,24 @@ export const metadata: Metadata = {
   },
 };
 
+const SHOW_DATA_SOURCE_BANNER = process.env.NEXT_PUBLIC_DEBUG_QUIZZES === "true";
+
 export default async function FindAQuizPage() {
-  const [quizzes, citiesFromDb] = await Promise.all([
-    getQuizzesForSite(),
-    getCities(),
-  ]);
-  const cities = citiesFromDb.length > 0 ? citiesFromDb : staticCities;
+  const { quizzes, cities, quizSource, citySource } =
+    await getQuizzesAndCitiesForFindAQuiz();
 
   return (
     <>
+      {SHOW_DATA_SOURCE_BANNER && (
+        <div
+          className="bg-quizzer-black text-quizzer-yellow text-center py-2 px-4 text-sm font-semibold border-b-2 border-quizzer-yellow"
+          role="status"
+        >
+          Data: quizzes from {quizSource} ({quizzes.length}), cities from{" "}
+          {citySource} ({cities.length}). Set NEXT_PUBLIC_DEBUG_QUIZZES=false to
+          hide.
+        </div>
+      )}
       <PageHero
         title="Find a Pub Quiz Near You"
         description="Browse quiz nights by city. Pick a location below or use the Quizzer app to find quizzes near you with filters and maps."
@@ -72,13 +81,10 @@ export default async function FindAQuizPage() {
             All quizzes
           </h2>
           <p className="text-quizzer-black/80 mb-6">
-            Filters (e.g. day, area, prize) can be added here or in the app.
+            Filters (e.g. day, area, prize) can be added here or in the app. When you allow
+            location, quizzes are sorted by distance.
           </p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {quizzes.map((quiz) => (
-              <QuizCard key={quiz.id} quiz={quiz} />
-            ))}
-          </div>
+          <QuizListWithLocation quizzes={quizzes} />
         </Container>
       </section>
 
