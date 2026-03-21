@@ -1,5 +1,6 @@
 import React, { Component, ErrorInfo, ReactNode } from "react";
 import { StyleSheet, Text, View } from "react-native";
+import { AuthProvider } from "./src/context/AuthContext";
 import { SavedQuizzesProvider } from "./src/context/SavedQuizzesContext";
 import RootNavigator from "./src/navigation/RootNavigator";
 
@@ -53,9 +54,11 @@ export default function App() {
   }
   return (
     <ErrorBoundary>
-      <SavedQuizzesProvider>
-        <RootNavigator />
-      </SavedQuizzesProvider>
+      <AuthProvider>
+        <SavedQuizzesProvider>
+          <RootNavigator />
+        </SavedQuizzesProvider>
+      </AuthProvider>
     </ErrorBoundary>
   );
 }

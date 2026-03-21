@@ -10,6 +10,7 @@ import {
   ScrollView,
 } from "react-native";
 import { colors, semantic, spacing, radius, borderWidth, shadow, typography } from "../theme";
+import { useAuth } from "../context/AuthContext";
 import { useRole } from "../context/RoleContext";
 import { useSavedQuizzes } from "../context/SavedQuizzesContext";
 import { setStoredRole, clearStoredRole } from "../lib/roleStorage";
@@ -30,6 +31,7 @@ const TIME_PRESETS = ["10:00", "12:00", "14:00"] as const;
 const MILES_OPTIONS = [3, 5, 10] as const;
 
 export default function SettingsScreen() {
+  const { user, signOut } = useAuth();
   const { role, setRole } = useRole();
   const { clearSaved, savedIds } = useSavedQuizzes();
   const [prefs, setPrefs] = useState<NotificationPreferences | null>(null);
@@ -56,6 +58,19 @@ export default function SettingsScreen() {
     },
     [setRole]
   );
+
+  const onSignOut = useCallback(() => {
+    Alert.alert("Sign out", "You'll need to sign in again to use Quizzer.", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Sign out",
+        style: "destructive",
+        onPress: () => {
+          void signOut();
+        },
+      },
+    ]);
+  }, [signOut]);
 
   const resetApp = useCallback(() => {
     Alert.alert(
@@ -99,6 +114,18 @@ export default function SettingsScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Account</Text>
+        {user?.email ? (
+          <Text style={styles.currentRole}>{user.email}</Text>
+        ) : (
+          <Text style={styles.currentRole}>Signed in</Text>
+        )}
+        <Pressable style={styles.signOutButton} onPress={onSignOut}>
+          <Text style={styles.signOutButtonText}>Sign out</Text>
+        </Pressable>
+      </View>
+
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Role</Text>
         <Text style={styles.currentRole}>Current: {role === "player" ? "Player" : "Host"}</Text>
@@ -216,6 +243,18 @@ const styles = StyleSheet.create({
     ...shadow.small,
   },
   switchButtonText: { color: semantic.textPrimary, ...typography.bodyStrong },
+  signOutButton: {
+    backgroundColor: semantic.bgPrimary,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.xl,
+    borderRadius: radius.medium,
+    borderWidth: borderWidth.default,
+    borderColor: semantic.borderPrimary,
+    alignSelf: "flex-start",
+    marginTop: spacing.sm,
+    ...shadow.small,
+  },
+  signOutButtonText: { color: semantic.textPrimary, ...typography.bodyStrong },
   resetButton: {
     backgroundColor: semantic.bgPrimary,
     paddingVertical: spacing.md,

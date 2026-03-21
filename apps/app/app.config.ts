@@ -5,6 +5,7 @@ export default ({ config }: { config: ExpoConfig }): ExpoConfig => ({
   ...config,
   plugins: [
     ...(config.plugins ?? []),
+    "expo-web-browser",
     [
       "expo-notifications",
       {
@@ -12,6 +13,7 @@ export default ({ config }: { config: ExpoConfig }): ExpoConfig => ({
       },
     ],
   ],
+  scheme: "quizzer",
   ios: {
     ...config.ios,
     infoPlist: {
@@ -22,6 +24,8 @@ export default ({ config }: { config: ExpoConfig }): ExpoConfig => ({
   },
   android: {
     ...config.android,
+    /** Application ID / manifest package — use this in Google Cloud “Android” OAuth or Play Console. */
+    package: "uk.co.quizzerapp",
     permissions: [
       ...((config.android as { permissions?: string[] })?.permissions ?? []),
       "ACCESS_COARSE_LOCATION",

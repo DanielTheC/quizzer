@@ -5,7 +5,10 @@ import { NavigationContainer } from "@react-navigation/native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 
+import { useAuth } from "../context/AuthContext";
 import { RoleProvider } from "../context/RoleContext";
+import { supabase } from "../lib/supabase";
+import AuthNavigator from "./AuthNavigator";
 import RoleSelectScreen from "../screens/RoleSelectScreen";
 import SettingsScreen from "../screens/SettingsScreen";
 import NearbyScreen from "../screens/player/NearbyScreen";
@@ -14,7 +17,7 @@ import SavedScreen from "../screens/player/SavedScreen";
 import HostSetupScreen from "../screens/host/HostSetupScreen";
 import RunQuizScreen from "../screens/host/RunQuizScreen";
 import PackQuestionsScreen from "../screens/host/PackQuestionsScreen";
-import { getStoredRole } from "../lib/roleStorage";
+import { clearStoredRole, getStoredRole } from "../lib/roleStorage";
 import type { QuizzerRole } from "../lib/roleStorage";
 
 export type NearbyStackParamList = {
@@ -136,25 +139,62 @@ const navStyles = StyleSheet.create({
 });
 
 export default function RootNavigator() {
+  const { session, initializing: authInitializing } = useAuth();
   const [role, setRole] = useState<QuizzerRole | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [roleLoading, setRoleLoading] = useState(true);
 
   useEffect(() => {
+    const { data } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "SIGNED_OUT") {
+        void clearStoredRole().then(() => setRole(null));
+      }
+    });
+    return () => data.subscription.unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    if (authInitializing) return;
+
+    if (!session) {
+      setRole(null);
+      setRoleLoading(false);
+      return;
+    }
+
     let cancelled = false;
+    setRoleLoading(true);
     getStoredRole().then((stored) => {
       if (!cancelled) {
         setRole(stored);
-        setLoading(false);
+        setRoleLoading(false);
       }
     });
-    return () => { cancelled = true; };
-  }, []);
+    return () => {
+      cancelled = true;
+    };
+  }, [authInitializing, session]);
 
   const handleRoleSelect = useCallback((selected: QuizzerRole) => {
     setRole(selected);
   }, []);
 
-  if (loading) {
+  if (authInitializing) {
+    return (
+      <NavigationContainer>
+        <LoadingGate />
+      </NavigationContainer>
+    );
+  }
+
+  if (!session) {
+    return (
+      <NavigationContainer>
+        <AuthNavigator />
+      </NavigationContainer>
+    );
+  }
+
+  if (roleLoading) {
     return (
       <NavigationContainer>
         <LoadingGate />
