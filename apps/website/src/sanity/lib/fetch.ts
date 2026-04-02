@@ -3,6 +3,8 @@ import {
   SITE_SETTINGS_QUERY,
   HOME_PAGE_QUERY,
   HOST_PAGE_QUERY,
+  QUIZ_PAGE_BY_EVENT_ID_QUERY,
+  QUIZ_PAGE_EVENT_IDS_QUERY,
   CITY_BY_SLUG_QUERY,
   ALL_FAQS_QUERY,
   ALL_BLOG_POSTS_QUERY,
@@ -14,6 +16,7 @@ import type {
   SiteSettings,
   HomePage,
   HostPage,
+  QuizPageDocument,
   CityDocument,
   FaqDocument,
   BlogPostListItem,
@@ -44,6 +47,34 @@ export async function getHostPage(): Promise<HostPage | null> {
     return await sanityClient.fetch<HostPage | null>(HOST_PAGE_QUERY, {}, { next: { revalidate: 60 } });
   } catch {
     return null;
+  }
+}
+
+export async function getQuizPageByEventId(quizEventId: string): Promise<QuizPageDocument | null> {
+  if (!isSanityConfigured()) return null;
+  try {
+    return await sanityClient.fetch<QuizPageDocument | null>(
+      QUIZ_PAGE_BY_EVENT_ID_QUERY,
+      { quizEventId },
+      { next: { revalidate: 60 } }
+    );
+  } catch {
+    return null;
+  }
+}
+
+/** Event IDs that have an enabled Sanity quiz page (for static generation). */
+export async function getQuizPageEventIds(): Promise<string[]> {
+  if (!isSanityConfigured()) return [];
+  try {
+    const ids = await sanityClient.fetch<string[] | null>(
+      QUIZ_PAGE_EVENT_IDS_QUERY,
+      {},
+      { next: { revalidate: 60 } }
+    );
+    return (ids ?? []).filter((id): id is string => typeof id === "string" && id.length > 0);
+  } catch {
+    return [];
   }
 }
 

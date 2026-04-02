@@ -8,6 +8,7 @@ import { blockContentType } from "./blockContent";
 import { blogAuthorType } from "./blogAuthor";
 import { blogCategoryType } from "./blogCategory";
 import { blogPostType } from "./blogPost";
+import { quizPageType } from "./quizPage";
 
 export const schemaTypes = [
   siteSettingsType,
@@ -20,4 +21,5 @@ export const schemaTypes = [
   blogAuthorType,
   blogCategoryType,
   blogPostType,
+  quizPageType,
 ];

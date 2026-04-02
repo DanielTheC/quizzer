@@ -36,6 +36,20 @@ export const HOST_PAGE_QUERY = `*[_type == "hostPage"][0] {
   seoDescription
 }`;
 
+/** Editorial overlay for /find-a-quiz/quiz/[id] (linked by Supabase quiz_events.id). */
+export const QUIZ_PAGE_BY_EVENT_ID_QUERY = `*[_type == "quizPage" && quizEventId == $quizEventId && (!defined(enabled) || enabled == true)][0] {
+  _id,
+  quizEventId,
+  enabled,
+  heroTitle,
+  heroSubtitle,
+  body,
+  seoTitle,
+  seoDescription
+}`;
+
+export const QUIZ_PAGE_EVENT_IDS_QUERY = `*[_type == "quizPage" && defined(quizEventId) && (!defined(enabled) || enabled == true)].quizEventId`;
+
 export const CITY_BY_SLUG_QUERY = `*[_type == "city" && slug.current == $slug][0] {
   _id,
   cityName,

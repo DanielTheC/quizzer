@@ -9,9 +9,40 @@ type VenueShape = {
   address: string | null;
   postcode: string | null;
   city: string | null;
+  borough: string | null;
   lat: number | null;
   lng: number | null;
 };
+
+/** If last segment looks like a UK postcode, treat the segment before it as the town/city hint. */
+function inferCityFromAddress(address: string | null): string | null {
+  if (!address?.trim()) return null;
+  const parts = address
+    .split(",")
+    .map((p) => p.trim())
+    .filter(Boolean);
+  if (parts.length === 0) return null;
+  const ukPost = /^[A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2}$/i;
+  let i = parts.length - 1;
+  if (ukPost.test(parts[i].replace(/\s+/g, ""))) {
+    i -= 1;
+  }
+  if (i < 0) return null;
+  return parts[i] ?? null;
+}
+
+/**
+ * Prefer `city`, then `borough`, then the last segment of `address` (excluding postcode).
+ * When everything is empty, quizzes bucket to slug "other" — backfill `venues.city` in Supabase when you can.
+ */
+export function resolveVenueCityLabel(venue: VenueShape | null): string | null {
+  if (!venue) return null;
+  const c = venue.city?.trim();
+  if (c) return c;
+  const b = venue.borough?.trim();
+  if (b) return b;
+  return inferCityFromAddress(venue.address ?? null);
+}
 
 /** PostgREST returns FK relation as "venue" when using venue:venues(...) in select. */
 type SupabaseQuizRow = {
@@ -52,6 +83,16 @@ function toCityName(city: string | null): string {
   return c.replace(/\b\w/g, (ch) => ch.toUpperCase());
 }
 
+/** Readable label for a city slug (breadcrumbs, “more in this city”). */
+export function citySlugToLabel(slug: string): string {
+  const s = slug.trim();
+  if (!s || s === "other") return "Other";
+  return s
+    .split("-")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
 function toSlug(venueName: string, citySlug: string, id: string): string {
   const base = venueName
     .trim()
@@ -64,14 +105,22 @@ function toSlug(venueName: string, citySlug: string, id: string): string {
 function rowToQuiz(row: SupabaseQuizRow): Quiz {
   const venue = row.venues ?? row.venue ?? null;
   const venueName = venue?.name?.trim() ?? "Unknown venue";
-  const citySlug = toCitySlug(venue?.city ?? null);
+  const cityLabel = resolveVenueCityLabel(venue);
+  const citySlug = toCitySlug(cityLabel);
   const dayName = DAY_NAMES[row.day_of_week] ?? String(row.day_of_week);
-  const area = venue?.city?.trim() ?? venue?.address?.split(",")[0]?.trim() ?? "—";
+  const area =
+    venue?.borough?.trim() ??
+    venue?.city?.trim() ??
+    venue?.address?.split(",")[0]?.trim() ??
+    "—";
 
   const lat =
     venue?.lat != null && Number.isFinite(venue.lat) ? venue.lat : undefined;
   const lng =
     venue?.lng != null && Number.isFinite(venue.lng) ? venue.lng : undefined;
+
+  const addr = venue?.address?.trim();
+  const pc = venue?.postcode?.trim();
 
   return {
     id: row.id,
@@ -86,6 +135,8 @@ function rowToQuiz(row: SupabaseQuizRow): Quiz {
     tags: [],
     lat,
     lng,
+    address: addr || undefined,
+    postcode: pc || undefined,
   };
 }
 
@@ -101,7 +152,7 @@ export async function fetchQuizzesFromSupabase(): Promise<Quiz[]> {
   if (!supabase) return [];
 
   const query =
-    "id, day_of_week, start_time, entry_fee_pence, prize, venues(name, address, postcode, city, lat, lng)";
+    "id, day_of_week, start_time, entry_fee_pence, prize, venues(name, address, postcode, city, borough, lat, lng)";
   const { data, error } = await supabase
     .from("quiz_events")
     .select(query)
@@ -119,6 +170,37 @@ export async function fetchQuizzesFromSupabase(): Promise<Quiz[]> {
 }
 
 /**
+ * Single active quiz for detail pages (by Supabase `quiz_events.id`).
+ */
+export async function fetchQuizByIdFromSupabase(id: string): Promise<Quiz | null> {
+  const supabase = getSupabaseSafe();
+  if (!supabase) return null;
+
+  const query =
+    "id, day_of_week, start_time, entry_fee_pence, prize, venues(name, address, postcode, city, borough, lat, lng)";
+  const { data, error } = await supabase
+    .from("quiz_events")
+    .select(query)
+    .eq("id", id)
+    .eq("is_active", true)
+    .maybeSingle();
+
+  if (error || !data) {
+    if (error) console.error("[website] Supabase quiz by id error:", error.message);
+    return null;
+  }
+
+  return rowToQuiz(data as unknown as SupabaseQuizRow);
+}
+
+export async function getQuizById(id: string): Promise<Quiz | null> {
+  const fromDb = await fetchQuizByIdFromSupabase(id);
+  if (fromDb) return fromDb;
+  const { quizzes } = await import("@/data/quizzes");
+  return quizzes.find((q) => q.id === id) ?? null;
+}
+
+/**
  * Fetch quizzes for a given city slug (e.g. "london", "birmingham").
  */
 export async function fetchQuizzesByCityFromSupabase(citySlug: string): Promise<Quiz[]> {
@@ -126,29 +208,42 @@ export async function fetchQuizzesByCityFromSupabase(citySlug: string): Promise<
   return all.filter((q) => q.city === citySlug);
 }
 
-type SupabaseCityRow = { city: string | null };
+type SupabaseVenueAreaRow = {
+  city: string | null;
+  borough: string | null;
+  address: string | null;
+};
 
 /**
- * Fetch distinct city list from Supabase `venues`.
- * Returns [] if Supabase is not configured or the request fails.
+ * Fetch distinct city list from Supabase `venues`, using the same resolution as quiz cards
+ * (city → borough → address inference) so buckets match `/find-a-quiz/[city]`.
  */
 export async function getCities(): Promise<City[]> {
   const supabase = getSupabaseSafe();
   if (!supabase) return [];
 
-  const { data, error } = await supabase.from("venues").select("city");
+  const { data, error } = await supabase.from("venues").select("city, borough, address");
 
   if (error) {
     console.error("[website] Supabase cities fetch error:", error.message);
     return [];
   }
 
-  const rows = (data as unknown as SupabaseCityRow[]) ?? [];
+  const rows = (data as unknown as SupabaseVenueAreaRow[]) ?? [];
   const unique = new Map<string, City>();
   for (const row of rows) {
-    const slug = toCitySlug(row.city);
+    const label = resolveVenueCityLabel({
+      name: null,
+      address: row.address,
+      postcode: null,
+      city: row.city,
+      borough: row.borough,
+      lat: null,
+      lng: null,
+    });
+    const slug = toCitySlug(label);
     if (!unique.has(slug)) {
-      const name = toCityName(row.city);
+      const name = toCityName(label);
       unique.set(slug, {
         slug,
         name,

@@ -36,6 +36,17 @@ export interface HostPage {
   seoDescription?: string | null;
 }
 
+export interface QuizPageDocument {
+  _id?: string;
+  quizEventId?: string | null;
+  enabled?: boolean | null;
+  heroTitle?: string | null;
+  heroSubtitle?: string | null;
+  body?: unknown;
+  seoTitle?: string | null;
+  seoDescription?: string | null;
+}
+
 export interface CityDocument {
   _id?: string;
   cityName?: string | null;

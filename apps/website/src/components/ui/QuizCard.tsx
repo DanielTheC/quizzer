@@ -9,7 +9,7 @@ interface QuizCardProps {
 export function QuizCard({ quiz }: QuizCardProps) {
   return (
     <Link
-      href={`/find-a-quiz/${quiz.city}`}
+      href={`/find-a-quiz/quiz/${quiz.id}`}
       className="block rounded-[12px] border-[3px] border-quizzer-black border-solid bg-quizzer-white p-5 shadow-[5px_5px_0_#000] transition-all duration-150 hover:shadow-[3px_3px_0_#000] hover:translate-x-[2px] hover:translate-y-[2px] text-quizzer-black no-underline"
     >
       <h3 className="font-heading text-xl font-normal text-quizzer-black mb-1">

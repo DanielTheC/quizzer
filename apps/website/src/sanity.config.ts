@@ -32,6 +32,9 @@ export default defineConfig({
               .title("Cities")
               .child(S.documentTypeList("city").title("Cities")),
             S.listItem()
+              .title("Quiz pages")
+              .child(S.documentTypeList("quizPage").title("Quiz pages")),
+            S.listItem()
               .title("FAQs")
               .child(S.documentTypeList("faq").title("FAQs")),
             S.listItem()

@@ -15,6 +15,9 @@ export interface Quiz {
   lng?: number;
   /** Distance in miles from user (set when location available). */
   distance?: number;
+  /** Venue address lines (detail page). */
+  address?: string;
+  postcode?: string;
 }
 
 /** City for find-a-quiz */
