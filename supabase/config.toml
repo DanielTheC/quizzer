@@ -1,0 +1,8 @@
+# Supabase CLI — https://supabase.com/docs/guides/cli/config
+# Add project-specific values when linking the repo to a Supabase project.
+
+[api]
+enabled = true
+
+[functions.notify-quiz-attendees]
+verify_jwt = true

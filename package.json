@@ -6,6 +6,8 @@
     "start:clean": "npm run start:clean --prefix apps/app",
     "android": "npm run android --prefix apps/app",
     "ios": "npm run ios --prefix apps/app",
-    "web": "npm run web --prefix apps/app"
+    "web": "npm run web --prefix apps/app",
+    "dev:website": "npm run dev --prefix apps/website",
+    "build:website": "npm run build --prefix apps/website"
   }
 }

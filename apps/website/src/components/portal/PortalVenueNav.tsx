@@ -10,6 +10,7 @@ export function PortalVenueNav({ venueLinks }: Props) {
   const pathname = usePathname();
 
   const overviewActive = pathname === "/portal";
+  const messagesActive = pathname === "/portal/messages" || pathname.startsWith("/portal/messages/");
 
   return (
     <ul className="space-y-1">
@@ -24,6 +25,19 @@ export function PortalVenueNav({ venueLinks }: Props) {
           aria-current={overviewActive ? "page" : undefined}
         >
           Overview
+        </Link>
+      </li>
+      <li>
+        <Link
+          href="/portal/messages"
+          className={`block rounded-[var(--radius-button)] border-2 px-3 py-2 text-sm font-medium transition ${
+            messagesActive
+              ? "border-quizzer-black bg-quizzer-yellow text-quizzer-black"
+              : "border-transparent text-quizzer-black hover:border-quizzer-black/25 hover:bg-quizzer-cream"
+          }`}
+          aria-current={messagesActive ? "page" : undefined}
+        >
+          Messages
         </Link>
       </li>
       {venueLinks.map((v) => {

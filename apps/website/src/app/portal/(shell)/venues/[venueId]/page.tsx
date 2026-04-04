@@ -66,6 +66,7 @@ export default async function PublicanVenueSchedulePage({ params }: PageProps) {
 
   return (
     <VenueQuizSchedule
+      venueId={venueId}
       venueName={current.venueName}
       scheduled={scheduled}
       cancelled={cancelled}

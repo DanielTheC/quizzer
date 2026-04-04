@@ -7,8 +7,16 @@ const supabaseAnonKey = (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "").trim()
 /**
  * Refreshes the Supabase session cookie on matched routes (required for server-side auth).
  */
+function nextWithPath(request: NextRequest): NextResponse {
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set("x-pathname", request.nextUrl.pathname);
+  return NextResponse.next({
+    request: { headers: requestHeaders },
+  });
+}
+
 export async function updateSession(request: NextRequest) {
-  let supabaseResponse = NextResponse.next({ request });
+  let supabaseResponse = nextWithPath(request);
 
   if (!supabaseUrl || !supabaseAnonKey) {
     return supabaseResponse;
@@ -23,7 +31,7 @@ export async function updateSession(request: NextRequest) {
         cookiesToSet.forEach(({ name, value }) => {
           request.cookies.set(name, value);
         });
-        supabaseResponse = NextResponse.next({ request });
+        supabaseResponse = nextWithPath(request);
         cookiesToSet.forEach(({ name, value, options }) => {
           supabaseResponse.cookies.set(name, value, options);
         });

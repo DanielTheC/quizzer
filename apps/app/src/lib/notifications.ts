@@ -1,3 +1,8 @@
+/**
+ * Local scheduled quiz reminders. For **operator / publican broadcasts** to interested players, the backend uses
+ * `push_tokens` in Supabase (see migration 20260409100000_push_tokens.sql): the app should upsert the Expo push
+ * token there when the user enables notifications so `/portal` “notify attendees” can reach devices.
+ */
 import * as Notifications from "expo-notifications";
 import * as Location from "expo-location";
 import { Platform } from "react-native";

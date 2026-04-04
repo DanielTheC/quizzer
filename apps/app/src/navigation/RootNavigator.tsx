@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Pressable, Text, View, StyleSheet } from "react-native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -436,8 +436,15 @@ function LoadingGate() {
 
 export default function RootNavigator() {
   const { session, initializing: authInitializing } = useAuth();
-  const [role, setRole] = useState<QuizzerRole | null>(null);
+  const [role, setRoleState] = useState<QuizzerRole | null>(null);
   const [roleLoading, setRoleLoading] = useState(true);
+  /** Bumps whenever we intentionally set role (sign-out, reset, role picker). Stale getStoredRole() callbacks must not overwrite. */
+  const roleIntentEpochRef = useRef(0);
+
+  const setRole = useCallback((next: QuizzerRole | null) => {
+    roleIntentEpochRef.current += 1;
+    setRoleState(next);
+  }, []);
 
   useEffect(() => {
     const { data } = supabase.auth.onAuthStateChange((event) => {
@@ -446,7 +453,7 @@ export default function RootNavigator() {
       }
     });
     return () => data.subscription.unsubscribe();
-  }, []);
+  }, [setRole]);
 
   useEffect(() => {
     if (authInitializing) return;
@@ -458,21 +465,25 @@ export default function RootNavigator() {
     }
 
     let cancelled = false;
+    const intentAtFetch = roleIntentEpochRef.current;
     setRoleLoading(true);
     getStoredRole().then((stored) => {
-      if (!cancelled) {
-        setRole(stored);
+      if (cancelled) return;
+      if (roleIntentEpochRef.current !== intentAtFetch) {
         setRoleLoading(false);
+        return;
       }
+      setRoleState(stored);
+      setRoleLoading(false);
     });
     return () => {
       cancelled = true;
     };
-  }, [authInitializing, session]);
+  }, [authInitializing, session, setRole]);
 
   const handleRoleSelect = useCallback((selected: QuizzerRole) => {
     setRole(selected);
-  }, []);
+  }, [setRole]);
 
   if (authInitializing) {
     return (

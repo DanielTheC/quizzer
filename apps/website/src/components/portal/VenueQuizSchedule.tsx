@@ -4,6 +4,8 @@ import {
   formatSchedulePrize,
   formatScheduleTime,
 } from "@/lib/portalScheduleFormat";
+import { PublicanNewMessageForm } from "./PublicanNewMessageForm";
+import { PublicanNotifyAttendeesPanel } from "./PublicanNotifyAttendeesPanel";
 
 export type VenueQuizEventRow = {
   id: string;
@@ -15,44 +17,82 @@ export type VenueQuizEventRow = {
 };
 
 type Props = {
+  venueId: string;
   venueName: string;
   scheduled: VenueQuizEventRow[];
   cancelled: VenueQuizEventRow[];
   interestByEventId: Map<string, number>;
 };
 
-function Row({
+function EventCard({
+  venueId,
+  venueName,
   event,
   interestCount,
   showCancelled,
 }: {
+  venueId: string;
+  venueName: string;
   event: VenueQuizEventRow;
   interestCount: number;
   showCancelled: boolean;
 }) {
+  const contextLabel = `${formatScheduleDay(event.day_of_week)} · ${formatScheduleTime(event.start_time)}${
+    showCancelled ? " · Cancelled slot" : ""
+  }`;
+
   return (
-    <tr className="border-b-2 border-quizzer-black/10 last:border-b-0">
-      <td className="py-3 pr-4 align-top font-medium text-quizzer-black">
-        <div className="flex flex-wrap items-center gap-2">
-          <span>{formatScheduleDay(event.day_of_week)}</span>
-          {showCancelled ? (
-            <span className="rounded-md border-2 border-quizzer-black bg-quizzer-cream px-2 py-0.5 text-xs font-semibold uppercase">
-              Cancelled
-            </span>
-          ) : null}
+    <article className="rounded-[var(--radius-card)] border-[var(--border-thick)] border-quizzer-black bg-quizzer-white shadow-[var(--shadow-card)]">
+      <div className="grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wide text-quizzer-black/55">When</p>
+          <div className="mt-1 flex flex-wrap items-center gap-2">
+            <span className="font-medium text-quizzer-black">{formatScheduleDay(event.day_of_week)}</span>
+            {showCancelled ? (
+              <span className="rounded-md border-2 border-quizzer-black bg-quizzer-cream px-2 py-0.5 text-xs font-semibold uppercase">
+                Cancelled
+              </span>
+            ) : null}
+          </div>
+          <p className="mt-0.5 tabular-nums text-sm text-quizzer-black">{formatScheduleTime(event.start_time)}</p>
         </div>
-      </td>
-      <td className="py-3 pr-4 align-top tabular-nums text-quizzer-black">{formatScheduleTime(event.start_time)}</td>
-      <td className="py-3 pr-4 align-top text-quizzer-black">{formatScheduleEntryFeePence(event.entry_fee_pence)}</td>
-      <td className="py-3 pr-4 align-top text-quizzer-black/90">{formatSchedulePrize(event.prize)}</td>
-      <td className="py-3 pr-4 align-top tabular-nums text-quizzer-black">{interestCount}</td>
-      <td className="py-3 align-top text-sm text-quizzer-black/80">No host yet</td>
-    </tr>
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wide text-quizzer-black/55">Entry</p>
+          <p className="mt-1 text-sm font-medium text-quizzer-black">{formatScheduleEntryFeePence(event.entry_fee_pence)}</p>
+        </div>
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wide text-quizzer-black/55">Prize</p>
+          <p className="mt-1 text-sm text-quizzer-black/90">{formatSchedulePrize(event.prize)}</p>
+        </div>
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wide text-quizzer-black/55">Interest</p>
+          <p className="mt-1 tabular-nums text-sm font-medium text-quizzer-black">{interestCount}</p>
+        </div>
+        <div className="sm:col-span-2 lg:col-span-2">
+          <p className="text-xs font-semibold uppercase tracking-wide text-quizzer-black/55">Host</p>
+          <p className="mt-1 text-sm text-quizzer-black/80">No host yet</p>
+        </div>
+      </div>
+      <div className="border-t-2 border-quizzer-black/10 px-4 pb-4">
+        <PublicanNotifyAttendeesPanel
+          venueName={venueName}
+          quizEventId={event.id}
+          interestedCount={interestCount}
+        />
+        <PublicanNewMessageForm
+          venueId={venueId}
+          quizEventId={event.id}
+          contextLabel={contextLabel}
+          compact
+        />
+      </div>
+    </article>
   );
 }
 
-export function VenueQuizSchedule({ venueName, scheduled, cancelled, interestByEventId }: Props) {
+export function VenueQuizSchedule({ venueId, venueName, scheduled, cancelled, interestByEventId }: Props) {
   const hasRows = scheduled.length > 0 || cancelled.length > 0;
+  const venueContext = `Venue · ${venueName}`;
 
   return (
     <div className="px-8 py-10">
@@ -60,6 +100,9 @@ export function VenueQuizSchedule({ venueName, scheduled, cancelled, interestByE
         <p className="text-xs font-semibold uppercase tracking-wide text-quizzer-black/60">Venue</p>
         <h1 className="font-heading text-3xl uppercase text-quizzer-black">{venueName}</h1>
         <p className="mt-2 text-sm text-quizzer-black/75">Active quiz nights and interest from players.</p>
+        <div className="mt-6 max-w-2xl rounded-[var(--radius-card)] border-[var(--border-thick)] border-quizzer-black bg-quizzer-white p-4 shadow-[var(--shadow-card)]">
+          <PublicanNewMessageForm venueId={venueId} quizEventId={null} contextLabel={venueContext} />
+        </div>
       </header>
 
       {!hasRows ? (
@@ -68,64 +111,40 @@ export function VenueQuizSchedule({ venueName, scheduled, cancelled, interestByE
         <div className="space-y-10">
           {scheduled.length > 0 ? (
             <section aria-labelledby="scheduled-heading">
-              <h2 id="scheduled-heading" className="mb-3 font-heading text-lg uppercase text-quizzer-black">
+              <h2 id="scheduled-heading" className="mb-4 font-heading text-lg uppercase text-quizzer-black">
                 Upcoming
               </h2>
-              <div className="overflow-x-auto rounded-[var(--radius-card)] border-[var(--border-thick)] border-quizzer-black bg-quizzer-white shadow-[var(--shadow-card)]">
-                <table className="w-full min-w-[640px] border-collapse text-left text-sm">
-                  <thead>
-                    <tr className="border-b-2 border-quizzer-black bg-quizzer-cream text-xs font-semibold uppercase tracking-wide text-quizzer-black">
-                      <th className="px-4 py-3">Day</th>
-                      <th className="px-4 py-3">Time</th>
-                      <th className="px-4 py-3">Entry</th>
-                      <th className="px-4 py-3">Prize</th>
-                      <th className="px-4 py-3">Interest</th>
-                      <th className="px-4 py-3">Host</th>
-                    </tr>
-                  </thead>
-                  <tbody className="text-sm">
-                    {scheduled.map((event) => (
-                      <Row
-                        key={event.id}
-                        event={event}
-                        interestCount={interestByEventId.get(event.id) ?? 0}
-                        showCancelled={false}
-                      />
-                    ))}
-                  </tbody>
-                </table>
+              <div className="grid gap-4 lg:grid-cols-1 xl:grid-cols-1">
+                {scheduled.map((event) => (
+                  <EventCard
+                    key={event.id}
+                    venueId={venueId}
+                    venueName={venueName}
+                    event={event}
+                    interestCount={interestByEventId.get(event.id) ?? 0}
+                    showCancelled={false}
+                  />
+                ))}
               </div>
             </section>
           ) : null}
 
           {cancelled.length > 0 ? (
             <section aria-labelledby="cancelled-heading">
-              <h2 id="cancelled-heading" className="mb-3 font-heading text-lg uppercase text-quizzer-black">
+              <h2 id="cancelled-heading" className="mb-4 font-heading text-lg uppercase text-quizzer-black">
                 Cancelled
               </h2>
-              <div className="overflow-x-auto rounded-[var(--radius-card)] border-[var(--border-thick)] border-quizzer-black bg-quizzer-white shadow-[var(--shadow-card)] opacity-90">
-                <table className="w-full min-w-[640px] border-collapse text-left text-sm">
-                  <thead>
-                    <tr className="border-b-2 border-quizzer-black bg-quizzer-cream text-xs font-semibold uppercase tracking-wide text-quizzer-black">
-                      <th className="px-4 py-3">Day</th>
-                      <th className="px-4 py-3">Time</th>
-                      <th className="px-4 py-3">Entry</th>
-                      <th className="px-4 py-3">Prize</th>
-                      <th className="px-4 py-3">Interest</th>
-                      <th className="px-4 py-3">Host</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {cancelled.map((event) => (
-                      <Row
-                        key={event.id}
-                        event={event}
-                        interestCount={interestByEventId.get(event.id) ?? 0}
-                        showCancelled
-                      />
-                    ))}
-                  </tbody>
-                </table>
+              <div className="space-y-4 opacity-95">
+                {cancelled.map((event) => (
+                  <EventCard
+                    key={event.id}
+                    venueId={venueId}
+                    venueName={venueName}
+                    event={event}
+                    interestCount={interestByEventId.get(event.id) ?? 0}
+                    showCancelled
+                  />
+                ))}
               </div>
             </section>
           ) : null}

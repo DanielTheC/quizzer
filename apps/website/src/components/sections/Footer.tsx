@@ -10,11 +10,13 @@ const footerLinks = {
   ],
   "For Venues": [
     { href: "/host-a-quiz", label: "Host a Quiz" },
+    { href: "/portal", label: "Venue portal" },
     { href: "/contact-us", label: "Contact" },
   ],
   Legal: [
     { href: "/privacy-policy", label: "Privacy Policy" },
     { href: "/terms-and-conditions", label: "Terms & Conditions" },
+    { href: "/admin/sign-in", label: "Operator sign-in" },
   ],
 };
 

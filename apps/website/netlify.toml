@@ -1,0 +1,7 @@
+# Netlify: enable the official Next.js runtime so all App Router paths (e.g. /admin, /portal)
+# are served by Next, not treated as missing static files.
+[build]
+  command = "npm run build"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"

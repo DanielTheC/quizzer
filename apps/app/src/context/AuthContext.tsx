@@ -71,12 +71,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signOut = useCallback(async () => {
+    // Leaving dev bypass must also clear any real Supabase session in storage — otherwise
+    // getSession() immediately restores it and sign-out appears to do nothing.
     if (isDevAuthBypassEnabled() && !bypassSuspended) {
+      await clearPackCache();
+      await supabase.auth.signOut();
       setBypassSuspended(true);
       return;
     }
     await clearPackCache();
-    await supabase.auth.signOut();
+    await supabase.auth.signOut({ scope: "local" });
   }, [bypassSuspended]);
 
   const value = useMemo<AuthContextValue>(
