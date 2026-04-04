@@ -1,5 +1,5 @@
--- Quiz pack system: packs, rounds, questions (host-only answer).
--- RLS: allow public read for app (anon); no auth required for host fetch.
+-- Quiz pack system: packs, rounds, questions (answer column replaced by quiz_answers in 20260402100000).
+-- RLS: answers restricted to allowlisted host emails after that migration.
 
 CREATE TABLE IF NOT EXISTS quiz_packs (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),

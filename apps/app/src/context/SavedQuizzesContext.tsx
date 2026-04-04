@@ -1,7 +1,20 @@
-import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
+import { AppState, type AppStateStatus } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import NetInfo from "@react-native-community/netinfo";
+import { useAuth } from "./AuthContext";
+import { supabase } from "../lib/supabase";
+import { isDevBypassSession } from "../lib/devAuthBypass";
+import {
+  clearInterestQueue,
+  deleteInterestOrQueue,
+  deleteInterestsOrQueue,
+  flushInterestQueue,
+  upsertInterestOrQueue,
+} from "../lib/quizInterestSyncQueue";
 
 const STORAGE_KEY = "saved_quiz_ids";
+const INTEREST_NUDGE_SHOWN_KEY = "interest_nudge_shown";
 
 type SavedQuizzesContextValue = {
   savedIds: string[];
@@ -10,13 +23,44 @@ type SavedQuizzesContextValue = {
   removeSaved: (id: string) => void;
   toggleSaved: (id: string) => void;
   clearSaved: () => void;
+  interestSignInSheetVisible: boolean;
+  dismissInterestSignInSheet: () => void;
 };
 
 const SavedQuizzesContext = createContext<SavedQuizzesContextValue | null>(null);
 
 export function SavedQuizzesProvider({ children }: { children: React.ReactNode }) {
+  const { session } = useAuth();
   const [savedIds, setSavedIds] = useState<string[]>([]);
   const [hydrated, setHydrated] = useState(false);
+  const [interestSignInSheetVisible, setInterestSignInSheetVisible] = useState(false);
+  const skipRemote = isDevBypassSession(session);
+  /** Prevents stacking multiple opens on repeated saves while the sheet is up; cleared on dismiss or SIGNED_IN. */
+  const interestSignInSheetGateRef = useRef(false);
+
+  const savedIdsRef = useRef<string[]>([]);
+  useEffect(() => {
+    savedIdsRef.current = savedIds;
+  }, [savedIds]);
+
+  const mergedRemoteRef = useRef<string | null>(null);
+
+  const dismissInterestSignInSheet = useCallback(() => {
+    interestSignInSheetGateRef.current = false;
+    setInterestSignInSheetVisible(false);
+    void AsyncStorage.setItem(INTEREST_NUDGE_SHOWN_KEY, "1");
+  }, []);
+
+  /** True when we should sync interests to Supabase (real session, not dev bypass). */
+  const canSyncRemote = Boolean(session?.user?.id && !skipRemote);
+
+  const runFlush = useCallback(async () => {
+    if (!hydrated || !session?.user?.id || skipRemote) return;
+    await flushInterestQueue({
+      sessionUserId: session.user.id,
+      savedIds: new Set(savedIdsRef.current),
+    });
+  }, [hydrated, session?.user?.id, skipRemote]);
 
   useEffect(() => {
     AsyncStorage.getItem(STORAGE_KEY)
@@ -33,34 +77,154 @@ export function SavedQuizzesProvider({ children }: { children: React.ReactNode }
       .finally(() => setHydrated(true));
   }, []);
 
+  const prevUserIdRef = useRef<string | undefined>(undefined);
+  useEffect(() => {
+    const uid = session?.user?.id;
+    if (prevUserIdRef.current && !uid && !skipRemote) {
+      mergedRemoteRef.current = null;
+      void clearInterestQueue();
+    }
+    prevUserIdRef.current = uid;
+  }, [session?.user?.id, skipRemote]);
+
+  useEffect(() => {
+    const { data: authSub } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "SIGNED_IN") {
+        interestSignInSheetGateRef.current = false;
+        void AsyncStorage.removeItem(INTEREST_NUDGE_SHOWN_KEY);
+      }
+    });
+    return () => authSub.subscription.unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    if (!hydrated || !session?.user?.id || skipRemote) return;
+    const uid = session.user.id;
+    let cancelled = false;
+    void (async () => {
+      try {
+        for (const id of savedIdsRef.current) {
+          if (cancelled) return;
+          await upsertInterestOrQueue(id, uid);
+        }
+        if (cancelled) return;
+        await flushInterestQueue({
+          sessionUserId: uid,
+          savedIds: new Set(savedIdsRef.current),
+        });
+        const { data, error } = await supabase
+          .from("quiz_event_interests")
+          .select("quiz_event_id")
+          .eq("user_id", uid);
+        if (cancelled) return;
+        if (error) {
+          console.warn("quiz_event_interests fetch:", error.message);
+          return;
+        }
+        const remoteIds = (data ?? []).map((r) => r.quiz_event_id).filter((x): x is string => typeof x === "string");
+        const key = `${uid}:${remoteIds.slice().sort().join(",")}`;
+        if (mergedRemoteRef.current === key) return;
+        mergedRemoteRef.current = key;
+        setSavedIds((prev) => {
+          const next = new Set(prev);
+          for (const id of remoteIds) next.add(id);
+          return Array.from(next);
+        });
+      } finally {
+        if (!cancelled) void runFlush();
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [hydrated, session?.user?.id, skipRemote, runFlush]);
+
   useEffect(() => {
     if (!hydrated) return;
     AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(savedIds));
   }, [savedIds, hydrated]);
+
+  useEffect(() => {
+    const onAppState = (s: AppStateStatus) => {
+      if (s === "active") void runFlush();
+    };
+    const sub = AppState.addEventListener("change", onAppState);
+    return () => sub.remove();
+  }, [runFlush]);
+
+  useEffect(() => {
+    const unsub = NetInfo.addEventListener((state) => {
+      if (state.isConnected) void runFlush();
+    });
+    return () => unsub();
+  }, [runFlush]);
+
+  const triggerInterestSignInSheetIfNeeded = useCallback(() => {
+    if (session?.user?.id || isDevBypassSession(session) || skipRemote) return;
+    if (interestSignInSheetGateRef.current) return;
+    interestSignInSheetGateRef.current = true;
+    void (async () => {
+      try {
+        if ((await AsyncStorage.getItem(INTEREST_NUDGE_SHOWN_KEY)) === "1") {
+          interestSignInSheetGateRef.current = false;
+          return;
+        }
+      } catch {
+        interestSignInSheetGateRef.current = false;
+        return;
+      }
+      setInterestSignInSheetVisible(true);
+    })();
+  }, [session, skipRemote]);
 
   const isSaved = useCallback(
     (id: string) => savedIds.includes(id),
     [savedIds]
   );
 
-  const addSaved = useCallback((id: string) => {
-    setSavedIds((prev) => (prev.includes(id) ? prev : [...prev, id]));
-  }, []);
+  const addSaved = useCallback(
+    (id: string) => {
+      setSavedIds((prev) => (prev.includes(id) ? prev : [...prev, id]));
+      const uid = session?.user?.id;
+      if (uid && !skipRemote) void upsertInterestOrQueue(id, uid);
+      else if (!skipRemote && !uid) triggerInterestSignInSheetIfNeeded();
+    },
+    [session?.user?.id, skipRemote, triggerInterestSignInSheetIfNeeded]
+  );
 
-  const removeSaved = useCallback((id: string) => {
-    setSavedIds((prev) => prev.filter((x) => x !== id));
-  }, []);
+  const removeSaved = useCallback(
+    (id: string) => {
+      setSavedIds((prev) => prev.filter((x) => x !== id));
+      if (session?.user?.id && !skipRemote) void deleteInterestOrQueue(id);
+    },
+    [session?.user?.id, skipRemote]
+  );
 
-  const toggleSaved = useCallback((id: string) => {
-    setSavedIds((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
-    );
-  }, []);
+  const toggleSaved = useCallback(
+    (id: string) => {
+      setSavedIds((prev) => {
+        const removing = prev.includes(id);
+        const next = removing ? prev.filter((x) => x !== id) : [...prev, id];
+        const uid = session?.user?.id;
+        if (uid && !skipRemote) {
+          if (removing) void deleteInterestOrQueue(id);
+          else void upsertInterestOrQueue(id, uid);
+        } else if (!removing && !skipRemote && !uid) {
+          triggerInterestSignInSheetIfNeeded();
+        }
+        return next;
+      });
+    },
+    [session?.user?.id, skipRemote, triggerInterestSignInSheetIfNeeded]
+  );
 
   const clearSaved = useCallback(() => {
-    setSavedIds([]);
-    AsyncStorage.removeItem(STORAGE_KEY);
-  }, []);
+    setSavedIds((prev) => {
+      if (session?.user?.id && !skipRemote && prev.length > 0) void deleteInterestsOrQueue(prev);
+      return [];
+    });
+    void AsyncStorage.removeItem(STORAGE_KEY);
+  }, [session?.user?.id, skipRemote]);
 
   const value: SavedQuizzesContextValue = {
     savedIds,
@@ -69,13 +233,11 @@ export function SavedQuizzesProvider({ children }: { children: React.ReactNode }
     removeSaved,
     toggleSaved,
     clearSaved,
+    interestSignInSheetVisible,
+    dismissInterestSignInSheet,
   };
 
-  return (
-    <SavedQuizzesContext.Provider value={value}>
-      {children}
-    </SavedQuizzesContext.Provider>
-  );
+  return <SavedQuizzesContext.Provider value={value}>{children}</SavedQuizzesContext.Provider>;
 }
 
 export function useSavedQuizzes(): SavedQuizzesContextValue {

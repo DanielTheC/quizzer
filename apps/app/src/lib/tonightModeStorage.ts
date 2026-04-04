@@ -5,9 +5,10 @@ const KEY = "quizzer_tonight_mode";
 export async function getTonightMode(): Promise<boolean> {
   try {
     const v = await AsyncStorage.getItem(KEY);
+    if (v === null) return true;
     return v === "true";
   } catch {
-    return false;
+    return true;
   }
 }
 

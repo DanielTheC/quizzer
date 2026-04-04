@@ -1,6 +1,252 @@
-import React from "react";
+import React, { useCallback, useMemo } from "react";
 import { View, Text, Pressable, StyleSheet } from "react-native";
-import { colors, semantic, spacing, radius, borderWidth, shadow, typography } from "../theme";
+import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
+import Animated, { useAnimatedStyle, useSharedValue, withSequence, withSpring } from "react-native-reanimated";
+import { useAppTheme } from "../context/ThemeContext";
+import { heartScalePeak, heartSpringIn, heartSpringOut } from "../lib/heartPressAnimation";
+import { hapticLight, hapticSavedQuiz } from "../lib/playerHaptics";
+import { postcodeOutwardOrArea } from "../lib/venueLocationSnippet";
+import {
+  colors,
+  fonts,
+  spacing,
+  radius,
+  borderWidth,
+  shadow,
+  typography,
+  playerBrutalPill,
+  type SemanticTheme,
+} from "../theme";
+
+const ICON = 22;
+
+function HeartToggleButton({
+  isSaved,
+  onToggleSaved,
+  semantic,
+}: {
+  isSaved: boolean;
+  onToggleSaved: () => void;
+  semantic: SemanticTheme;
+}) {
+  const scale = useSharedValue(1);
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
+  const onPress = useCallback(() => {
+    scale.value = withSequence(
+      withSpring(heartScalePeak, heartSpringIn),
+      withSpring(1, heartSpringOut)
+    );
+    if (isSaved) hapticLight();
+    else hapticSavedQuiz();
+    onToggleSaved();
+  }, [isSaved, onToggleSaved, scale]);
+
+  return (
+    <Pressable
+      onPress={onPress}
+      hitSlop={12}
+      style={stylesStatic.heartWrap}
+      accessibilityLabel={isSaved ? "Remove from saved" : "Save quiz"}
+    >
+      <Animated.View style={animatedStyle}>
+        <MaterialCommunityIcons
+          name={isSaved ? "heart" : "heart-outline"}
+          size={22}
+          color={isSaved ? semantic.accentRed : semantic.textSecondary}
+        />
+      </Animated.View>
+    </Pressable>
+  );
+}
+
+const stylesStatic = StyleSheet.create({
+  heartWrap: { padding: spacing.xs },
+});
+
+function formatPrizePill(prize: string): string {
+  const raw = prize?.replace(/_/g, " ").trim() || "Prize TBC";
+  const words = raw.split(/\s+/).filter(Boolean);
+  const upper = words.map((w) => w.toUpperCase()).join(" ");
+  return upper.length > 28 ? `${upper.slice(0, 26)}…` : upper;
+}
+
+function createQuizCardStyles(semantic: SemanticTheme, isDark: boolean) {
+  return StyleSheet.create({
+    card: {
+      backgroundColor: isDark ? semantic.bgPrimary : colors.white,
+      borderRadius: radius.brutal,
+      borderWidth: borderWidth.default,
+      borderColor: semantic.borderPrimary,
+      overflow: "hidden",
+      ...shadow.medium,
+    },
+    cardAccentTop: {
+      height: 7,
+      width: "100%",
+      borderBottomWidth: borderWidth.thin,
+      borderBottomColor: semantic.borderPrimary,
+    },
+    cardInner: {
+      padding: spacing.lg,
+    },
+    cardPressed: {
+      transform: [{ translateY: 2 }],
+      shadowOffset: { width: 1, height: 1 },
+    },
+    inner: {
+      flexDirection: "row",
+      alignItems: "flex-start",
+    },
+    rankBadge: {
+      marginRight: spacing.md,
+      marginTop: 2,
+      ...playerBrutalPill,
+      paddingVertical: spacing.xs + 2,
+      paddingHorizontal: spacing.md,
+    },
+    rankText: {
+      fontSize: 11,
+      fontWeight: "800",
+      textTransform: "uppercase",
+      letterSpacing: 0.6,
+      color: colors.black,
+    },
+    content: {
+      flex: 1,
+      minWidth: 0,
+    },
+    row1: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "flex-start",
+    },
+    titleRow: {
+      flex: 1,
+      flexDirection: "row",
+      alignItems: "center",
+      minWidth: 0,
+    },
+    venueIcon: {
+      marginRight: spacing.sm,
+      marginTop: 1,
+    },
+    pubNameBlock: {
+      flex: 1,
+      minWidth: 0,
+    },
+    pubName: {
+      fontSize: 21,
+      fontWeight: "400",
+      fontFamily: fonts.display,
+      letterSpacing: -0.35,
+      lineHeight: 26,
+      color: semantic.textPrimary,
+    },
+    pubPostcode: {
+      fontSize: 15,
+      fontWeight: "600",
+      color: semantic.textSecondary,
+      letterSpacing: 0.2,
+    },
+    rightRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      marginLeft: spacing.sm,
+    },
+    distance: {
+      fontSize: 12,
+      fontWeight: "600",
+      color: semantic.textSecondary,
+      marginRight: spacing.sm,
+    },
+    row2: {
+      marginTop: spacing.xs,
+    },
+    dayTime: {
+      fontSize: 13,
+      fontWeight: "500",
+      color: semantic.textSecondary,
+      letterSpacing: 0.15,
+    },
+    tonightRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      flexWrap: "wrap",
+    },
+    timeEmphasis: {
+      fontSize: 16,
+      fontWeight: "700",
+      color: semantic.textPrimary,
+      marginRight: spacing.sm,
+    },
+    tonightBadge: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingVertical: spacing.xs + 2,
+      paddingHorizontal: spacing.md,
+      marginRight: spacing.sm,
+      borderRadius: radius.pill,
+      borderWidth: borderWidth.default,
+      borderColor: colors.black,
+      backgroundColor: colors.black,
+    },
+    tonightFire: {
+      marginRight: 4,
+    },
+    tonightBadgeText: {
+      fontSize: 11,
+      fontWeight: "800",
+      textTransform: "uppercase",
+      letterSpacing: 0.5,
+      color: colors.findQuizTabYellow,
+    },
+    tagRow: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      alignItems: "center",
+      marginTop: spacing.md,
+      marginHorizontal: -spacing.xs,
+    },
+    brutalTag: {
+      ...playerBrutalPill,
+      marginHorizontal: spacing.xs,
+      marginBottom: spacing.sm,
+      maxWidth: "100%",
+    },
+    brutalTagText: {
+      fontSize: 10,
+      fontWeight: "800",
+      textTransform: "uppercase",
+      letterSpacing: 0.7,
+      color: colors.black,
+    },
+    nextOccurrence: {
+      fontSize: 13,
+      fontWeight: "600",
+      color: semantic.textPrimary,
+      letterSpacing: 0.15,
+    },
+    interestPill: {
+      alignSelf: "flex-start",
+      marginTop: spacing.sm,
+      paddingVertical: 4,
+      paddingHorizontal: spacing.sm,
+      borderRadius: radius.pill,
+      borderWidth: borderWidth.thin,
+      borderColor: colors.grey200,
+      backgroundColor: isDark ? semantic.bgSecondary : colors.grey100,
+    },
+    interestPillText: {
+      fontSize: 11,
+      fontWeight: "600",
+      color: semantic.textSecondary,
+      letterSpacing: 0.15,
+    },
+  });
+}
 
 const DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
@@ -14,8 +260,15 @@ export type QuizCardQuiz = {
   start_time: string;
   entry_fee_pence: number;
   prize: string;
-  venues: { name?: string | null } | null;
+  venues: {
+    name?: string | null;
+    postcode?: string | null;
+    borough?: string | null;
+    city?: string | null;
+  } | null;
 };
+
+type ListAccent = "default" | "tonight" | "distance";
 
 type QuizCardProps = {
   quiz: QuizCardQuiz;
@@ -23,10 +276,17 @@ type QuizCardProps = {
   isSaved: boolean;
   onToggleSaved: () => void;
   onPress: () => void;
+  /** e.g. prefetch detail on press-in for snappier navigation */
+  onPressIn?: () => void;
   isTonightMode: boolean;
   showRank: boolean;
   rank: number | null;
-  labelNextUp?: boolean;
+  /** Left stripe: warm (default), Tonight (orange), or distance sort (blue). */
+  listAccent?: ListAccent;
+  /** When set (e.g. Saved list), replaces the usual day/time line with next-run copy. */
+  nextOccurrenceLabel?: string | null;
+  /** Optional popularity line (e.g. from Nearby embed); omit when empty. */
+  interestPillLabel?: string | null;
 };
 
 export function QuizCard({
@@ -35,203 +295,103 @@ export function QuizCard({
   isSaved,
   onToggleSaved,
   onPress,
+  onPressIn,
   isTonightMode,
   showRank,
   rank,
-  labelNextUp = false,
+  listAccent: listAccentProp,
+  nextOccurrenceLabel = null,
+  interestPillLabel = null,
 }: QuizCardProps) {
+  const { semantic, isDark } = useAppTheme();
+  const styles = useMemo(() => createQuizCardStyles(semantic, isDark), [semantic, isDark]);
+
+  const listAccent: ListAccent =
+    listAccentProp ??
+    (isTonightMode ? "tonight" : showRank ? "distance" : "default");
+
+  const leftStripeColor =
+    listAccent === "tonight"
+      ? semantic.accentOrange
+      : listAccent === "distance"
+        ? semantic.accentBlue
+        : semantic.accentYellow;
+
   const timeStr = String(quiz.start_time).trim().slice(0, 5);
   const dayTimeStr = `${dayName(quiz.day_of_week)} • ${timeStr}`;
-  const entryStr = `£${(quiz.entry_fee_pence / 100).toFixed(2)}`;
   const pubName = quiz.venues?.name ?? "Unknown venue";
+  const locationSnippet = postcodeOutwardOrArea(quiz.venues ?? null);
+  const prizePill = formatPrizePill(quiz.prize ?? "");
 
   return (
     <Pressable
       style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
       onPress={onPress}
+      onPressIn={onPressIn}
     >
-      <View style={styles.inner}>
-        {showRank && rank != null ? (
-          <View style={styles.rankBadge}>
-            <Text style={styles.rankText}>#{rank}</Text>
-          </View>
-        ) : null}
-        <View style={styles.content}>
-          {/* Row 1: icon + pub name (left) | distance (muted) + heart (right) */}
-          <View style={styles.row1}>
-            <View style={styles.titleRow}>
-              <Text style={styles.venueIcon}>🍺</Text>
-              <Text style={styles.pubName} numberOfLines={1}>
-                {pubName}
-              </Text>
+      <View style={[styles.cardAccentTop, { backgroundColor: leftStripeColor }]} />
+      <View style={styles.cardInner}>
+        <View style={styles.inner}>
+          {showRank && rank != null ? (
+            <View style={styles.rankBadge}>
+              <Text style={styles.rankText}>#{rank}</Text>
             </View>
-            <View style={styles.rightRow}>
-              {distanceLabel != null ? (
-                <Text style={styles.distance} numberOfLines={1}>
-                  {distanceLabel}
+          ) : null}
+          <View style={styles.content}>
+            <View style={styles.row1}>
+              <View style={styles.titleRow}>
+                <MaterialCommunityIcons name="glass-mug-variant" size={ICON} color={semantic.textPrimary} style={styles.venueIcon} />
+                <Text style={styles.pubNameBlock} numberOfLines={2}>
+                  <Text style={styles.pubName}>{pubName}</Text>
+                  {locationSnippet ? (
+                    <Text style={styles.pubPostcode}>{` · ${locationSnippet}`}</Text>
+                  ) : null}
                 </Text>
-              ) : null}
-              <Pressable onPress={onToggleSaved} hitSlop={12} style={styles.heartWrap}>
-                <Text style={[styles.heart, isSaved && styles.heartSaved]}>
-                  {isSaved ? "♥" : "♡"}
-                </Text>
-              </Pressable>
-            </View>
-          </View>
-
-          {/* Row 2: Day • Time (or Tonight emphasis + badge) */}
-          <View style={styles.row2}>
-            {isTonightMode ? (
-              <View style={styles.tonightRow}>
-                <Text style={styles.timeEmphasis}>{timeStr}</Text>
-                <View style={styles.tonightBadge}>
-                  <Text style={styles.tonightBadgeText}>🔥 Tonight</Text>
-                </View>
-                {labelNextUp ? (
-                  <View style={styles.nextUpBadge}>
-                    <Text style={styles.nextUpText}>Next up</Text>
-                  </View>
-                ) : null}
               </View>
-            ) : (
-              <Text style={styles.dayTime}>{dayTimeStr}</Text>
-            )}
-          </View>
+              <View style={styles.rightRow}>
+                {distanceLabel != null ? (
+                  <Text style={styles.distance} numberOfLines={1}>
+                    {distanceLabel}
+                  </Text>
+                ) : null}
+                <HeartToggleButton isSaved={isSaved} onToggleSaved={onToggleSaved} semantic={semantic} />
+              </View>
+            </View>
 
-          {/* Row 3: £Entry • Prize */}
-          <Text style={styles.entryPrize}>
-            {entryStr} • {quiz.prize}
-          </Text>
+            <View style={styles.row2}>
+              {nextOccurrenceLabel ? (
+                <Text style={styles.nextOccurrence}>{nextOccurrenceLabel}</Text>
+              ) : isTonightMode ? (
+                <View style={styles.tonightRow}>
+                  <Text style={styles.timeEmphasis}>{timeStr}</Text>
+                  <View style={styles.tonightBadge}>
+                    <MaterialCommunityIcons name="fire" size={14} color={colors.findQuizTabYellow} style={styles.tonightFire} />
+                    <Text style={styles.tonightBadgeText}>Tonight</Text>
+                  </View>
+                </View>
+              ) : (
+                <Text style={styles.dayTime}>{dayTimeStr}</Text>
+              )}
+            </View>
+
+            {interestPillLabel ? (
+              <View style={styles.interestPill}>
+                <Text style={styles.interestPillText} numberOfLines={1}>
+                  {interestPillLabel}
+                </Text>
+              </View>
+            ) : null}
+
+            <View style={styles.tagRow}>
+              <View style={styles.brutalTag}>
+                <Text style={styles.brutalTagText} numberOfLines={2}>
+                  {prizePill}
+                </Text>
+              </View>
+            </View>
+          </View>
         </View>
       </View>
     </Pressable>
   );
 }
-
-const styles = StyleSheet.create({
-  card: {
-    backgroundColor: semantic.bgPrimary,
-    borderRadius: radius.large,
-    borderWidth: borderWidth.default,
-    borderColor: semantic.borderPrimary,
-    padding: spacing.lg,
-    marginBottom: spacing.md,
-    ...shadow.small,
-  },
-  cardPressed: {
-    transform: [{ translateY: 2 }],
-    shadowOffset: { width: 1, height: 1 },
-  },
-  inner: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-  },
-  rankBadge: {
-    marginRight: spacing.md,
-    marginTop: 2,
-    paddingVertical: spacing.xs,
-    paddingHorizontal: spacing.sm,
-    borderRadius: radius.small,
-    borderWidth: borderWidth.default,
-    borderColor: semantic.borderPrimary,
-    backgroundColor: semantic.accentYellow,
-  },
-  rankText: {
-    ...typography.labelUppercase,
-    color: semantic.textPrimary,
-  },
-  content: {
-    flex: 1,
-    minWidth: 0,
-  },
-  row1: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-  },
-  titleRow: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    minWidth: 0,
-  },
-  venueIcon: {
-    fontSize: 16,
-    marginRight: spacing.sm,
-  },
-  pubName: {
-    flex: 1,
-    ...typography.bodyStrong,
-    fontSize: 17,
-    color: semantic.textPrimary,
-  },
-  rightRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginLeft: spacing.sm,
-  },
-  distance: {
-    ...typography.caption,
-    color: semantic.textSecondary,
-    marginRight: spacing.sm,
-  },
-  heartWrap: {
-    padding: spacing.xs,
-  },
-  heart: {
-    fontSize: 20,
-    color: colors.grey400,
-  },
-  heartSaved: {
-    color: semantic.accentRed,
-  },
-  row2: {
-    marginTop: spacing.sm,
-  },
-  dayTime: {
-    ...typography.caption,
-    color: semantic.textSecondary,
-  },
-  tonightRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    flexWrap: "wrap",
-  },
-  timeEmphasis: {
-    ...typography.displaySmall,
-    fontSize: 17,
-    color: semantic.textPrimary,
-    marginRight: spacing.sm,
-  },
-  tonightBadge: {
-    paddingVertical: spacing.xs,
-    paddingHorizontal: spacing.sm,
-    borderRadius: radius.small,
-    borderWidth: borderWidth.thin,
-    borderColor: semantic.borderPrimary,
-    backgroundColor: semantic.accentOrange,
-  },
-  tonightBadgeText: {
-    ...typography.labelUppercase,
-    color: semantic.textInverse,
-  },
-  nextUpBadge: {
-    marginLeft: spacing.sm,
-    paddingVertical: 2,
-    paddingHorizontal: radius.small,
-    borderRadius: radius.small,
-    borderWidth: borderWidth.thin,
-    borderColor: semantic.borderPrimary,
-    backgroundColor: semantic.accentBlue,
-  },
-  nextUpText: {
-    fontSize: 11,
-    fontWeight: "700",
-    color: semantic.textInverse,
-  },
-  entryPrize: {
-    marginTop: spacing.sm,
-    ...typography.caption,
-    color: semantic.textSecondary,
-  },
-});

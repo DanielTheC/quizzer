@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   Modal,
   View,
@@ -9,7 +9,8 @@ import {
   Linking,
 } from "react-native";
 import Slider from "@react-native-community/slider";
-import { colors, semantic, spacing, radius, borderWidth, shadow, typography } from "../theme";
+import { useAppTheme } from "../context/ThemeContext";
+import { colors, spacing, radius, borderWidth, shadow, typography, websiteCta, type SemanticTheme } from "../theme";
 
 const DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const PRIZE_OPTIONS = ["all", "cash", "bar_tab", "drinks", "voucher", "other"] as const;
@@ -35,6 +36,98 @@ type Props = {
   isTonightMode?: boolean;
 };
 
+function buildFiltersSheetStyles(semantic: SemanticTheme, isDark: boolean) {
+  const handleColor = isDark ? "rgba(168,162,158,0.45)" : colors.grey400;
+  return StyleSheet.create({
+    backdrop: {
+      flex: 1,
+      justifyContent: "flex-end",
+      backgroundColor: "rgba(0,0,0,0.4)",
+    },
+    sheet: {
+      backgroundColor: semantic.bgPrimary,
+      borderTopLeftRadius: radius.brutal,
+      borderTopRightRadius: radius.brutal,
+      borderTopWidth: borderWidth.default,
+      borderLeftWidth: borderWidth.default,
+      borderRightWidth: borderWidth.default,
+      borderColor: semantic.borderPrimary,
+      maxHeight: "85%",
+    },
+    handle: {
+      width: 40,
+      height: 4,
+      borderRadius: 2,
+      backgroundColor: handleColor,
+      alignSelf: "center",
+      marginTop: spacing.md,
+    },
+    header: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      paddingHorizontal: spacing.xl,
+      paddingVertical: spacing.md,
+      borderBottomWidth: borderWidth.default,
+      borderBottomColor: semantic.borderPrimary,
+    },
+    headerTitle: { ...typography.heading, color: semantic.textPrimary },
+    closeBtn: { padding: spacing.sm },
+    closeBtnText: { ...typography.bodyStrong, color: semantic.accentBlue },
+    scroll: { maxHeight: 400 },
+    scrollContent: { padding: spacing.xl, paddingBottom: spacing.xxl },
+    tonightHint: {
+      padding: spacing.md,
+      backgroundColor: semantic.accentYellow,
+      borderRadius: radius.medium,
+      borderWidth: borderWidth.thin,
+      borderColor: semantic.borderPrimary,
+      marginBottom: spacing.sm,
+    },
+    tonightHintText: { ...typography.caption, color: semantic.textPrimary },
+    sectionTitle: { ...typography.labelUppercase, color: semantic.textSecondary, marginBottom: spacing.sm, marginTop: spacing.lg },
+    chipRow: { flexDirection: "row", flexWrap: "wrap", marginBottom: spacing.xs },
+    chip: {
+      paddingVertical: spacing.sm,
+      paddingHorizontal: spacing.md,
+      borderRadius: radius.small,
+      borderWidth: borderWidth.default,
+      borderColor: semantic.borderPrimary,
+      backgroundColor: semantic.bgPrimary,
+      marginRight: spacing.sm,
+      marginBottom: spacing.sm,
+    },
+    chipActive: { backgroundColor: semantic.bgInverse },
+    chipText: { ...typography.captionStrong, color: semantic.textPrimary },
+    chipTextActive: { color: semantic.textInverse },
+    sliderRow: { marginBottom: spacing.sm },
+    sliderLabel: { ...typography.captionStrong, color: semantic.textPrimary, marginBottom: spacing.xs },
+    slider: { width: "100%", height: 32 },
+    settingsHint: { padding: spacing.md, backgroundColor: semantic.accentYellow, borderRadius: radius.small, borderWidth: borderWidth.thin, borderColor: semantic.borderPrimary, marginBottom: spacing.sm },
+    settingsHintText: { ...typography.caption, color: semantic.textPrimary },
+    footer: {
+      flexDirection: "row",
+      padding: spacing.xl,
+      paddingTop: spacing.lg,
+      borderTopWidth: borderWidth.default,
+      borderTopColor: semantic.borderPrimary,
+    },
+    clearBtn: {
+      flex: 1,
+      paddingVertical: spacing.md,
+      marginRight: spacing.md,
+      ...websiteCta.yellow,
+    },
+    clearBtnText: { ...typography.bodyStrong, color: colors.black },
+    applyBtn: {
+      flex: 1,
+      paddingVertical: spacing.md,
+      ...websiteCta.pink,
+    },
+    applyBtnText: { ...typography.bodyStrong, color: colors.white },
+  });
+}
+
 export function NearbyFiltersSheet({
   visible,
   onClose,
@@ -43,6 +136,8 @@ export function NearbyFiltersSheet({
   locationPermission,
   isTonightMode = false,
 }: Props) {
+  const { semantic, isDark } = useAppTheme();
+  const styles = useMemo(() => buildFiltersSheetStyles(semantic, isDark), [semantic, isDark]);
   const [draft, setDraft] = useState<FiltersState>(initialFilters);
 
   useEffect(() => {
@@ -93,32 +188,37 @@ export function NearbyFiltersSheet({
             {isTonightMode ? (
               <View style={styles.tonightHint}>
                 <Text style={styles.tonightHintText}>
-                  Tonight mode shows quizzes happening today. Use filters below to narrow results.
+                  Tonight only lists today’s quizzes. Use the filters below for prize, distance, fee, and saved —
+                  or turn off Tonight on the list to pick days of the week.
                 </Text>
               </View>
             ) : null}
 
-            <Text style={styles.sectionTitle}>Day</Text>
-            <View style={styles.chipRow}>
-              <Pressable
-                style={[styles.chip, draft.selectedDays.length === 0 && styles.chipActive]}
-                onPress={() => setDraft((p) => ({ ...p, selectedDays: [] }))}
-              >
-                <Text style={[styles.chipText, draft.selectedDays.length === 0 && styles.chipTextActive]}>Any</Text>
-              </Pressable>
-              {DAY_LABELS.map((label, idx) => {
-                const active = draft.selectedDays.includes(idx);
-                return (
+            {!isTonightMode ? (
+              <>
+                <Text style={styles.sectionTitle}>Day</Text>
+                <View style={styles.chipRow}>
                   <Pressable
-                    key={label}
-                    style={[styles.chip, active && styles.chipActive]}
-                    onPress={() => toggleDay(idx)}
+                    style={[styles.chip, draft.selectedDays.length === 0 && styles.chipActive]}
+                    onPress={() => setDraft((p) => ({ ...p, selectedDays: [] }))}
                   >
-                    <Text style={[styles.chipText, active && styles.chipTextActive]}>{label}</Text>
+                    <Text style={[styles.chipText, draft.selectedDays.length === 0 && styles.chipTextActive]}>Any</Text>
                   </Pressable>
-                );
-              })}
-            </View>
+                  {DAY_LABELS.map((label, idx) => {
+                    const active = draft.selectedDays.includes(idx);
+                    return (
+                      <Pressable
+                        key={label}
+                        style={[styles.chip, active && styles.chipActive]}
+                        onPress={() => toggleDay(idx)}
+                      >
+                        <Text style={[styles.chipText, active && styles.chipTextActive]}>{label}</Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              </>
+            ) : null}
 
             <Text style={styles.sectionTitle}>Prize</Text>
             <View style={styles.chipRow}>
@@ -179,8 +279,8 @@ export function NearbyFiltersSheet({
                   setDraft((p) => ({ ...p, maxFeePounds: v === 0 ? "" : String(Math.round(v)) }))
                 }
                 minimumTrackTintColor={semantic.borderPrimary}
-                maximumTrackTintColor={colors.grey200}
-                thumbTintColor={semantic.borderPrimary}
+                maximumTrackTintColor={isDark ? "rgba(168,162,158,0.35)" : colors.grey200}
+                thumbTintColor={semantic.accentYellow}
               />
             </View>
 
@@ -208,102 +308,3 @@ export function NearbyFiltersSheet({
     </Modal>
   );
 }
-
-const styles = StyleSheet.create({
-  backdrop: {
-    flex: 1,
-    justifyContent: "flex-end",
-    backgroundColor: "rgba(0,0,0,0.4)",
-  },
-  sheet: {
-    backgroundColor: semantic.bgPrimary,
-    borderTopLeftRadius: radius.xl,
-    borderTopRightRadius: radius.xl,
-    borderTopWidth: borderWidth.default,
-    borderLeftWidth: borderWidth.default,
-    borderRightWidth: borderWidth.default,
-    borderColor: semantic.borderPrimary,
-    maxHeight: "85%",
-  },
-  handle: {
-    width: 40,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: colors.grey400,
-    alignSelf: "center",
-    marginTop: spacing.md,
-  },
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.md,
-    borderBottomWidth: borderWidth.default,
-    borderBottomColor: semantic.borderPrimary,
-  },
-  headerTitle: { ...typography.heading, color: semantic.textPrimary },
-  closeBtn: { padding: spacing.sm },
-  closeBtnText: { ...typography.bodyStrong, color: semantic.accentBlue },
-  scroll: { maxHeight: 400 },
-  scrollContent: { padding: spacing.xl, paddingBottom: spacing.xxl },
-  tonightHint: {
-    padding: spacing.md,
-    backgroundColor: semantic.accentYellow,
-    borderRadius: radius.medium,
-    borderWidth: borderWidth.thin,
-    borderColor: semantic.borderPrimary,
-    marginBottom: spacing.sm,
-  },
-  tonightHintText: { ...typography.caption, color: semantic.textPrimary },
-  sectionTitle: { ...typography.labelUppercase, color: semantic.textSecondary, marginBottom: spacing.sm, marginTop: spacing.lg },
-  chipRow: { flexDirection: "row", flexWrap: "wrap", marginBottom: spacing.xs },
-  chip: {
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    borderRadius: radius.small,
-    borderWidth: borderWidth.default,
-    borderColor: semantic.borderPrimary,
-    backgroundColor: semantic.bgPrimary,
-    marginRight: spacing.sm,
-    marginBottom: spacing.sm,
-  },
-  chipActive: { backgroundColor: semantic.bgInverse },
-  chipText: { ...typography.captionStrong, color: semantic.textPrimary },
-  chipTextActive: { color: semantic.textInverse },
-  sliderRow: { marginBottom: spacing.sm },
-  sliderLabel: { ...typography.captionStrong, color: semantic.textPrimary, marginBottom: spacing.xs },
-  slider: { width: "100%", height: 32 },
-  settingsHint: { padding: spacing.md, backgroundColor: semantic.accentYellow, borderRadius: radius.small, borderWidth: borderWidth.thin, borderColor: semantic.borderPrimary, marginBottom: spacing.sm },
-  settingsHintText: { ...typography.caption, color: semantic.textPrimary },
-  footer: {
-    flexDirection: "row",
-    padding: spacing.xl,
-    paddingTop: spacing.lg,
-    borderTopWidth: borderWidth.default,
-    borderTopColor: semantic.borderPrimary,
-  },
-  clearBtn: {
-    flex: 1,
-    paddingVertical: spacing.md,
-    borderRadius: radius.medium,
-    borderWidth: borderWidth.default,
-    borderColor: semantic.borderPrimary,
-    backgroundColor: semantic.bgPrimary,
-    alignItems: "center",
-    marginRight: spacing.md,
-    ...shadow.small,
-  },
-  clearBtnText: { ...typography.bodyStrong, color: semantic.textSecondary },
-  applyBtn: {
-    flex: 1,
-    paddingVertical: spacing.md,
-    borderRadius: radius.medium,
-    borderWidth: borderWidth.default,
-    borderColor: semantic.borderPrimary,
-    backgroundColor: semantic.accentYellow,
-    alignItems: "center",
-    ...shadow.small,
-  },
-  applyBtnText: { ...typography.bodyStrong, color: semantic.textPrimary },
-});

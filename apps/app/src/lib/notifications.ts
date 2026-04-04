@@ -16,13 +16,9 @@ Notifications.setNotificationHandler({
 const QUIZZER_CHANNEL_ID = "quizzer-quiz-reminders";
 const QUIZZER_IDENTIFIER_PREFIX = "quizzer-quiz-";
 
-export type QuizEventForNotification = {
-  id: string;
-  day_of_week: number;
-  start_time: string;
-  entry_fee_pence: number;
-  prize: string;
-  venues: { name: string } | null;
+/** Payload for handling taps (see `navigateToSavedQuizDetail`). */
+export type QuizNotificationData = {
+  quizEventId?: string;
 };
 
 export type ScheduleOptions = {
@@ -54,9 +50,7 @@ export async function requestPermissions(): Promise<boolean> {
 /** Cancel all notifications we scheduled (same identifier prefix). */
 export async function cancelAllQuizzerNotifications(): Promise<void> {
   const scheduled = await Notifications.getAllScheduledNotificationsAsync();
-  const ours = scheduled.filter((n) =>
-    String(n.identifier).startsWith(QUIZZER_IDENTIFIER_PREFIX)
-  );
+  const ours = scheduled.filter((n) => String(n.identifier).startsWith(QUIZZER_IDENTIFIER_PREFIX));
   await Promise.all(ours.map((n) => Notifications.cancelScheduledNotificationAsync(String(n.identifier))));
 }
 
@@ -68,6 +62,19 @@ async function ensureChannel(): Promise<void> {
       importance: Notifications.AndroidImportance.DEFAULT,
     });
   }
+}
+
+type QuizRow = {
+  id: string;
+  day_of_week: number;
+  start_time: string;
+  entry_fee_pence: number;
+  prize: string;
+  venues: { name: string } | null;
+};
+
+function androidChannel(): { channelId: string } | undefined {
+  return Platform.OS === "android" ? { channelId: QUIZZER_CHANNEL_ID } : undefined;
 }
 
 /**
@@ -92,8 +99,8 @@ export async function scheduleTodaysQuizNotifications(
 
   if (error || !data?.length) return;
 
-  let events = (data as QuizEventForNotification[]).slice();
-  // Optional: filter by distance if onlyWithinMiles and userLatLng provided (MVP: skip if no coords)
+  let events = data as unknown as QuizRow[];
+
   if (
     options.onlyWithinMiles != null &&
     options.onlyWithinMiles > 0 &&
@@ -105,17 +112,14 @@ export async function scheduleTodaysQuizNotifications(
       .from("quiz_events")
       .select("id, venues ( lat, lng )")
       .in("id", events.map((e) => e.id));
-    const withCoords = (withVenues ?? []) as {
-      id: string;
-      venues: { lat: number | null; lng: number | null } | null;
-    }[];
+    type VenueRow = { id: string; venues: { lat: number | null; lng: number | null } | null };
+    const withCoords = (withVenues ?? []) as unknown as VenueRow[];
     const byId = new Map(withCoords.map((r) => [r.id, r.venues]));
     events = events.filter((e) => {
       const v = byId.get(e.id);
       const lat = v?.lat;
       const lng = v?.lng;
-      if (lat == null || lng == null || !Number.isFinite(lat) || !Number.isFinite(lng))
-        return true;
+      if (lat == null || lng == null || !Number.isFinite(lat) || !Number.isFinite(lng)) return true;
       const miles = haversineMiles(options.userLatLng!.lat, options.userLatLng!.lng, lat, lng);
       return miles <= options.onlyWithinMiles!;
     });
@@ -128,7 +132,12 @@ export async function scheduleTodaysQuizNotifications(
   const [h, m] = options.notifyTime.split(":").map(Number);
   const triggerDate = new Date();
   triggerDate.setHours(Number.isFinite(h) ? h : 12, Number.isFinite(m) ? m : 0, 0, 0);
-  if (triggerDate <= new Date()) triggerDate.setDate(triggerDate.getDate() + 1);
+
+  if (triggerDate.getTime() <= Date.now()) {
+    return;
+  }
+
+  const android = androidChannel();
 
   if (events.length === 1) {
     const e = events[0];
@@ -139,12 +148,13 @@ export async function scheduleTodaysQuizNotifications(
         : e.entry_fee_pence === 0
           ? "Free"
           : `£${(e.entry_fee_pence / 100).toFixed(2)}`;
-    const body = `${venue} at ${formatTime(e.start_time)}. Entry ${fee}. Prize: ${prizeLabel(e.prize ?? "")}.`;
+    const body = `${venue} at ${formatTime(e.start_time)}. Entry ${fee}. Prize: ${prizeLabel(e.prize ?? "")}. Tap to open.`;
     await Notifications.scheduleNotificationAsync({
       content: {
-        title: "Quiz tonight",
+        title: "Saved quiz today",
         body,
-        channelId: QUIZZER_CHANNEL_ID,
+        data: { quizEventId: e.id } satisfies QuizNotificationData,
+        ...(android ? { android } : {}),
       },
       trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: triggerDate },
       identifier: `${QUIZZER_IDENTIFIER_PREFIX}${e.id}`,
@@ -152,20 +162,18 @@ export async function scheduleTodaysQuizNotifications(
     return;
   }
 
-  // Multiple: one summary (soonest first)
-  const sorted = [...events].sort((a, b) =>
-    String(a.start_time).localeCompare(String(b.start_time))
-  );
+  const sorted = [...events].sort((a, b) => String(a.start_time).localeCompare(String(b.start_time)));
   const toNotify = sorted.slice(0, 3);
   const summaryBody =
     toNotify.length === events.length
-      ? `${events.length} quizzes tonight. Open Quizzer to see times and venues.`
-      : `${toNotify.length} quizzes tonight (soonest first). Open Quizzer for more.`;
+      ? `${events.length} saved quizzes today. Tap to pick one from Saved.`
+      : `${toNotify.length} saved quizzes today (soonest first). Tap to open Saved.`;
   await Notifications.scheduleNotificationAsync({
     content: {
-      title: "Quizzes tonight",
+      title: "Saved quizzes today",
       body: summaryBody,
-      channelId: QUIZZER_CHANNEL_ID,
+      data: { quizEventId: sorted[0]?.id } satisfies QuizNotificationData,
+      ...(android ? { android } : {}),
     },
     trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: triggerDate },
     identifier: `${QUIZZER_IDENTIFIER_PREFIX}summary`,
@@ -176,9 +184,7 @@ export async function scheduleTodaysQuizNotifications(
  * If notifications are enabled, schedule today's quiz reminders; otherwise cancel all.
  * Call on app launch and when saved list or notification settings change.
  */
-export async function scheduleQuizNotificationsIfEnabled(
-  savedIds: string[]
-): Promise<void> {
+export async function scheduleQuizNotificationsIfEnabled(savedIds: string[]): Promise<void> {
   const prefs = await getNotificationPreferences();
   if (!prefs.notifyEnabled) {
     await cancelAllQuizzerNotifications();

@@ -8,7 +8,8 @@ import {
 } from "react-native";
 import { setStoredRole } from "../lib/roleStorage";
 import type { QuizzerRole } from "../lib/roleStorage";
-import { semantic, spacing, radius, borderWidth, shadow, typography } from "../theme";
+import { ScreenTitle } from "../components/ScreenTitle";
+import { semantic, spacing, radius, borderWidth, shadow } from "../theme";
 
 type Props = {
   onSelect: (role: QuizzerRole) => void;
@@ -21,8 +22,16 @@ export default function RoleSelectScreen({ onSelect }: Props) {
 
   return (
     <SafeAreaView style={styles.container}>
+      <View style={styles.topStripe} accessibilityRole="none">
+        <View style={styles.topStripeBlack} />
+        <View style={styles.topStripeYellow} />
+      </View>
       <View style={styles.content}>
-        <Text style={styles.title}>Welcome to Quizzer</Text>
+        <View style={styles.heroTitleWrap}>
+          <ScreenTitle variant="hero" subtitle="Pick how you use the app — you can change this anytime.">
+            Welcome to Quizzer
+          </ScreenTitle>
+        </View>
 
         <Pressable
           style={({ pressed }) => [styles.primaryButton, pressed && { transform: [{ translateY: 2 }], shadowOffset: { width: 1, height: 1 } }]}
@@ -40,6 +49,11 @@ export default function RoleSelectScreen({ onSelect }: Props) {
           <Text style={styles.secondaryButtonSubtitle}>Run consistent quiz nights</Text>
         </Pressable>
 
+        <Text style={styles.hostHint}>
+          New to hosting here? Pick Host, then use <Text style={styles.hostHintEm}>Apply for host access</Text> on the next screen if your account
+          isn’t approved yet.
+        </Text>
+
         <Text style={styles.note}>You can change this later in Settings.</Text>
       </View>
     </SafeAreaView>
@@ -48,13 +62,11 @@ export default function RoleSelectScreen({ onSelect }: Props) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: semantic.bgSecondary },
+  topStripe: { flexDirection: "row", height: 8 },
+  topStripeBlack: { flex: 1, backgroundColor: semantic.bgInverse },
+  topStripeYellow: { width: 100, backgroundColor: semantic.accentYellow },
   content: { flex: 1, padding: spacing.xxl, justifyContent: "center", alignItems: "stretch" },
-  title: {
-    ...typography.displayLarge,
-    color: semantic.textPrimary,
-    textAlign: "center",
-    marginBottom: 48,
-  },
+  heroTitleWrap: { marginBottom: 40 },
   primaryButton: {
     backgroundColor: semantic.accentYellow,
     paddingVertical: spacing.xxl,
@@ -81,9 +93,15 @@ const styles = StyleSheet.create({
   },
   secondaryButtonText: { color: semantic.textPrimary, fontSize: 20, fontWeight: "700" },
   secondaryButtonSubtitle: { color: semantic.textSecondary, fontSize: 15, marginTop: 6 },
-  note: {
-    ...typography.caption,
+  hostHint: {
+    fontSize: 14,
+    fontWeight: "500",
     color: semantic.textSecondary,
     textAlign: "center",
+    lineHeight: 20,
+    marginBottom: spacing.lg,
+    paddingHorizontal: spacing.sm,
   },
+  hostHintEm: { fontWeight: "700", color: semantic.textPrimary },
+  note: { fontSize: 14, fontWeight: "500", color: semantic.textSecondary, textAlign: "center" },
 });

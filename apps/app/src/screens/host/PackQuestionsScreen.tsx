@@ -13,6 +13,8 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { HostStackParamList } from "../../navigation/RootNavigator";
 import type { QuizPack, QuizQuestion, QuizRound } from "../../lib/quizPack";
 import { getCachedPack, fetchLatestPack } from "../../lib/quizPack";
+import { ScreenTitle } from "../../components/ScreenTitle";
+import { colors, semantic, spacing, radius, borderWidth, shadow, typography } from "../../theme";
 
 export default function PackQuestionsScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<HostStackParamList>>();
@@ -21,7 +23,7 @@ export default function PackQuestionsScreen() {
 
   const [pack, setPack] = useState<QuizPack | null>(null);
   const [loading, setLoading] = useState(true);
-  const [revealed, setRevealed] = useState<Set<string>>(new Set()); // question ids
+  const [revealed, setRevealed] = useState<Set<string>>(new Set());
 
   const loadPack = useCallback(async () => {
     setLoading(true);
@@ -34,6 +36,12 @@ export default function PackQuestionsScreen() {
   useEffect(() => {
     loadPack();
   }, [loadPack]);
+
+  useEffect(() => {
+    if (pack?.name) {
+      navigation.setOptions({ headerTitle: pack.name });
+    }
+  }, [navigation, pack?.name]);
 
   const toggleReveal = useCallback((questionId: string) => {
     setRevealed((prev) => {
@@ -48,7 +56,7 @@ export default function PackQuestionsScreen() {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.centered}>
-          <ActivityIndicator size="large" />
+          <ActivityIndicator size="large" color={semantic.accentYellow} />
           <Text style={styles.loadingText}>Loading pack…</Text>
         </View>
       </SafeAreaView>
@@ -70,16 +78,10 @@ export default function PackQuestionsScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
-        <Text style={styles.packTitle}>{pack.name}</Text>
-        <Text style={styles.packSubtitle}>Host only: tap “Reveal answer” to show answer.</Text>
+      <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <ScreenTitle subtitle="Tap “Reveal answer” when you’re ready to show the answer.">Questions</ScreenTitle>
         {pack.rounds.map((round) => (
-          <RoundBlock
-            key={round.id}
-            round={round}
-            revealed={revealed}
-            onToggleReveal={toggleReveal}
-          />
+          <RoundBlock key={round.id} round={round} revealed={revealed} onToggleReveal={toggleReveal} />
         ))}
       </ScrollView>
     </SafeAreaView>
@@ -128,40 +130,80 @@ function QuestionRow({
         </Pressable>
       </View>
       <Text style={styles.questionText}>{question.question_text}</Text>
-      {question.host_notes ? (
-        <Text style={styles.hostNotes}>Note: {question.host_notes}</Text>
-      ) : null}
-      {isRevealed && (
+      {question.host_notes ? <Text style={styles.hostNotes}>Note: {question.host_notes}</Text> : null}
+      {isRevealed ? (
         <View style={styles.answerBlock}>
           <Text style={styles.answerLabel}>Answer</Text>
-          <Text style={styles.answerText}>{question.answer}</Text>
+          {question.answer.trim() ? (
+            <Text style={styles.answerText}>{question.answer}</Text>
+          ) : (
+            <Text style={styles.answerUnavailable}>
+              No answer loaded. Use an account whose email is on the host allowlist, then reopen the pack.
+            </Text>
+          )}
         </View>
-      )}
+      ) : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#fff" },
+  container: { flex: 1, backgroundColor: semantic.bgSecondary },
   scroll: { flex: 1 },
-  scrollContent: { padding: 24, paddingBottom: 48 },
-  centered: { flex: 1, justifyContent: "center", alignItems: "center" },
-  loadingText: { marginTop: 12, color: "#64748b" },
-  errorText: { color: "#64748b", textAlign: "center", marginBottom: 16 },
-  retryBtn: { padding: 12, backgroundColor: "#e2e8f0", borderRadius: 8 },
-  retryBtnText: { fontWeight: "600", color: "#334155" },
-  packTitle: { fontSize: 22, fontWeight: "700", marginBottom: 4, color: "#111" },
-  packSubtitle: { fontSize: 14, color: "#64748b", marginBottom: 24 },
-  roundBlock: { marginBottom: 24, borderWidth: 1, borderColor: "#e2e8f0", borderRadius: 12, padding: 16 },
-  roundTitle: { fontSize: 17, fontWeight: "700", marginBottom: 12, color: "#1e293b" },
-  questionRow: { marginBottom: 16, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: "#f1f5f9" },
-  questionHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 6 },
-  questionNum: { fontSize: 13, fontWeight: "600", color: "#64748b" },
-  revealBtn: { paddingVertical: 6, paddingHorizontal: 12, backgroundColor: "#2563eb", borderRadius: 8 },
-  revealBtnText: { color: "#fff", fontSize: 13, fontWeight: "600" },
-  questionText: { fontSize: 16, color: "#111", marginBottom: 4 },
-  hostNotes: { fontSize: 13, color: "#64748b", fontStyle: "italic", marginBottom: 6 },
-  answerBlock: { marginTop: 8, padding: 12, backgroundColor: "#f0fdf4", borderRadius: 8, borderLeftWidth: 4, borderLeftColor: "#22c55e" },
-  answerLabel: { fontSize: 12, fontWeight: "600", color: "#166534", marginBottom: 4 },
-  answerText: { fontSize: 16, fontWeight: "600", color: "#166534" },
+  scrollContent: { padding: spacing.xxl, paddingBottom: 48 },
+  centered: { flex: 1, justifyContent: "center", alignItems: "center", padding: spacing.xxl },
+  loadingText: { marginTop: spacing.md, ...typography.body, color: semantic.textSecondary },
+  errorText: { ...typography.body, color: semantic.textSecondary, textAlign: "center", marginBottom: spacing.lg },
+  retryBtn: {
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.xl,
+    backgroundColor: semantic.accentYellow,
+    borderRadius: radius.medium,
+    borderWidth: borderWidth.default,
+    borderColor: semantic.borderPrimary,
+    ...shadow.small,
+  },
+  retryBtnText: { ...typography.bodyStrong, color: semantic.textPrimary },
+  roundBlock: {
+    marginBottom: spacing.xxl,
+    borderWidth: borderWidth.default,
+    borderColor: semantic.borderPrimary,
+    borderRadius: radius.large,
+    padding: spacing.lg,
+    backgroundColor: semantic.bgPrimary,
+    ...shadow.small,
+  },
+  roundTitle: { ...typography.heading, marginBottom: spacing.md, color: semantic.textPrimary },
+  questionRow: {
+    marginBottom: spacing.lg,
+    paddingBottom: spacing.lg,
+    borderBottomWidth: borderWidth.thin,
+    borderBottomColor: colors.grey200,
+  },
+  questionHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: spacing.sm },
+  questionNum: { ...typography.captionStrong, color: semantic.textSecondary },
+  revealBtn: {
+    paddingVertical: spacing.xs + 2,
+    paddingHorizontal: spacing.md,
+    backgroundColor: semantic.accentBlue,
+    borderRadius: radius.small,
+    borderWidth: borderWidth.thin,
+    borderColor: semantic.borderPrimary,
+  },
+  revealBtnText: { color: semantic.textInverse, fontSize: 13, fontWeight: "700" },
+  questionText: { ...typography.body, color: semantic.textPrimary, marginBottom: spacing.xs },
+  hostNotes: { fontSize: 13, color: semantic.textSecondary, fontStyle: "italic", marginBottom: spacing.sm },
+  answerBlock: {
+    marginTop: spacing.sm,
+    padding: spacing.md,
+    backgroundColor: semantic.bgSecondary,
+    borderRadius: radius.medium,
+    borderLeftWidth: 6,
+    borderLeftColor: semantic.accentGreen,
+    borderWidth: borderWidth.thin,
+    borderColor: semantic.borderPrimary,
+  },
+  answerLabel: { ...typography.labelUppercase, fontSize: 11, color: semantic.accentGreen, marginBottom: spacing.xs },
+  answerText: { ...typography.bodyStrong, color: semantic.textPrimary },
+  answerUnavailable: { ...typography.body, fontSize: 14, color: semantic.textSecondary, lineHeight: 20 },
 });

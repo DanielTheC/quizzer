@@ -20,13 +20,12 @@ import {
   setNotificationPreferences,
   type NotificationPreferences,
 } from "../lib/notificationPreferences";
+import { ScreenTitle } from "../components/ScreenTitle";
 import {
   requestPermissions,
   cancelAllQuizzerNotifications,
   scheduleQuizNotificationsIfEnabled,
 } from "../lib/notifications";
-import { useScheduleQuizNotifications } from "../hooks/useScheduleQuizNotifications";
-
 const TIME_PRESETS = ["10:00", "12:00", "14:00"] as const;
 const MILES_OPTIONS = [3, 5, 10] as const;
 
@@ -35,8 +34,6 @@ export default function SettingsScreen() {
   const { role, setRole } = useRole();
   const { clearSaved, savedIds } = useSavedQuizzes();
   const [prefs, setPrefs] = useState<NotificationPreferences | null>(null);
-
-  useScheduleQuizNotifications();
 
   useEffect(() => {
     getNotificationPreferences().then(setPrefs);
@@ -98,7 +95,7 @@ export default function SettingsScreen() {
         if (!granted) {
           Alert.alert(
             "Notifications disabled",
-            "To get reminders for quizzes near you, enable notifications in your device Settings → Quizzer → Notifications.",
+            "To get saved-quiz-day reminders, enable notifications in your device Settings → Quizzer → Notifications.",
             [{ text: "OK" }]
           );
           return;
@@ -114,6 +111,7 @@ export default function SettingsScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScreenTitle subtitle="Account, role, and reminders.">Settings</ScreenTitle>
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Account</Text>
         {user?.email ? (
@@ -141,7 +139,9 @@ export default function SettingsScreen() {
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Notifications</Text>
-        <Text style={styles.sectionDesc}>Quizzes near you tonight</Text>
+        <Text style={styles.sectionDesc}>
+          On days you have a saved quiz, we’ll ping at the time below. Tap the notification to open that quiz.
+        </Text>
         <View style={styles.switchRow}>
           <Text style={styles.switchLabel}>Notify me about saved quizzes</Text>
           <Switch
@@ -210,7 +210,15 @@ export default function SettingsScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: semantic.bgSecondary },
   scrollContent: { padding: spacing.xxl, paddingBottom: 48 },
-  section: { marginBottom: 32 },
+  section: {
+    marginBottom: spacing.xxl,
+    padding: spacing.lg,
+    backgroundColor: semantic.bgPrimary,
+    borderRadius: radius.large,
+    borderWidth: borderWidth.default,
+    borderColor: semantic.borderPrimary,
+    ...shadow.small,
+  },
   sectionTitle: { ...typography.labelUppercase, color: semantic.textSecondary, marginBottom: spacing.sm },
   sectionDesc: { ...typography.caption, color: semantic.textSecondary, marginBottom: spacing.md },
   currentRole: { ...typography.body, color: semantic.textPrimary, marginBottom: spacing.md },

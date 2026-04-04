@@ -2,6 +2,8 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useS
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "../lib/supabase";
 import { signInWithGoogle } from "../lib/auth/googleSignIn";
+import { clearPackCache } from "../lib/quizPack";
+import { createDevBypassSession, isDevAuthBypassEnabled } from "../lib/devAuthBypass";
 
 type AuthContextValue = {
   session: Session | null;
@@ -17,10 +19,20 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
-  const [initializing, setInitializing] = useState(true);
+  const [bypassSuspended, setBypassSuspended] = useState(false);
+  const devBypassActive = isDevAuthBypassEnabled() && !bypassSuspended;
+  const [initializing, setInitializing] = useState(() => !isDevAuthBypassEnabled());
+
+  const devSession = useMemo(() => createDevBypassSession(), []);
 
   useEffect(() => {
+    if (devBypassActive) {
+      setInitializing(false);
+      return;
+    }
+
     let mounted = true;
+    setInitializing(true);
 
     supabase.auth.getSession().then(({ data: { session: s } }) => {
       if (mounted) {
@@ -39,7 +51,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       mounted = false;
       subscription.unsubscribe();
     };
-  }, []);
+  }, [devBypassActive]);
 
   const signInWithEmail = useCallback(async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
@@ -59,20 +71,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signOut = useCallback(async () => {
+    if (isDevAuthBypassEnabled() && !bypassSuspended) {
+      setBypassSuspended(true);
+      return;
+    }
+    await clearPackCache();
     await supabase.auth.signOut();
-  }, []);
+  }, [bypassSuspended]);
 
   const value = useMemo<AuthContextValue>(
     () => ({
-      session,
-      user: session?.user ?? null,
+      session: devBypassActive ? devSession : session,
+      user: devBypassActive ? devSession.user : session?.user ?? null,
       initializing,
       signInWithEmail,
       signUpWithEmail,
       signInWithGoogle: signInWithGoogleOAuth,
       signOut,
     }),
-    [session, initializing, signInWithEmail, signUpWithEmail, signInWithGoogleOAuth, signOut]
+    [
+      devBypassActive,
+      devSession,
+      session,
+      initializing,
+      signInWithEmail,
+      signUpWithEmail,
+      signInWithGoogleOAuth,
+      signOut,
+    ]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

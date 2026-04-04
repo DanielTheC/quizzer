@@ -28,6 +28,36 @@ export type QuizPack = {
   rounds: QuizRound[];
 };
 
+type QuestionRow = {
+  id: string;
+  quiz_round_id: string;
+  question_number: number;
+  question_text: string;
+  host_notes: string | null;
+  quiz_answers: { answer: string } | { answer: string }[] | null;
+};
+
+function answerFromEmbed(rel: QuestionRow["quiz_answers"]): string {
+  if (rel == null) return "";
+  if (Array.isArray(rel)) return rel[0]?.answer ?? "";
+  return rel.answer ?? "";
+}
+
+/** Labels for score indices 0–7 (rounds 1–8) and 8 (picture / round 9). Uses pack titles when present. */
+export function buildRoundLabelsFromPack(pack: QuizPack | null | undefined): string[] {
+  const rounds = pack?.rounds ?? [];
+  const byNum = new Map(rounds.map((r) => [r.round_number, String(r.title ?? "").trim()]));
+  const labels: string[] = [];
+  for (let i = 0; i < 8; i++) {
+    const n = i + 1;
+    const t = byNum.get(n);
+    labels.push(t && t.length > 0 ? t : `Round ${n}`);
+  }
+  const pic = byNum.get(9);
+  labels.push(pic && pic.length > 0 ? pic : "Picture round");
+  return labels;
+}
+
 export async function fetchLatestPack(): Promise<QuizPack | null> {
   const { data: packs, error } = await supabase
     .from("quiz_packs")
@@ -51,11 +81,19 @@ export async function fetchLatestPack(): Promise<QuizPack | null> {
   const roundIds = (roundsData as { id: string }[]).map((r) => r.id);
   const { data: questionsData, error: questionsError } = await supabase
     .from("quiz_questions")
-    .select("id, quiz_round_id, question_number, question_text, host_notes, answer")
+    .select("id, quiz_round_id, question_number, question_text, host_notes, quiz_answers(answer)")
     .in("quiz_round_id", roundIds)
     .order("question_number", { ascending: true });
 
-  const questions = (questionsError ? [] : (questionsData ?? [])) as QuizQuestion[];
+  const raw = (questionsError ? [] : (questionsData ?? [])) as QuestionRow[];
+  const questions: QuizQuestion[] = raw.map((row) => ({
+    id: row.id,
+    quiz_round_id: row.quiz_round_id,
+    question_number: row.question_number,
+    question_text: row.question_text,
+    host_notes: row.host_notes,
+    answer: answerFromEmbed(row.quiz_answers),
+  }));
   const rounds: QuizRound[] = (roundsData as QuizRound[]).map((r) => ({
     ...r,
     questions: questions.filter((q) => q.quiz_round_id === r.id),
@@ -79,6 +117,15 @@ export async function getCachedPack(packId: string): Promise<QuizPack | null> {
 
 export async function setCachedPack(pack: QuizPack): Promise<void> {
   await AsyncStorage.setItem(CACHE_KEY_PREFIX + pack.id, JSON.stringify(pack));
+}
+
+/** Clears cached pack JSON (e.g. on sign-out so answers are not left on device). */
+export async function clearPackCache(): Promise<void> {
+  const keys = await AsyncStorage.getAllKeys();
+  const packKeys = keys.filter((k) => k.startsWith(CACHE_KEY_PREFIX) || k === LATEST_PACK_ID_KEY);
+  if (packKeys.length > 0) {
+    await AsyncStorage.multiRemove(packKeys);
+  }
 }
 
 /** Get latest pack: from cache if id matches, else fetch and cache. */

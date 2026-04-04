@@ -1,8 +1,14 @@
-import React, { Component, ErrorInfo, ReactNode } from "react";
+import React, { Component, ErrorInfo, ReactNode, useEffect } from "react";
 import { StyleSheet, Text, View } from "react-native";
+import { useFonts, Anton_400Regular } from "@expo-google-fonts/anton";
+import * as SplashScreen from "expo-splash-screen";
 import { AuthProvider } from "./src/context/AuthContext";
 import { SavedQuizzesProvider } from "./src/context/SavedQuizzesContext";
+import { ThemeProvider } from "./src/context/ThemeContext";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 import RootNavigator from "./src/navigation/RootNavigator";
+
+void SplashScreen.preventAutoHideAsync();
 
 type Props = { children: ReactNode };
 type State = { error: Error | null };
@@ -43,6 +49,34 @@ const styles = StyleSheet.create({
   errorText: { fontSize: 14, color: "#666", textAlign: "center" },
 });
 
+function AppRoot() {
+  const [fontsLoaded] = useFonts({ Anton_400Regular });
+
+  useEffect(() => {
+    if (fontsLoaded) {
+      void SplashScreen.hideAsync();
+    }
+  }, [fontsLoaded]);
+
+  if (!fontsLoaded) {
+    return null;
+  }
+
+  return (
+    <ErrorBoundary>
+      <SafeAreaProvider>
+        <ThemeProvider>
+          <AuthProvider>
+            <SavedQuizzesProvider>
+              <RootNavigator />
+            </SavedQuizzesProvider>
+          </AuthProvider>
+        </ThemeProvider>
+      </SafeAreaProvider>
+    </ErrorBoundary>
+  );
+}
+
 export default function App() {
   if (typeof RootNavigator !== "function") {
     return (
@@ -52,13 +86,5 @@ export default function App() {
       </View>
     );
   }
-  return (
-    <ErrorBoundary>
-      <AuthProvider>
-        <SavedQuizzesProvider>
-          <RootNavigator />
-        </SavedQuizzesProvider>
-      </AuthProvider>
-    </ErrorBoundary>
-  );
+  return <AppRoot />;
 }
