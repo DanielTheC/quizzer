@@ -28,6 +28,7 @@ import {
   getBonusAppliedState,
   DEFAULT_STATE,
 } from "../../lib/runQuizStorage";
+import { supabase } from "../../lib/supabase";
 import { buildRoundLabelsFromPack, getCachedPack } from "../../lib/quizPack";
 import { ScreenTitle } from "../../components/ScreenTitle";
 import { colors, semantic, spacing, radius, borderWidth, shadow, typography } from "../../theme";
@@ -168,17 +169,31 @@ export default function RunQuizScreen() {
         style: "destructive",
         onPress: async () => {
           if (state.phase === "results") {
+            const totalPlayerCount = state.teams.reduce(
+              (sum, t) => sum + (parseInt(t.playerCount, 10) || 0),
+              0
+            );
+            const teamCount = state.teams.length;
             await recordHostCompletedSession({
               venueId: state.venueId,
               packId: state.packId,
             }).catch(() => {});
+            void supabase
+              .rpc("record_host_quiz_session", {
+                p_venue_id: state.venueId,
+                p_pack_id: state.packId,
+                p_team_count: teamCount,
+                p_total_player_count: totalPlayerCount,
+              })
+              .then(() => {})
+              .catch(() => {});
           }
           await clearRunQuizState();
           navigation.navigate("HostSetup");
         },
       },
     ]);
-  }, [navigation, state.phase, state.venueId, state.packId]);
+  }, [navigation, state.phase, state.venueId, state.packId, state.teams]);
 
   const resetNight = useCallback(() => {
     Alert.alert("Reset night", "Clear all quiz state and return to setup? This cannot be undone.", [
