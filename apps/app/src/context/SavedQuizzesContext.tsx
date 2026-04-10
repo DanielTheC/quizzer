@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { AppState, type AppStateStatus } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import NetInfo from "@react-native-community/netinfo";
@@ -176,9 +176,11 @@ export function SavedQuizzesProvider({ children }: { children: React.ReactNode }
     })();
   }, [session, skipRemote]);
 
+  const savedIdsSet = useMemo(() => new Set(savedIds), [savedIds]);
+
   const isSaved = useCallback(
-    (id: string) => savedIds.includes(id),
-    [savedIds]
+    (id: string) => savedIdsSet.has(id),
+    [savedIdsSet]
   );
 
   const addSaved = useCallback(
