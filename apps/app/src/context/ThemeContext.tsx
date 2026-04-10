@@ -9,8 +9,8 @@ import {
   type DetailScreenTheme,
 } from "../theme";
 
-/** Set false to follow system appearance again. */
-const FORCE_LIGHT_MODE = true;
+/** Follow system appearance (dark/light mode). */
+const FORCE_LIGHT_MODE = false;
 
 export type AppTheme = {
   semantic: SemanticTheme;

@@ -1,7 +1,9 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "../lib/supabase";
+import { signInWithApple } from "../lib/auth/appleSignIn";
 import { signInWithGoogle } from "../lib/auth/googleSignIn";
+import { normalizePhoneE164, requestPhoneOtp, verifyPhoneOtp } from "../lib/auth/phoneAuth";
 import { clearPackCache } from "../lib/quizPack";
 import { createDevBypassSession, isDevAuthBypassEnabled } from "../lib/devAuthBypass";
 
@@ -12,6 +14,10 @@ type AuthContextValue = {
   signInWithEmail: (email: string, password: string) => Promise<{ error: Error | null }>;
   signUpWithEmail: (email: string, password: string) => Promise<{ error: Error | null }>;
   signInWithGoogle: () => Promise<{ error: Error | null }>;
+  signInWithApple: () => Promise<{ error: Error | null }>;
+  /** `phone` can include spaces; normalised to E.164 (UK `0…` → `+44…`). */
+  requestPhoneOtp: (phone: string) => Promise<{ error: Error | null }>;
+  verifyPhoneOtp: (phone: string, token: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
 };
 
@@ -34,12 +40,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     let mounted = true;
     setInitializing(true);
 
-    supabase.auth.getSession().then(({ data: { session: s } }) => {
-      if (mounted) {
-        setSession(s);
-        setInitializing(false);
-      }
-    });
+    void supabase.auth
+      .getSession()
+      .then(({ data: { session: s } }) => {
+        if (mounted) setSession(s);
+      })
+      .catch((e) => {
+        if (__DEV__) console.warn("auth getSession:", e);
+        if (mounted) setSession(null);
+      })
+      .finally(() => {
+        if (mounted) setInitializing(false);
+      });
 
     const {
       data: { subscription },
@@ -70,6 +82,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return signInWithGoogle();
   }, []);
 
+  const signInWithAppleOAuth = useCallback(async () => {
+    return signInWithApple();
+  }, []);
+
+  const requestPhoneOtpCb = useCallback(async (phone: string) => {
+    const e164 = normalizePhoneE164(phone);
+    if (!e164 || e164.length < 10) {
+      return { error: new Error("Enter a valid mobile number (include country code or start with 0 for UK).") };
+    }
+    return requestPhoneOtp(e164);
+  }, []);
+
+  const verifyPhoneOtpCb = useCallback(async (phone: string, token: string) => {
+    const e164 = normalizePhoneE164(phone);
+    if (!e164) {
+      return { error: new Error("Missing phone number.") };
+    }
+    return verifyPhoneOtp(e164, token);
+  }, []);
+
   const signOut = useCallback(async () => {
     // Leaving dev bypass must also clear any real Supabase session in storage — otherwise
     // getSession() immediately restores it and sign-out appears to do nothing.
@@ -91,6 +123,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       signInWithEmail,
       signUpWithEmail,
       signInWithGoogle: signInWithGoogleOAuth,
+      signInWithApple: signInWithAppleOAuth,
+      requestPhoneOtp: requestPhoneOtpCb,
+      verifyPhoneOtp: verifyPhoneOtpCb,
       signOut,
     }),
     [
@@ -101,6 +136,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       signInWithEmail,
       signUpWithEmail,
       signInWithGoogleOAuth,
+      signInWithAppleOAuth,
+      requestPhoneOtpCb,
+      verifyPhoneOtpCb,
       signOut,
     ]
   );

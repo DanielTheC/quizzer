@@ -19,6 +19,7 @@ import {
   loadRunQuizState,
   saveRunQuizState,
   clearRunQuizState,
+  recordHostCompletedSession,
   createTeam,
   getEmptyScores,
   getTeamDisplayName,
@@ -38,7 +39,7 @@ const LEADERBOARD_PRIZES: Record<number, { badge: string; prize: string }> = {
   3: { badge: "3rd place", prize: "£15 bar tab" },
 };
 
-const PODIUM_GOLD = "#FFD400";
+const PODIUM_GOLD = colors.yellow;
 const PODIUM_SILVER = "#E2E8F0";
 const PODIUM_BRONZE = "#E8A87C";
 
@@ -102,7 +103,7 @@ export default function RunQuizScreen() {
   }, [state, persist]);
 
   const updateTeam = useCallback(
-    (id: string, patch: Partial<Pick<RunQuizTeam, "name" | "tableNumber" | "bonusRound" | "scores">>) => {
+    (id: string, patch: Partial<Pick<RunQuizTeam, "name" | "playerCount" | "bonusRound" | "scores">>) => {
       const teams = state.teams.map((t) =>
         t.id === id ? { ...t, ...patch } : t
       );
@@ -166,12 +167,18 @@ export default function RunQuizScreen() {
         text: "End quiz",
         style: "destructive",
         onPress: async () => {
+          if (state.phase === "results") {
+            await recordHostCompletedSession({
+              venueId: state.venueId,
+              packId: state.packId,
+            }).catch(() => {});
+          }
           await clearRunQuizState();
           navigation.navigate("HostSetup");
         },
       },
     ]);
-  }, [navigation]);
+  }, [navigation, state.phase, state.venueId, state.packId]);
 
   const resetNight = useCallback(() => {
     Alert.alert("Reset night", "Clear all quiz state and return to setup? This cannot be undone.", [
@@ -359,28 +366,58 @@ function TeamsPhase({
   onRemoveTeam: (id: string) => void;
   onStartQuiz: () => void;
 }) {
+  const nameRefs = useRef<(RNTextInput | null)[]>([]);
+  const playerRefs = useRef<(RNTextInput | null)[]>([]);
+
+  useEffect(() => {
+    nameRefs.current = nameRefs.current.slice(0, teams.length);
+    playerRefs.current = playerRefs.current.slice(0, teams.length);
+  }, [teams.length]);
+
   return (
     <View style={styles.phase}>
       <Text style={styles.phaseTitle}>Teams</Text>
       <Text style={styles.phaseSubtitle}>
-        Add teams (names are optional—suggestions show as placeholders). Bonus rounds are chosen on the next screen.
+        Add teams (names are optional—suggestions show as placeholders). Enter how many players per team. Bonus rounds are
+        chosen on the next screen.
       </Text>
       {teams.map((t, index) => (
         <View key={t.id} style={styles.teamCard}>
           <TextInput
+            ref={(el) => {
+              nameRefs.current[index] = el;
+            }}
             style={styles.teamNameInput}
             value={t.name}
             onChangeText={(name) => onUpdateTeam(t.id, { name })}
             placeholder={`Team ${index + 1}`}
             placeholderTextColor={colors.grey400}
+            returnKeyType="next"
+            submitBehavior="submit"
+            onSubmitEditing={() => {
+              setTimeout(() => playerRefs.current[index]?.focus(), 0);
+            }}
           />
           <TextInput
-            style={styles.tableInput}
-            value={t.tableNumber}
-            onChangeText={(tableNumber) => onUpdateTeam(t.id, { tableNumber })}
-            placeholder="Table #"
+            ref={(el) => {
+              playerRefs.current[index] = el;
+            }}
+            style={styles.playerCountInput}
+            value={t.playerCount}
+            onChangeText={(text) => {
+              const digits = text.replace(/[^0-9]/g, "");
+              onUpdateTeam(t.id, { playerCount: digits.slice(0, 3) });
+            }}
+            placeholder="Players"
             placeholderTextColor={colors.grey400}
-            keyboardType="number-pad"
+            keyboardType="numeric"
+            returnKeyType={index < teams.length - 1 ? "next" : "done"}
+            submitBehavior="submit"
+            onSubmitEditing={() => {
+              const nextIndex = index + 1;
+              if (nextIndex >= teams.length) return;
+              setTimeout(() => nameRefs.current[nextIndex]?.focus(), 0);
+            }}
           />
           <Pressable style={styles.removeBtn} onPress={() => onRemoveTeam(t.id)}>
             <Text style={styles.removeBtnText}>Remove</Text>
@@ -550,8 +587,10 @@ function LeaderboardPhase({
               </View>
               <View style={styles.leaderCardMain}>
                 <Text style={styles.leaderCardName}>{getTeamDisplayName(team, origIndex)}</Text>
-                {team.tableNumber ? (
-                  <Text style={styles.leaderTableSmall}>Table {team.tableNumber}</Text>
+                {team.playerCount ? (
+                  <Text style={styles.leaderTableSmall}>
+                    {team.playerCount} {team.playerCount === "1" ? "player" : "players"}
+                  </Text>
                 ) : null}
                 <View
                   style={[
@@ -825,7 +864,14 @@ const styles = StyleSheet.create({
     ...shadow.small,
   },
   teamNameInput: { flex: 1, fontSize: 16, padding: spacing.sm + 2, color: semantic.textPrimary },
-  tableInput: { width: 76, fontSize: 16, padding: spacing.sm + 2, marginLeft: spacing.sm, color: semantic.textPrimary },
+  playerCountInput: {
+    width: 88,
+    fontSize: 16,
+    padding: spacing.sm + 2,
+    marginLeft: spacing.sm,
+    color: semantic.textPrimary,
+    textAlign: "center",
+  },
   removeBtn: { padding: spacing.sm },
   removeBtnText: { color: semantic.danger, ...typography.captionStrong },
   addTeamBtn: {
@@ -956,17 +1002,17 @@ const styles = StyleSheet.create({
   podiumRow1: {
     backgroundColor: PODIUM_GOLD,
     borderLeftWidth: 6,
-    borderLeftColor: "#B8860B",
+    borderLeftColor: colors.black,
   },
   podiumRow2: {
     backgroundColor: PODIUM_SILVER,
     borderLeftWidth: 6,
-    borderLeftColor: "#94A3B8",
+    borderLeftColor: colors.grey400,
   },
   podiumRow3: {
     backgroundColor: PODIUM_BRONZE,
     borderLeftWidth: 6,
-    borderLeftColor: "#A16207",
+    borderLeftColor: colors.grey700,
   },
   leaderCardTop: {
     flexDirection: "row",

@@ -1,7 +1,6 @@
 import React, { useCallback, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -18,49 +17,76 @@ import { borderWidth, colors, radius, semantic, shadow, spacing, typography } fr
 
 type Props = NativeStackScreenProps<AuthStackParamList, "SignUp">;
 
+function friendlySignUpError(message: string): string {
+  const lower = message.toLowerCase();
+  if (lower.includes("already registered") || lower.includes("already exists") || lower.includes("duplicate")) {
+    return "An account with this email already exists. Try signing in instead.";
+  }
+  if (lower.includes("rate limit") || lower.includes("too many")) {
+    return "Too many attempts. Please wait a moment and try again.";
+  }
+  if (lower.includes("network") || lower.includes("fetch")) {
+    return "No internet connection. Check your network and try again.";
+  }
+  return "Could not create account. Please try again.";
+}
+
 export default function SignUpScreen({ navigation }: Props) {
-  const { signUpWithEmail, signInWithGoogle } = useAuth();
+  const { signUpWithEmail, signInWithGoogle, signInWithApple } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [googleBusy, setGoogleBusy] = useState(false);
+  const [appleBusy, setAppleBusy] = useState(false);
 
   const onSubmit = useCallback(async () => {
+    setErrorMsg(null);
     if (!email.trim() || !password) {
-      Alert.alert("Missing details", "Enter your email and a password.");
+      setErrorMsg("Enter your email and a password.");
       return;
     }
     if (password.length < 6) {
-      Alert.alert("Password too short", "Use at least 6 characters.");
+      setErrorMsg("Password must be at least 6 characters.");
       return;
     }
     if (password !== confirm) {
-      Alert.alert("Passwords do not match", "Check your password and confirmation.");
+      setErrorMsg("Passwords do not match. Check and try again.");
       return;
     }
     setBusy(true);
     const { error } = await signUpWithEmail(email, password);
     setBusy(false);
     if (error) {
-      Alert.alert("Sign up failed", error.message);
+      setErrorMsg(friendlySignUpError(error.message));
       return;
     }
-    Alert.alert(
-      "Check your email",
-      "If email confirmation is enabled in your project, open the link we sent to finish signing up. You can then sign in here.",
-      [{ text: "OK", onPress: () => navigation.navigate("Login") }]
-    );
+    setErrorMsg(null);
+    navigation.navigate("Login", { signedUp: true });
   }, [email, password, confirm, signUpWithEmail, navigation]);
 
   const onGoogle = useCallback(async () => {
+    setErrorMsg(null);
     setGoogleBusy(true);
     const { error } = await signInWithGoogle();
     setGoogleBusy(false);
     if (error) {
-      Alert.alert("Google sign-in failed", error.message);
+      setErrorMsg("Google sign-in failed. Please try again.");
     }
   }, [signInWithGoogle]);
+
+  const onApple = useCallback(async () => {
+    setErrorMsg(null);
+    setAppleBusy(true);
+    const { error } = await signInWithApple();
+    setAppleBusy(false);
+    if (error) {
+      setErrorMsg("Apple sign-in failed. Please try again.");
+    }
+  }, [signInWithApple]);
+
+  const anyBusy = busy || googleBusy || appleBusy;
 
   return (
     <SafeAreaView style={styles.safe} edges={["bottom"]}>
@@ -81,7 +107,8 @@ export default function SignUpScreen({ navigation }: Props) {
             autoCapitalize="none"
             autoCorrect={false}
             keyboardType="email-address"
-            editable={!busy && !googleBusy}
+            editable={!anyBusy}
+            accessibilityLabel="Email address"
           />
 
           <Text style={styles.label}>Password</Text>
@@ -92,7 +119,8 @@ export default function SignUpScreen({ navigation }: Props) {
             placeholder="At least 6 characters"
             placeholderTextColor={semantic.textSecondary}
             secureTextEntry
-            editable={!busy && !googleBusy}
+            editable={!anyBusy}
+            accessibilityLabel="Password"
           />
 
           <Text style={styles.label}>Confirm password</Text>
@@ -103,13 +131,23 @@ export default function SignUpScreen({ navigation }: Props) {
             placeholder="Repeat password"
             placeholderTextColor={semantic.textSecondary}
             secureTextEntry
-            editable={!busy && !googleBusy}
+            editable={!anyBusy}
+            accessibilityLabel="Confirm password"
           />
 
+          {errorMsg ? (
+            <View style={styles.errorBanner} accessibilityLiveRegion="polite">
+              <Text style={styles.errorText}>{errorMsg}</Text>
+            </View>
+          ) : null}
+
           <Pressable
-            style={[styles.primaryBtn, busy && styles.btnDisabled]}
+            style={({ pressed }) => [styles.primaryBtn, anyBusy && styles.btnDisabled, pressed && styles.btnPressed]}
             onPress={onSubmit}
-            disabled={busy || googleBusy}
+            disabled={anyBusy}
+            accessibilityRole="button"
+            accessibilityLabel="Create account"
+            accessibilityState={{ disabled: anyBusy }}
           >
             {busy ? (
               <ActivityIndicator color={colors.black} />
@@ -125,9 +163,12 @@ export default function SignUpScreen({ navigation }: Props) {
           </View>
 
           <Pressable
-            style={[styles.googleBtn, googleBusy && styles.btnDisabled]}
+            style={({ pressed }) => [styles.googleBtn, anyBusy && styles.btnDisabled, pressed && styles.btnPressed]}
             onPress={onGoogle}
-            disabled={busy || googleBusy}
+            disabled={anyBusy}
+            accessibilityRole="button"
+            accessibilityLabel="Continue with Google"
+            accessibilityState={{ disabled: anyBusy }}
           >
             {googleBusy ? (
               <ActivityIndicator color={colors.black} />
@@ -137,9 +178,37 @@ export default function SignUpScreen({ navigation }: Props) {
           </Pressable>
 
           <Pressable
+            style={({ pressed }) => [styles.appleBtn, anyBusy && styles.btnDisabled, pressed && styles.btnPressed]}
+            onPress={onApple}
+            disabled={anyBusy}
+            accessibilityRole="button"
+            accessibilityLabel="Continue with Apple"
+            accessibilityState={{ disabled: anyBusy }}
+          >
+            {appleBusy ? (
+              <ActivityIndicator color={colors.white} />
+            ) : (
+              <Text style={styles.appleBtnText}>Continue with Apple</Text>
+            )}
+          </Pressable>
+
+          <Pressable
+            style={({ pressed }) => [styles.phoneBtn, anyBusy && styles.btnDisabled, pressed && styles.btnPressed]}
+            onPress={() => navigation.navigate("PhoneSignIn")}
+            disabled={anyBusy}
+            accessibilityRole="button"
+            accessibilityLabel="Continue with phone number"
+            accessibilityState={{ disabled: anyBusy }}
+          >
+            <Text style={styles.phoneBtnText}>Continue with phone number</Text>
+          </Pressable>
+
+          <Pressable
             style={styles.linkWrap}
             onPress={() => navigation.navigate("Login")}
-            disabled={busy || googleBusy}
+            disabled={anyBusy}
+            accessibilityRole="link"
+            accessibilityLabel="Already have an account? Sign in"
           >
             <Text style={styles.link}>Already have an account? Sign in</Text>
           </Pressable>
@@ -176,8 +245,17 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
     ...shadow.small,
   },
+  errorBanner: {
+    marginBottom: spacing.md,
+    padding: spacing.md,
+    borderRadius: radius.medium,
+    backgroundColor: "rgba(220, 38, 38, 0.1)",
+    borderWidth: borderWidth.default,
+    borderColor: semantic.danger,
+  },
+  errorText: { ...typography.body, color: semantic.danger, fontSize: 14 },
   primaryBtn: {
-    backgroundColor: semantic.accentPink,
+    backgroundColor: semantic.accentYellow,
     borderWidth: borderWidth.default,
     borderColor: semantic.borderPrimary,
     borderRadius: radius.medium,
@@ -186,8 +264,9 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
     ...shadow.small,
   },
-  primaryBtnText: { ...typography.body, fontWeight: "800", color: semantic.textInverse },
+  primaryBtnText: { ...typography.body, fontWeight: "800", color: semantic.textPrimary },
   btnDisabled: { opacity: 0.6 },
+  btnPressed: { transform: [{ translateY: 2 }], shadowOffset: { width: 1, height: 1 } },
   divider: {
     flexDirection: "row",
     alignItems: "center",
@@ -206,6 +285,28 @@ const styles = StyleSheet.create({
     ...shadow.small,
   },
   googleBtnText: { ...typography.body, fontWeight: "800", color: semantic.textPrimary },
+  appleBtn: {
+    marginTop: spacing.md,
+    backgroundColor: colors.black,
+    borderWidth: borderWidth.default,
+    borderColor: semantic.borderPrimary,
+    borderRadius: radius.medium,
+    paddingVertical: spacing.lg,
+    alignItems: "center",
+    ...shadow.small,
+  },
+  appleBtnText: { ...typography.body, fontWeight: "800", color: colors.white },
+  phoneBtn: {
+    marginTop: spacing.md,
+    backgroundColor: semantic.bgPrimary,
+    borderWidth: borderWidth.default,
+    borderColor: semantic.borderPrimary,
+    borderRadius: radius.medium,
+    paddingVertical: spacing.lg,
+    alignItems: "center",
+    ...shadow.small,
+  },
+  phoneBtnText: { ...typography.body, fontWeight: "800", color: semantic.textPrimary },
   linkWrap: { marginTop: spacing.xxl, alignItems: "center" },
   link: { ...typography.body, fontWeight: "700", color: semantic.accentBlue, textDecorationLine: "underline" },
 });

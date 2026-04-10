@@ -29,6 +29,6 @@ const styles = StyleSheet.create({
     top: 0,
     bottom: 0,
     width: StyleSheet.hairlineWidth * 2,
-    opacity: 0.045,
+    opacity: 0.08,
   },
 });

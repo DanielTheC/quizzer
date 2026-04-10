@@ -30,6 +30,7 @@ type Props = {
   sortBy: SortMode;
   onOpenSort: () => void;
   onOpenFilters: () => void;
+  activeFilterCount: number;
   locationPermission: LocationPermissionStatus;
   resultLine: string;
   onHideFiltersRow: () => void;
@@ -53,6 +54,7 @@ export function NearbyListToolbar({
   sortBy,
   onOpenSort,
   onOpenFilters,
+  activeFilterCount,
   locationPermission,
   resultLine,
   onHideFiltersRow,
@@ -159,8 +161,11 @@ export function NearbyListToolbar({
             <Pressable
               onPress={onOpenFilters}
               style={({ pressed }) => [styles.chipFilters, pressed && styles.chipPressed]}
+              accessibilityLabel={activeFilterCount > 0 ? `Filters, ${activeFilterCount} active` : "Filters"}
             >
-              <Text style={styles.chipFiltersText}>Filters</Text>
+              <Text style={styles.chipFiltersText}>
+                {activeFilterCount > 0 ? `Filters · ${activeFilterCount}` : "Filters"}
+              </Text>
             </Pressable>
           </View>
 
@@ -196,6 +201,26 @@ export function NearbyListToolbar({
       </Animated.View>
       {showCollapsedToolbarChrome ? (
         <>
+          <View style={styles.collapsedTonightRow}>
+            <Pressable
+              onPress={onToggleTonight}
+              style={({ pressed }) => [
+                tonightMode ? styles.chipTonight : styles.chip,
+                pressed && styles.chipPressed,
+              ]}
+              accessibilityRole="button"
+              accessibilityState={{ selected: tonightMode }}
+              accessibilityLabel={tonightMode ? "Tonight on — tap to show all week" : "Tonight off — tap to show only today"}
+            >
+              <MaterialCommunityIcons
+                name="fire"
+                size={18}
+                color={tonightMode ? colors.yellow : semantic.textPrimary}
+                style={styles.chipLeadingIcon}
+              />
+              <Text style={tonightMode ? styles.chipTonightText : styles.chipText}>Tonight</Text>
+            </Pressable>
+          </View>
           <View style={styles.toolbarMiniSummary}>
             <Text style={styles.toolbarMiniSummaryText} numberOfLines={1} ellipsizeMode="tail">
               {listToolbarCompactSummary}

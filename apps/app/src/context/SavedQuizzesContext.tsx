@@ -11,6 +11,7 @@ import {
   deleteInterestsOrQueue,
   flushInterestQueue,
   upsertInterestOrQueue,
+  upsertInterestsOrQueue,
 } from "../lib/quizInterestSyncQueue";
 
 const STORAGE_KEY = "saved_quiz_ids";
@@ -103,10 +104,8 @@ export function SavedQuizzesProvider({ children }: { children: React.ReactNode }
     let cancelled = false;
     void (async () => {
       try {
-        for (const id of savedIdsRef.current) {
-          if (cancelled) return;
-          await upsertInterestOrQueue(id, uid);
-        }
+        if (cancelled) return;
+        await upsertInterestsOrQueue(savedIdsRef.current, uid);
         if (cancelled) return;
         await flushInterestQueue({
           sessionUserId: uid,
@@ -118,7 +117,7 @@ export function SavedQuizzesProvider({ children }: { children: React.ReactNode }
           .eq("user_id", uid);
         if (cancelled) return;
         if (error) {
-          console.warn("quiz_event_interests fetch:", error.message);
+          if (__DEV__) console.warn("quiz_event_interests fetch:", error.message);
           return;
         }
         const remoteIds = (data ?? []).map((r) => r.quiz_event_id).filter((x): x is string => typeof x === "string");

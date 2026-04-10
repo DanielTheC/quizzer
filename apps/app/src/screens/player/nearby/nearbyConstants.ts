@@ -1,6 +1,4 @@
-/** Cap for scroll-linked collapse range; actual range scales with measured toolbar height. */
-export const LIST_TOOLBAR_SCROLL_COLLAPSE_RANGE_MAX = 168;
-
+/** List scroll offset below which we auto-reveal the filters row after “Hide filters”. */
 export const LIST_TOOLBAR_NEAR_TOP_PX = 28;
 export const LIST_SCROLL_DIRECTION_PX = 8;
 export const LIST_TOOLBAR_EXPAND_FALLBACK_PX = 320;

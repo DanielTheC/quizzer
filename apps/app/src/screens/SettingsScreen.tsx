@@ -20,16 +20,21 @@ import {
   setNotificationPreferences,
   type NotificationPreferences,
 } from "../lib/notificationPreferences";
+import { useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { ScreenTitle } from "../components/ScreenTitle";
+import { HostStackParamList } from "../navigation/RootNavigator";
 import {
   requestPermissions,
   cancelAllQuizzerNotifications,
   scheduleQuizNotificationsIfEnabled,
+  syncExpoPushTokenIfNeeded,
 } from "../lib/notifications";
 const TIME_PRESETS = ["10:00", "12:00", "14:00"] as const;
 const MILES_OPTIONS = [3, 5, 10] as const;
 
 export default function SettingsScreen() {
+  const navigation = useNavigation();
   const { user, signOut } = useAuth();
   const { role, setRole } = useRole();
   const { clearSaved, savedIds } = useSavedQuizzes();
@@ -100,6 +105,7 @@ export default function SettingsScreen() {
           );
           return;
         }
+        await syncExpoPushTokenIfNeeded();
       } else {
         await cancelAllQuizzerNotifications();
       }
@@ -136,6 +142,23 @@ export default function SettingsScreen() {
           </Text>
         </Pressable>
       </View>
+
+      {role === "host" && (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Host</Text>
+          <Text style={styles.sectionDesc}>Replay the short introduction any time.</Text>
+          <Pressable
+            style={styles.guideLink}
+            onPress={() =>
+              (navigation as NativeStackNavigationProp<HostStackParamList>).navigate("HostOnboarding", {
+                allowBack: true,
+              })
+            }
+          >
+            <Text style={styles.guideLinkText}>View host guide</Text>
+          </Pressable>
+        </View>
+      )}
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Notifications</Text>
@@ -251,6 +274,12 @@ const styles = StyleSheet.create({
     ...shadow.small,
   },
   switchButtonText: { color: semantic.textPrimary, ...typography.bodyStrong },
+  guideLink: {
+    alignSelf: "flex-start",
+    marginTop: spacing.sm,
+    paddingVertical: spacing.sm,
+  },
+  guideLinkText: { ...typography.bodyStrong, color: semantic.textPrimary, textDecorationLine: "underline" },
   signOutButton: {
     backgroundColor: semantic.bgPrimary,
     paddingVertical: spacing.md,

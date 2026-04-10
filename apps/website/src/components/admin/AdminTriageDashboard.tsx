@@ -1,11 +1,49 @@
 "use client";
 
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
+import { captureSupabaseError } from "@/lib/observability/supabaseErrors";
+import type { CSSProperties } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 const REFRESH_MS = 60_000;
+/** Tab return often fires both `visibilitychange` and `window` `focus` within milliseconds. */
+const USER_ACTIVITY_REFETCH_GAP_MS = 900;
 
-const DOW = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
+/** Postgres / JS convention: 0 = Sunday … 6 = Saturday (matches EXTRACT(DOW)). */
+const DAY_NAMES = [
+  "Sunday",
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+] as const;
+
+const EMPTY_COPY = "Nothing to action.";
+
+function daysSinceCreated(iso: string): number {
+  const c = new Date(iso);
+  const start = new Date(c.getFullYear(), c.getMonth(), c.getDate());
+  const n = new Date();
+  const end = new Date(n.getFullYear(), n.getMonth(), n.getDate());
+  return Math.max(0, Math.round((end.getTime() - start.getTime()) / 86_400_000));
+}
+
+function formatNextOccurrence(d: string) {
+  const x = d.trim();
+  if (!x) return "—";
+  const parsed = /^\d{4}-\d{2}-\d{2}$/.test(x)
+    ? new Date(`${x}T12:00:00`)
+    : new Date(x);
+  if (Number.isNaN(parsed.getTime())) return x;
+  return parsed.toLocaleDateString("en-GB", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+}
 
 type HostApplication = {
   id: string;
@@ -80,12 +118,22 @@ export function AdminTriageDashboard() {
   const [msgExpanded, setMsgExpanded] = useState<string | null>(null);
   const [replyDraft, setReplyDraft] = useState<Record<string, string>>({});
   const [replyStatusPick, setReplyStatusPick] = useState<
-    Record<string, "in_progress" | "resolved">
+    Record<string, "open" | "in_progress" | "resolved">
   >({});
   const [replyBusy, setReplyBusy] = useState<string | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
   const initialLoad = useRef(true);
+  const loadGenerationRef = useRef(0);
+  const lastUserActivityRefetchAtRef = useRef(0);
+  const loadAbortRef = useRef<AbortController | null>(null);
 
   const load = useCallback(async () => {
+    const gen = ++loadGenerationRef.current;
+    loadAbortRef.current?.abort();
+    const ac = new AbortController();
+    loadAbortRef.current = ac;
+    const { signal } = ac;
+
     if (initialLoad.current) setLoading(true);
     setError(null);
     try {
@@ -95,47 +143,87 @@ export function AdminTriageDashboard() {
           .from("host_applications")
           .select("id, full_name, email, experience_notes, created_at, status")
           .eq("status", "pending")
-          .order("created_at", { ascending: true }),
+          .order("created_at", { ascending: true })
+          .abortSignal(signal),
         supabase
           .from("publican_messages")
           .select(
             "id, venue_id, message_type, body, status, created_at, operator_reply, resolved_at, venues(name)",
           )
           .or("status.eq.open,status.eq.in_progress")
-          .order("created_at", { ascending: true }),
-        supabase.rpc("operator_triage_unhosted_quizzes"),
+          .order("created_at", { ascending: true })
+          .abortSignal(signal),
+        supabase.rpc("operator_triage_unhosted_quizzes").abortSignal(signal),
       ]);
 
-      if (a.error) throw new Error(a.error.message);
-      if (m.error) throw new Error(m.error.message);
-      if (u.error) throw new Error(u.error.message);
+      if (gen !== loadGenerationRef.current) return;
+
+      if (a.error) {
+        captureSupabaseError("host_applications.pending_list", a.error);
+        throw new Error(a.error.message);
+      }
+      if (m.error) {
+        captureSupabaseError("publican_messages.open_list", m.error);
+        throw new Error(m.error.message);
+      }
+      if (u.error) {
+        captureSupabaseError("operator_triage_unhosted_quizzes", u.error);
+        throw new Error(u.error.message);
+      }
 
       setApps((a.data ?? []) as HostApplication[]);
       setMsgs(normalizePublicanRows(m.data));
       setUnhosted((u.data ?? []) as UnhostedQuiz[]);
     } catch (e) {
+      if (gen !== loadGenerationRef.current) return;
       setError(e instanceof Error ? e.message : "Failed to load triage data.");
     } finally {
-      setLoading(false);
-      initialLoad.current = false;
+      if (gen === loadGenerationRef.current) {
+        setLoading(false);
+        initialLoad.current = false;
+      }
     }
   }, []);
+
+  const loadAfterUserActivity = useCallback(() => {
+    const now = Date.now();
+    if (now - lastUserActivityRefetchAtRef.current < USER_ACTIVITY_REFETCH_GAP_MS) {
+      return;
+    }
+    lastUserActivityRefetchAtRef.current = now;
+    void load();
+  }, [load]);
 
   useEffect(() => {
     void load();
   }, [load]);
 
   useEffect(() => {
+    return () => {
+      loadAbortRef.current?.abort();
+    };
+  }, []);
+
+  useEffect(() => {
     const t = setInterval(() => void load(), REFRESH_MS);
     const onVis = () => {
-      if (document.visibilityState === "visible") void load();
+      if (document.visibilityState === "visible") loadAfterUserActivity();
     };
+    const onFocus = () => loadAfterUserActivity();
     document.addEventListener("visibilitychange", onVis);
+    window.addEventListener("focus", onFocus);
     return () => {
       clearInterval(t);
       document.removeEventListener("visibilitychange", onVis);
+      window.removeEventListener("focus", onFocus);
     };
-  }, [load]);
+  }, [load, loadAfterUserActivity]);
+
+  useEffect(() => {
+    if (!toast) return;
+    const t = window.setTimeout(() => setToast(null), 3200);
+    return () => window.clearTimeout(t);
+  }, [toast]);
 
   async function approve(id: string) {
     setApproveBusy(id);
@@ -145,7 +233,12 @@ export function AdminTriageDashboard() {
       const { error: e } = await supabase.rpc("operator_approve_host_application", {
         p_application_id: id,
       });
-      if (e) throw new Error(e.message);
+      if (e) {
+        captureSupabaseError("operator_approve_host_application", e, { applicationId: id });
+        throw new Error(e.message);
+      }
+      setApps((prev) => prev.filter((a) => a.id !== id));
+      setToast("Application approved.");
       void load();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Approve failed.");
@@ -169,7 +262,10 @@ export function AdminTriageDashboard() {
         })
         .eq("id", id)
         .eq("status", "pending");
-      if (e) throw new Error(e.message);
+      if (e) {
+        captureSupabaseError("host_applications.reject", e, { applicationId: id });
+        throw new Error(e.message);
+      }
       setRejectExpanded(null);
       setRejectReason("");
       void load();
@@ -183,10 +279,6 @@ export function AdminTriageDashboard() {
   async function submitReply(id: string) {
     const text = (replyDraft[id] ?? "").trim();
     const st = replyStatusPick[id] ?? "in_progress";
-    if (!text) {
-      setError("Reply cannot be empty.");
-      return;
-    }
     setReplyBusy(id);
     setError(null);
     try {
@@ -194,12 +286,15 @@ export function AdminTriageDashboard() {
       const { error: e } = await supabase
         .from("publican_messages")
         .update({
-          operator_reply: text,
+          operator_reply: text.length > 0 ? text : null,
           status: st,
           resolved_at: st === "resolved" ? new Date().toISOString() : null,
         })
         .eq("id", id);
-      if (e) throw new Error(e.message);
+      if (e) {
+        captureSupabaseError("publican_messages.operator_reply", e, { messageId: id });
+        throw new Error(e.message);
+      }
       setMsgExpanded(null);
       void load();
     } catch (e) {
@@ -218,54 +313,78 @@ export function AdminTriageDashboard() {
     setReplyDraft((d) => ({ ...d, [row.id]: row.operator_reply ?? "" }));
     setReplyStatusPick((s) => ({
       ...s,
-      [row.id]: row.status === "resolved" ? "resolved" : "in_progress",
+      [row.id]:
+        row.status === "resolved"
+          ? "resolved"
+          : row.status === "open"
+            ? "open"
+            : "in_progress",
     }));
   }
 
   return (
-    <div className="space-y-6">
-      <h1 className="font-heading text-2xl uppercase text-quizzer-black">Triage</h1>
+    <div className="relative space-y-6">
+      {toast ? (
+        <p
+          key={toast}
+          className="animate-admin-toast fixed bottom-6 right-6 z-50 max-w-sm rounded-[var(--radius-button)] border-2 border-quizzer-black bg-quizzer-yellow px-4 py-2 text-sm font-semibold text-quizzer-black shadow-[var(--shadow-card)]"
+          role="status"
+        >
+          {toast}
+        </p>
+      ) : null}
+      <h1 className="font-heading animate-admin-fade-in-up text-2xl uppercase text-quizzer-black">
+        Triage
+      </h1>
       {error ? (
-        <p className="rounded-[var(--radius-button)] border-2 border-quizzer-red bg-quizzer-white px-3 py-2 text-sm text-quizzer-red">
+        <p className="animate-admin-fade-in-up rounded-[var(--radius-button)] border-2 border-quizzer-red bg-quizzer-white px-3 py-2 text-sm text-quizzer-red">
           {error}
         </p>
       ) : null}
 
       <div className="grid gap-6 lg:grid-cols-3">
-        <section className="flex min-h-[320px] flex-col rounded-[var(--radius-button)] border-[var(--border-thick)] border-quizzer-black bg-quizzer-white p-4 shadow-[var(--shadow-card)]">
+        <section
+          className="animate-admin-fade-in-up flex min-h-[320px] flex-col rounded-[var(--radius-button)] border-[var(--border-thick)] border-quizzer-black bg-quizzer-white p-4 shadow-[var(--shadow-card)]"
+          style={{ "--admin-stagger": "0ms" } as CSSProperties}
+        >
           <h2 className="flex flex-wrap items-center gap-2 font-heading text-sm uppercase tracking-wide text-quizzer-black">
             Pending host applications
             <span className="rounded-full border-2 border-quizzer-black bg-quizzer-yellow px-2 py-0.5 text-xs font-semibold normal-case tracking-normal">
-              {apps.length} pending
+              {apps.length}
             </span>
           </h2>
           <div className="mt-4 flex-1 space-y-3 overflow-y-auto">
             {loading && apps.length === 0 ? (
               <p className="text-sm text-quizzer-black/60">Loading…</p>
             ) : apps.length === 0 ? (
-              <p className="text-sm text-quizzer-black/60">None pending.</p>
+              <p className="text-sm text-quizzer-black/60">{EMPTY_COPY}</p>
             ) : (
-              apps.map((app) => (
+              apps.map((app, rowIdx) => {
+                const age = daysSinceCreated(app.created_at);
+                return (
                 <div
                   key={app.id}
-                  className="rounded-[var(--radius-button)] border-2 border-quizzer-black/15 bg-quizzer-cream/40 p-3"
+                  className="animate-admin-row rounded-[var(--radius-button)] border-2 border-quizzer-black/15 bg-quizzer-cream/40 p-3"
+                  style={
+                    { "--admin-row-delay": `${Math.min(rowIdx, 12) * 42}ms` } as CSSProperties
+                  }
                 >
                   <p className="font-semibold text-quizzer-black">{app.full_name}</p>
                   <p className="text-xs text-quizzer-black/70">{app.email}</p>
                   <p className="mt-1 text-sm text-quizzer-black/85">
-                    {snippet(app.experience_notes, 140)}
+                    {snippet(app.experience_notes, 120)}
                   </p>
                   <p className="mt-1 text-xs text-quizzer-black/55">
-                    Applied {new Date(app.created_at).toLocaleString()}
+                    {age} day{age === 1 ? "" : "s"} since applied
                   </p>
                   {rejectExpanded === app.id ? (
-                    <div className="mt-2 space-y-2 border-t border-quizzer-black/10 pt-2">
+                    <div className="animate-admin-fade-in-up mt-2 space-y-2 border-t border-quizzer-black/10 pt-2">
                       <label className="block text-xs font-medium text-quizzer-black">
                         Rejection reason (optional)
-                        <textarea
+                        <input
+                          type="text"
                           value={rejectReason}
                           onChange={(e) => setRejectReason(e.target.value)}
-                          rows={2}
                           className="mt-1 w-full rounded-[var(--radius-button)] border-2 border-quizzer-black bg-quizzer-white px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-quizzer-yellow"
                         />
                       </label>
@@ -313,31 +432,38 @@ export function AdminTriageDashboard() {
                     </div>
                   )}
                 </div>
-              ))
+                );
+              })
             )}
           </div>
         </section>
 
-        <section className="flex min-h-[320px] flex-col rounded-[var(--radius-button)] border-[var(--border-thick)] border-quizzer-black bg-quizzer-white p-4 shadow-[var(--shadow-card)]">
+        <section
+          className="animate-admin-fade-in-up flex min-h-[320px] flex-col rounded-[var(--radius-button)] border-[var(--border-thick)] border-quizzer-black bg-quizzer-white p-4 shadow-[var(--shadow-card)]"
+          style={{ "--admin-stagger": "70ms" } as CSSProperties}
+        >
           <h2 className="flex flex-wrap items-center gap-2 font-heading text-sm uppercase tracking-wide text-quizzer-black">
-            Publican messages
+            Unresolved publican messages
             <span className="rounded-full border-2 border-quizzer-black bg-quizzer-yellow px-2 py-0.5 text-xs font-semibold normal-case tracking-normal">
-              {msgs.length} open
+              {msgs.length}
             </span>
           </h2>
           <div className="mt-4 flex-1 space-y-2 overflow-y-auto">
             {loading && msgs.length === 0 ? (
               <p className="text-sm text-quizzer-black/60">Loading…</p>
             ) : msgs.length === 0 ? (
-              <p className="text-sm text-quizzer-black/60">Nothing unresolved.</p>
+              <p className="text-sm text-quizzer-black/60">{EMPTY_COPY}</p>
             ) : (
-              msgs.map((row) => {
+              msgs.map((row, rowIdx) => {
                 const venueName = row.venues?.name ?? "Venue";
                 const expanded = msgExpanded === row.id;
                 return (
                   <div
                     key={row.id}
-                    className="rounded-[var(--radius-button)] border-2 border-quizzer-black/15 bg-quizzer-cream/40"
+                    className="animate-admin-row rounded-[var(--radius-button)] border-2 border-quizzer-black/15 bg-quizzer-cream/40"
+                    style={
+                      { "--admin-row-delay": `${Math.min(rowIdx, 12) * 42}ms` } as CSSProperties
+                    }
                   >
                     <button
                       type="button"
@@ -353,10 +479,12 @@ export function AdminTriageDashboard() {
                           className={`rounded border px-1.5 py-0.5 text-[10px] font-semibold uppercase ${
                             row.status === "open"
                               ? "border-quizzer-black bg-quizzer-yellow/80 text-quizzer-black"
-                              : "border-quizzer-black/40 bg-quizzer-white text-quizzer-black"
+                              : row.status === "in_progress"
+                                ? "border-quizzer-black/40 bg-quizzer-cream text-quizzer-black"
+                                : "border-quizzer-black/40 bg-quizzer-white text-quizzer-black"
                           }`}
                         >
-                          {row.status.replace("_", " ")}
+                          {row.status.replace(/_/g, " ")}
                         </span>
                       </div>
                       <p className="mt-1 text-sm text-quizzer-black/85">{snippet(row.body, 120)}</p>
@@ -365,7 +493,7 @@ export function AdminTriageDashboard() {
                       </p>
                     </button>
                     {expanded ? (
-                      <div className="border-t-2 border-quizzer-black/10 px-3 pb-3 pt-2">
+                      <div className="animate-admin-fade-in-up border-t-2 border-quizzer-black/10 px-3 pb-3 pt-2">
                         <p className="whitespace-pre-wrap text-sm text-quizzer-black">{row.body}</p>
                         <label className="mt-3 block text-xs font-medium text-quizzer-black">
                           Operator reply
@@ -386,11 +514,15 @@ export function AdminTriageDashboard() {
                               onChange={(e) =>
                                 setReplyStatusPick((s) => ({
                                   ...s,
-                                  [row.id]: e.target.value as "in_progress" | "resolved",
+                                  [row.id]: e.target.value as
+                                    | "open"
+                                    | "in_progress"
+                                    | "resolved",
                                 }))
                               }
                               className="rounded-[var(--radius-button)] border-2 border-quizzer-black bg-quizzer-white px-2 py-1 text-xs"
                             >
+                              <option value="open">Open</option>
                               <option value="in_progress">In progress</option>
                               <option value="resolved">Resolved</option>
                             </select>
@@ -401,7 +533,7 @@ export function AdminTriageDashboard() {
                             onClick={() => void submitReply(row.id)}
                             className="rounded-[var(--radius-button)] border-2 border-quizzer-black bg-quizzer-yellow px-3 py-1 text-xs font-semibold text-quizzer-black shadow-[var(--shadow-button)] hover:translate-x-[1px] hover:translate-y-[1px] disabled:opacity-50"
                           >
-                            {replyBusy === row.id ? "Saving…" : "Send reply"}
+                            {replyBusy === row.id ? "Saving…" : "Save"}
                           </button>
                         </div>
                       </div>
@@ -417,20 +549,22 @@ export function AdminTriageDashboard() {
           <h2 className="flex flex-wrap items-center gap-2 font-heading text-sm uppercase tracking-wide text-quizzer-black">
             Unhosted quizzes
             <span className="rounded-full border-2 border-quizzer-black bg-quizzer-yellow px-2 py-0.5 text-xs font-semibold normal-case tracking-normal">
-              {unhosted.length} unhosted
+              {unhosted.length}
             </span>
           </h2>
           <div className="mt-4 flex-1 space-y-3 overflow-y-auto">
             {loading && unhosted.length === 0 ? (
               <p className="text-sm text-quizzer-black/60">Loading…</p>
             ) : unhosted.length === 0 ? (
-              <p className="text-sm text-quizzer-black/60">All active quizzes have an approved host link.</p>
+              <p className="text-sm text-quizzer-black/60">{EMPTY_COPY}</p>
             ) : (
-              unhosted.map((q) => {
-                const dow = DOW[q.day_of_week] ?? `Day ${q.day_of_week}`;
-                const next = q.next_occurrence
-                  ? new Date(`${q.next_occurrence}T12:00:00`).toLocaleDateString()
-                  : "—";
+              unhosted.map((q, rowIdx) => {
+                const dowIdx = Number(q.day_of_week);
+                const dow =
+                  dowIdx >= 0 && dowIdx < DAY_NAMES.length
+                    ? DAY_NAMES[dowIdx]
+                    : `Day ${q.day_of_week}`;
+                const next = formatNextOccurrence(String(q.next_occurrence ?? ""));
                 const ic =
                   typeof q.interest_count === "number"
                     ? q.interest_count
@@ -438,7 +572,10 @@ export function AdminTriageDashboard() {
                 return (
                   <div
                     key={q.quiz_event_id}
-                    className="rounded-[var(--radius-button)] border-2 border-quizzer-black/15 bg-quizzer-cream/40 p-3"
+                    className="animate-admin-row rounded-[var(--radius-button)] border-2 border-quizzer-black/15 bg-quizzer-cream/40 p-3"
+                    style={
+                      { "--admin-row-delay": `${Math.min(rowIdx, 12) * 42}ms` } as CSSProperties
+                    }
                   >
                     <p className="font-semibold text-quizzer-black">{q.venue_name}</p>
                     <p className="mt-1 text-sm text-quizzer-black/85">

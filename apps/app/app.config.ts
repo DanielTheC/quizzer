@@ -6,6 +6,7 @@ export default ({ config }: { config: ExpoConfig }): ExpoConfig => ({
   userInterfaceStyle: "light",
   plugins: [
     ...(config.plugins ?? []),
+    "expo-apple-authentication",
     "expo-web-browser",
     [
       "expo-notifications",

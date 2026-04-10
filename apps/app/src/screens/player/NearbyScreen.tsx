@@ -3,7 +3,7 @@ import { Text, View, Pressable, Linking, RefreshControl, ScrollView } from "reac
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { StatusBar } from "expo-status-bar";
-import Animated, { FadeInDown } from "react-native-reanimated";
+import Animated from "react-native-reanimated";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { NearbyStackParamList } from "../../navigation/RootNavigator";
@@ -63,11 +63,11 @@ export default function NearbyScreen() {
   const [tonightMode, setTonightModeState] = useState(true);
 
   const {
-    showCollapsedToolbarChrome,
+    listFiltersUserHidden,
     quizListRef,
     listToolbarExpandableStyle,
     onListToolbarExpandableLayout,
-    onListScroll,
+    listScrollHandler,
     revealListToolbarFromCollapsed,
     setListFiltersUserHidden,
   } = useNearbyListToolbarScroll(nearbyView);
@@ -155,6 +155,58 @@ export default function NearbyScreen() {
     savedOnly,
   };
 
+  const activeFilterCount =
+    (selectedDays.length > 0 ? 1 : 0) +
+    (prizeFilter !== "all" ? 1 : 0) +
+    (maxFeePounds.trim() !== "" ? 1 : 0) +
+    (distanceFilterMiles != null ? 1 : 0) +
+    (savedOnly ? 1 : 0);
+
+  const nearbyListHeader = useMemo(
+    () => (
+      <NearbyListToolbar
+        insetsTop={insets.top}
+        styles={styles}
+        semantic={semantic}
+        searchQuery={searchQuery}
+        onSearchQueryChange={setSearchQuery}
+        nearbyView="list"
+        showCollapsedToolbarChrome={listFiltersUserHidden}
+        listToolbarExpandableStyle={listToolbarExpandableStyle}
+        onListToolbarExpandableLayout={onListToolbarExpandableLayout}
+        tonightMode={tonightMode}
+        onToggleTonight={toggleTonight}
+        sortBy={sortBy}
+        onOpenSort={() => setSortModalVisible(true)}
+        onOpenFilters={() => setFiltersSheetVisible(true)}
+        activeFilterCount={activeFilterCount}
+        locationPermission={locationPermission}
+        resultLine={resultLine}
+        onHideFiltersRow={() => setListFiltersUserHidden(true)}
+        revealListToolbarFromCollapsed={revealListToolbarFromCollapsed}
+        listToolbarCompactSummary={listToolbarCompactSummary}
+        onSetNearbyView={setNearbyView}
+      />
+    ),
+    [
+      insets.top,
+      styles,
+      semantic,
+      searchQuery,
+      listFiltersUserHidden,
+      listToolbarExpandableStyle,
+      onListToolbarExpandableLayout,
+      tonightMode,
+      toggleTonight,
+      sortBy,
+      activeFilterCount,
+      locationPermission,
+      resultLine,
+      revealListToolbarFromCollapsed,
+      listToolbarCompactSummary,
+    ]
+  );
+
   if (loading) {
     return (
       <SafeAreaView style={styles.screenRoot} edges={["bottom", "left", "right"]}>
@@ -197,30 +249,7 @@ export default function NearbyScreen() {
             </View>
           )}
 
-          {nearbyView === "list" ? (
-            <NearbyListToolbar
-              insetsTop={insets.top}
-              styles={styles}
-              semantic={semantic}
-              searchQuery={searchQuery}
-              onSearchQueryChange={setSearchQuery}
-              nearbyView={nearbyView}
-              showCollapsedToolbarChrome={showCollapsedToolbarChrome}
-              listToolbarExpandableStyle={listToolbarExpandableStyle}
-              onListToolbarExpandableLayout={onListToolbarExpandableLayout}
-              tonightMode={tonightMode}
-              onToggleTonight={toggleTonight}
-              sortBy={sortBy}
-              onOpenSort={() => setSortModalVisible(true)}
-              onOpenFilters={() => setFiltersSheetVisible(true)}
-              locationPermission={locationPermission}
-              resultLine={resultLine}
-              onHideFiltersRow={() => setListFiltersUserHidden(true)}
-              revealListToolbarFromCollapsed={revealListToolbarFromCollapsed}
-              listToolbarCompactSummary={listToolbarCompactSummary}
-              onSetNearbyView={setNearbyView}
-            />
-          ) : (
+          {nearbyView === "map" && (
             <>
               {locationPermission === "denied" && (
                 <View style={{ paddingHorizontal: spacing.lg }}>
@@ -242,9 +271,10 @@ export default function NearbyScreen() {
               style={styles.list}
               data={filteredQuizzes}
               keyExtractor={(item) => item.id}
+              ListHeaderComponent={nearbyListHeader}
               ItemSeparatorComponent={() => <View style={styles.listSeparator} />}
               showsVerticalScrollIndicator={false}
-              onScroll={onListScroll}
+              onScroll={listScrollHandler}
               scrollEventThrottle={16}
               refreshControl={
                 <RefreshControl
@@ -258,20 +288,18 @@ export default function NearbyScreen() {
                 const miles = locationPermission !== "denied" && referenceLocation ? getMiles(item.venues) : null;
                 const distanceLabel = miles != null ? `${miles.toFixed(1)} mi` : null;
                 return (
-                  <Animated.View entering={FadeInDown.delay(Math.min(index * 42, 400)).duration(340)}>
-                    <QuizCard
-                      quiz={item}
-                      distanceLabel={distanceLabel}
-                      isSaved={isSaved(item.id)}
-                      onToggleSaved={() => toggleSaved(item.id)}
-                      onPressIn={() => prefetchQuizEventDetail(item.id)}
-                      onPress={() => navigation.navigate("QuizDetail", { quizEventId: item.id })}
-                      isTonightMode={tonightMode}
-                      showRank={sortBy === "distance"}
-                      rank={sortBy === "distance" ? index + 1 : null}
-                      interestPillLabel={formatNearbyListInterestLabel(item.interest_count, isSaved(item.id))}
-                    />
-                  </Animated.View>
+                  <QuizCard
+                    quiz={item}
+                    distanceLabel={distanceLabel}
+                    isSaved={isSaved(item.id)}
+                    onToggleSaved={() => toggleSaved(item.id)}
+                    onPressIn={() => prefetchQuizEventDetail(item.id)}
+                    onPress={() => navigation.navigate("QuizDetail", { quizEventId: item.id })}
+                    isTonightMode={tonightMode}
+                    showRank={sortBy === "distance"}
+                    rank={sortBy === "distance" ? index + 1 : null}
+                    interestPillLabel={formatNearbyListInterestLabel(item.interest_count, isSaved(item.id))}
+                  />
                 );
               }}
               ListEmptyComponent={
@@ -308,13 +336,14 @@ export default function NearbyScreen() {
                 searchQuery={searchQuery}
                 onSearchQueryChange={setSearchQuery}
                 nearbyView={nearbyView}
-                showCollapsedToolbarChrome={showCollapsedToolbarChrome}
+                showCollapsedToolbarChrome={listFiltersUserHidden}
                 onSetNearbyView={setNearbyView}
                 tonightMode={tonightMode}
                 onToggleTonight={toggleTonight}
                 sortBy={sortBy}
                 onOpenSort={() => setSortModalVisible(true)}
                 onOpenFilters={() => setFiltersSheetVisible(true)}
+                activeFilterCount={activeFilterCount}
                 resultLine={resultLine}
               />
             </View>
@@ -341,3 +370,4 @@ export default function NearbyScreen() {
     </SafeAreaView>
   );
 }
+cd

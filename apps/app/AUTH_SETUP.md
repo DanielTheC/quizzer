@@ -185,19 +185,52 @@ npx expo start --clear
 
 ---
 
-## Part H — Quick checklist
+## Part H — Apple Sign In
+
+The app uses **native Sign in with Apple on iOS** (`expo-apple-authentication` + Supabase `signInWithIdToken`). On **Android**, it falls back to **Supabase Apple OAuth** in the in-app browser (same redirect URL pattern as Google).
+
+### Supabase
+
+1. **Authentication → Providers → Apple**: enable it.
+2. For **native iOS**, add your app’s **bundle ID** (e.g. `uk.co.quizzerapp`) in Apple / Supabase as required by the dashboard (Secret Key, Service ID, or “client” fields depending on your Supabase UI version).
+3. Follow [Supabase: Login with Apple](https://supabase.com/docs/guides/auth/social-login/auth-apple) for creating the Apple **Services ID**, **Key**, and linking them.
+
+### Apple Developer
+
+- Enable **Sign in with Apple** on the App ID used by your iOS bundle ID.
+- EAS / Xcode builds pick up the `expo-apple-authentication` config plugin from `app.config.ts`.
+
+### Redirect URLs
+
+- Browser-based Apple on Android still uses **`quizzer://auth/callback`** — it must stay in Supabase **Redirect URLs** (same as Google).
+
+---
+
+## Part I — Phone (SMS OTP)
+
+1. **Authentication → Providers → Phone**: enable it.
+2. Configure your **SMS provider** in Supabase (Twilio, MessageBird, etc.) per Supabase docs.
+3. The app calls `signInWithOtp` / `verifyOtp` with `channel: 'sms'`. Numbers are normalised to **E.164** (UK numbers can be entered as `07…`; the app prefixes **`+44`**).
+
+**Testing:** use a real device; SMS often does not arrive in simulators. Watch Supabase Auth logs if codes fail.
+
+---
+
+## Part J — Quick checklist
 
 - [ ] Supabase **Email** provider enabled.
 - [ ] Google Cloud **OAuth client** (Web) created with redirect  
       `https://<project-ref>.supabase.co/auth/v1/callback`
 - [ ] Supabase **Google** provider enabled with that client’s ID and secret.
+- [ ] Supabase **Apple** provider enabled; Sign in with Apple on the Apple Developer App ID; native iOS + optional OAuth fallback configured per Supabase docs.
+- [ ] Supabase **Phone** provider enabled with an SMS gateway configured.
 - [ ] Supabase **Redirect URLs** includes `quizzer://auth/callback` (+ Expo `exp://...` if using Expo Go).
 - [ ] App `.env` has correct `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_ANON_KEY`.
 - [ ] If consent screen is in **Testing**, your Gmail is added as a **test user**.
 
 ---
 
-## Part I — Troubleshooting (plain English)
+## Part K — Troubleshooting (plain English)
 
 | Symptom | What to check |
 |--------|----------------|
@@ -205,6 +238,8 @@ npx expo start --clear
 | Google error about redirect | Google Cloud **Authorised redirect URIs** must include **only** the Supabase `https://....supabase.co/auth/v1/callback` URL — not `quizzer://`. |
 | “Access blocked” / “app not verified” | OAuth consent screen: add yourself as **test user** while in Testing, or complete verification for production. |
 | Email sign-up works but cannot sign in | **Confirm email** may be on — check inbox or disable for dev in Supabase Email settings. |
+| Apple / “invalid client” / nonce | Supabase Apple provider + Apple Developer identifiers must match; iOS bundle ID must have Sign in with Apple enabled. |
+| Phone OTP never arrives | Enable Phone provider + SMS gateway in Supabase; try a physical device; check Twilio/MessageBird logs. |
 | Invalid API key in app | Wrong anon key or `.env` not loaded — restart with `--clear`. |
 
 ---

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useLayoutEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
   Linking,
   Pressable,
@@ -26,8 +26,10 @@ import { RouteProp, useNavigation, useRoute } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import {
   fetchQuizEventDetailForScreen,
+  prefetchQuizEventDetail,
   type QuizEventDetail,
 } from "../../lib/quizEventDetailCache";
+import { fetchClosestOtherQuizzes, type ClosestOtherQuizRow } from "../../lib/fetchClosestOtherQuizzes";
 import { fetchQuizEventInterestCount, formatInterestCaption } from "../../lib/quizEventInterestCount";
 import { postcodeOutwardOrArea } from "../../lib/venueLocationSnippet";
 import { useSavedQuizzes } from "../../context/SavedQuizzesContext";
@@ -179,6 +181,7 @@ function QuizDetailHeartAction({
       style={({ pressed }) => [btnStyle, pressed && btnPressedStyle]}
       accessibilityLabel={saved ? "Remove from saved" : "Save quiz"}
       accessibilityRole="button"
+      accessibilityState={{ selected: saved }}
     >
       <View style={iconRingStyle}>
         <Animated.View style={animatedStyle}>
@@ -217,7 +220,7 @@ function createQuizDetailStyles(semantic: SemanticTheme, detail: DetailScreenThe
     scroll: { flex: 1 },
     scrollContent: { padding: spacing.lg, paddingBottom: spacing.xxl * 2 },
     ticketCard: {
-      backgroundColor: colors.white,
+      backgroundColor: semantic.bgPrimary,
       borderRadius: radius.brutal,
       borderWidth: borderWidth.default,
       borderColor: semantic.borderPrimary,
@@ -227,9 +230,9 @@ function createQuizDetailStyles(semantic: SemanticTheme, detail: DetailScreenThe
     },
     ticketStripe: {
       height: 10,
-      backgroundColor: colors.white,
+      backgroundColor: semantic.bgPrimary,
       borderBottomWidth: borderWidth.thin,
-      borderBottomColor: "rgba(0,0,0,0.12)",
+      borderBottomColor: isDark ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.12)",
     },
     ticketBody: { padding: spacing.lg },
     cancelBanner: {
@@ -326,96 +329,77 @@ function createQuizDetailStyles(semantic: SemanticTheme, detail: DetailScreenThe
       marginTop: spacing.lg,
       paddingTop: spacing.lg,
       borderTopWidth: borderWidth.thin,
-      borderTopColor: "rgba(0,0,0,0.12)",
+      borderTopColor: isDark ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.12)",
+      gap: spacing.sm,
     },
-    ticketActionsRow: {
+    ticketActionSavePrimary: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      paddingVertical: spacing.md + 2,
+      paddingHorizontal: spacing.lg,
+      ...websiteCta.yellow,
+      borderRadius: radius.brutal,
+      gap: spacing.sm,
+    },
+    ticketActionSavePrimaryText: {
+      ...typography.bodyStrong,
+      fontSize: 16,
+      color: colors.black,
+    },
+    ticketActionsSecondaryRow: {
       flexDirection: "row",
       alignItems: "stretch",
-      marginHorizontal: -spacing.xs,
+      gap: spacing.sm,
     },
     ticketActionShare: {
       flex: 1,
-      paddingVertical: spacing.sm,
-      paddingHorizontal: spacing.xs,
-      marginHorizontal: spacing.xs,
-      minHeight: 0,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      paddingVertical: spacing.sm + 2,
+      paddingHorizontal: spacing.sm,
       ...websiteCta.blue,
       borderRadius: radius.brutal,
-    },
-    ticketActionSecondary: {
-      flex: 1,
-      paddingVertical: spacing.sm,
-      paddingHorizontal: spacing.xs,
-      marginHorizontal: spacing.xs,
-      minHeight: 0,
-      ...websiteCta.yellow,
-      borderRadius: radius.brutal,
+      gap: spacing.xs,
     },
     ticketActionMaps: {
       flex: 1,
-      paddingVertical: spacing.sm,
-      paddingHorizontal: spacing.xs,
-      marginHorizontal: spacing.xs,
-      minHeight: 0,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      paddingVertical: spacing.sm + 2,
+      paddingHorizontal: spacing.sm,
       ...websiteCta.pink,
       borderRadius: radius.brutal,
-    },
-    /** Same as ticketActionSecondary but no flex:1 — parent column would stretch it vertically. */
-    ticketActionHeart: {
-      alignSelf: "stretch",
-      paddingVertical: spacing.sm,
-      paddingHorizontal: spacing.xs,
-      marginHorizontal: spacing.xs,
-      minHeight: 0,
-      ...websiteCta.yellow,
-      borderRadius: radius.brutal,
+      gap: spacing.xs,
     },
     ticketActionBtnPressed: { transform: [{ translateY: 2 }], shadowOffset: { width: 1, height: 1 } },
-    heartColumn: {
-      flex: 1,
-      minWidth: 0,
-      flexDirection: "column",
-      alignItems: "stretch",
-      alignSelf: "stretch",
-    },
     interestCaption: {
-      marginTop: spacing.xs,
-      paddingHorizontal: spacing.xs,
       alignSelf: "center",
       ...typography.caption,
       fontSize: 11,
       color: semantic.textSecondary,
       textAlign: "center",
       lineHeight: 15,
-      maxWidth: 112,
     },
     interestCaptionSaved: {
-      marginTop: spacing.xs,
-      paddingHorizontal: spacing.xs,
       alignSelf: "center",
       ...typography.captionStrong,
       fontSize: 12,
       color: detail.ticketInkSecondary,
       textAlign: "center",
       lineHeight: 16,
-      maxWidth: 120,
-    },
-    ticketActionLabel: {
-      ...typography.captionStrong,
-      color: detail.ticketInkPrimary,
-      marginTop: 2,
-      fontSize: 10,
     },
     ticketActionLabelInverse: {
       ...typography.captionStrong,
       color: colors.white,
-      marginTop: 2,
-      fontSize: 10,
+      fontSize: 13,
     },
     actionIconRing: {
-      width: 30,
-      height: 30,
-      borderRadius: 15,
+      width: 28,
+      height: 28,
+      borderRadius: 14,
       alignItems: "center",
       justifyContent: "center",
       backgroundColor: detail.ticketIconRingBg,
@@ -425,6 +409,10 @@ function createQuizDetailStyles(semantic: SemanticTheme, detail: DetailScreenThe
     actionIconRingPrimary: {
       backgroundColor: "rgba(255,255,255,0.22)",
       borderColor: "rgba(0,0,0,0.12)",
+    },
+    actionIconRingTransparent: {
+      backgroundColor: "transparent",
+      borderColor: "transparent",
     },
     ticketHairline: {
       height: borderWidth.default,
@@ -449,12 +437,12 @@ function createQuizDetailStyles(semantic: SemanticTheme, detail: DetailScreenThe
       marginTop: spacing.md,
       paddingTop: spacing.md,
       borderTopWidth: borderWidth.thin,
-      borderTopColor: "rgba(0,0,0,0.12)",
+      borderTopColor: isDark ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.12)",
     },
     ticketAddressText: {
       fontSize: 14,
       lineHeight: 22,
-      color: colors.grey700,
+      color: semantic.textSecondary,
     },
     bulletList: { marginTop: spacing.xs },
     bulletRow: {
@@ -466,7 +454,7 @@ function createQuizDetailStyles(semantic: SemanticTheme, detail: DetailScreenThe
       marginTop: spacing.lg,
       paddingTop: spacing.lg,
       borderTopWidth: borderWidth.thin,
-      borderTopColor: "rgba(0,0,0,0.12)",
+      borderTopColor: isDark ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.12)",
     },
     ticketEyebrow: {
       ...typography.labelUppercase,
@@ -479,7 +467,7 @@ function createQuizDetailStyles(semantic: SemanticTheme, detail: DetailScreenThe
       marginTop: 7,
       marginRight: spacing.sm,
       borderRadius: 2,
-      backgroundColor: colors.black,
+      backgroundColor: semantic.textPrimary,
       borderWidth: borderWidth.thin,
       borderColor: semantic.borderPrimary,
     },
@@ -487,7 +475,48 @@ function createQuizDetailStyles(semantic: SemanticTheme, detail: DetailScreenThe
       flex: 1,
       fontSize: 14,
       lineHeight: 22,
-      color: colors.grey700,
+      color: semantic.textSecondary,
+    },
+    nearbySection: {
+      marginTop: spacing.lg,
+    },
+    nearbyEyebrow: {
+      ...typography.labelUppercase,
+      marginBottom: spacing.sm,
+      color: semantic.textPrimary,
+    },
+    nearbyCard: {
+      backgroundColor: isDark ? semantic.bgPrimary : colors.white,
+      borderRadius: radius.brutal,
+      borderWidth: borderWidth.default,
+      borderColor: semantic.borderPrimary,
+      overflow: "hidden",
+      ...shadow.small,
+    },
+    nearbyRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingVertical: spacing.md,
+      paddingHorizontal: spacing.md,
+      gap: spacing.sm,
+    },
+    nearbyRowBorder: {
+      borderBottomWidth: borderWidth.thin,
+      borderBottomColor: isDark ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.1)",
+    },
+    nearbyRowPressed: { opacity: 0.92 },
+    nearbyRowBody: { flex: 1, minWidth: 0 },
+    nearbyRowTitle: {
+      fontSize: 16,
+      fontWeight: "700",
+      fontFamily: fonts.display,
+      color: detail.ticketInkPrimary,
+    },
+    nearbyRowMeta: {
+      marginTop: 4,
+      fontSize: 13,
+      fontWeight: "600",
+      color: semantic.textSecondary,
     },
   });
 }
@@ -505,9 +534,14 @@ export default function QuizDetailScreen() {
   const [quiz, setQuiz] = useState<QuizEventDetail | null>(null);
   const [retryCount, setRetryCount] = useState(0);
   const [interestCount, setInterestCount] = useState<number | null>(null);
+  const [otherNearby, setOtherNearby] = useState<ClosestOtherQuizRow[] | null>(null);
+  const interestSyncedRef = useRef(false);
+  const savedBaselineRef = useRef(false);
+  const savedLiveRef = useRef(false);
   const { isSaved, toggleSaved } = useSavedQuizzes();
 
   const saved = quizEventId != null && isSaved(quizEventId);
+  savedLiveRef.current = saved;
   const interestCaption = formatInterestCaption(interestCount, saved);
 
   useEffect(() => {
@@ -539,17 +573,65 @@ export default function QuizDetailScreen() {
   useEffect(() => {
     if (!quizEventId || !quiz) {
       setInterestCount(null);
+      interestSyncedRef.current = false;
       return;
     }
     let cancelled = false;
+    interestSyncedRef.current = false;
     void (async () => {
       const n = await fetchQuizEventInterestCount(quizEventId);
-      if (!cancelled) setInterestCount(n);
+      if (!cancelled) {
+        setInterestCount(n);
+        interestSyncedRef.current = true;
+        savedBaselineRef.current = savedLiveRef.current;
+      }
     })();
     return () => {
       cancelled = true;
     };
-  }, [quizEventId, quiz, saved]);
+  }, [quizEventId, quiz?.id, retryCount]);
+
+  useEffect(() => {
+    if (!interestSyncedRef.current || !quizEventId || !quiz) return;
+    const baseline = savedBaselineRef.current;
+    if (saved === baseline) return;
+    savedBaselineRef.current = saved;
+    setInterestCount((c) => {
+      if (c == null) return c;
+      if (saved && !baseline) return c + 1;
+      if (!saved && baseline) return Math.max(0, c - 1);
+      return c;
+    });
+  }, [saved, quizEventId, quiz?.id]);
+
+  useEffect(() => {
+    if (!quizEventId || !quiz || quiz.id !== quizEventId) {
+      setOtherNearby(null);
+      return;
+    }
+    const lat = quiz.venues?.lat;
+    const lng = quiz.venues?.lng;
+    if (lat == null || lng == null || !Number.isFinite(lat) || !Number.isFinite(lng)) {
+      setOtherNearby([]);
+      return;
+    }
+    let cancelled = false;
+    void fetchClosestOtherQuizzes(quiz.id, lat, lng, 2).then((rows) => {
+      if (!cancelled) setOtherNearby(rows);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [quizEventId, quiz?.id, quiz?.venues?.lat, quiz?.venues?.lng]);
+
+  const openOtherNearbyQuiz = useCallback(
+    (id: string) => {
+      if (!id || id === quizEventId) return;
+      hapticLight();
+      navigation.push("QuizDetail", { quizEventId: id });
+    },
+    [navigation, quizEventId]
+  );
 
   const openInMaps = useCallback(() => {
     if (!quiz) return;
@@ -712,7 +794,21 @@ export default function QuizDetailScreen() {
 
               {quizEventId ? (
                 <View style={styles.ticketActionsFooter}>
-                  <View style={styles.ticketActionsRow}>
+                  <QuizDetailHeartAction
+                    saved={saved}
+                    quizEventId={quizEventId}
+                    onToggleSaved={toggleSaved}
+                    btnStyle={styles.ticketActionSavePrimary}
+                    btnPressedStyle={styles.ticketActionBtnPressed}
+                    labelStyle={styles.ticketActionSavePrimaryText}
+                    iconRingStyle={styles.actionIconRingTransparent}
+                    heartOutlineColor={semantic.accentRed}
+                    iconSize={22}
+                  />
+                  {interestCaption ? (
+                    <Text style={saved ? styles.interestCaptionSaved : styles.interestCaption}>{interestCaption}</Text>
+                  ) : null}
+                  <View style={styles.ticketActionsSecondaryRow}>
                     <Pressable
                       onPress={() => {
                         hapticLight();
@@ -722,26 +818,11 @@ export default function QuizDetailScreen() {
                       accessibilityLabel="Share this quiz"
                       accessibilityRole="button"
                     >
-                      <View style={styles.actionIconRing}>
-                        <MaterialCommunityIcons name="share-variant-outline" size={18} color={detail.ticketInkPrimary} />
+                      <View style={[styles.actionIconRing, styles.actionIconRingPrimary]}>
+                        <MaterialCommunityIcons name="share-variant-outline" size={16} color={colors.white} />
                       </View>
                       <Text style={styles.ticketActionLabelInverse}>Share</Text>
                     </Pressable>
-                    <View style={styles.heartColumn}>
-                      <QuizDetailHeartAction
-                        saved={saved}
-                        quizEventId={quizEventId}
-                        onToggleSaved={toggleSaved}
-                        btnStyle={styles.ticketActionHeart}
-                        btnPressedStyle={styles.ticketActionBtnPressed}
-                        labelStyle={styles.ticketActionLabel}
-                        iconRingStyle={styles.actionIconRing}
-                        heartOutlineColor={semantic.accentRed}
-                      />
-                      {interestCaption ? (
-                        <Text style={saved ? styles.interestCaptionSaved : styles.interestCaption}>{interestCaption}</Text>
-                      ) : null}
-                    </View>
                     <Pressable
                       onPress={openInMaps}
                       style={({ pressed }) => [styles.ticketActionMaps, pressed && styles.ticketActionBtnPressed]}
@@ -749,7 +830,7 @@ export default function QuizDetailScreen() {
                       accessibilityRole="button"
                     >
                       <View style={[styles.actionIconRing, styles.actionIconRingPrimary]}>
-                        <MaterialCommunityIcons name="map-outline" size={18} color={colors.white} />
+                        <MaterialCommunityIcons name="map-outline" size={16} color={colors.white} />
                       </View>
                       <Text style={styles.ticketActionLabelInverse}>Maps</Text>
                     </Pressable>
@@ -758,6 +839,44 @@ export default function QuizDetailScreen() {
               ) : null}
             </View>
           </Animated.View>
+
+          {otherNearby && otherNearby.length > 0 ? (
+            <View style={styles.nearbySection} accessibilityLabel="Other quizzes nearby">
+              <Text style={styles.nearbyEyebrow}>Other quizzes nearby</Text>
+              <View style={styles.nearbyCard}>
+                {otherNearby.map((row, i) => {
+                  const dayLine = dayNameShort(row.day_of_week);
+                  const metaLine = `${dayLine} · ${formatTime(row.start_time)} · ${row.miles.toFixed(1)} mi`;
+                  const cityPart = row.city ? ` · ${row.city}` : "";
+                  return (
+                    <Pressable
+                      key={row.id}
+                      onPressIn={() => prefetchQuizEventDetail(row.id)}
+                      onPress={() => openOtherNearbyQuiz(row.id)}
+                      style={({ pressed }) => [
+                        styles.nearbyRow,
+                        i === 0 && otherNearby.length > 1 ? styles.nearbyRowBorder : null,
+                        pressed && styles.nearbyRowPressed,
+                      ]}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Open ${row.venueName}, ${metaLine}`}
+                    >
+                      <View style={styles.nearbyRowBody}>
+                        <Text style={styles.nearbyRowTitle} numberOfLines={2}>
+                          {row.venueName}
+                        </Text>
+                        <Text style={styles.nearbyRowMeta} numberOfLines={2}>
+                          {metaLine}
+                          {cityPart}
+                        </Text>
+                      </View>
+                      <MaterialCommunityIcons name="chevron-right" size={22} color={semantic.textSecondary} />
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </View>
+          ) : null}
         </ScrollView>
       )}
     </SafeAreaView>

@@ -5,6 +5,7 @@
  */
 import * as Notifications from "expo-notifications";
 import * as Location from "expo-location";
+import Constants from "expo-constants";
 import { Platform } from "react-native";
 import { supabase } from "./supabase";
 import { getNotificationPreferences } from "./notificationPreferences";
@@ -75,6 +76,7 @@ type QuizRow = {
   start_time: string;
   entry_fee_pence: number;
   prize: string;
+  host_cancelled_at: string | null;
   venues: { name: string } | null;
 };
 
@@ -97,10 +99,11 @@ export async function scheduleTodaysQuizNotifications(
   const today = new Date().getDay(); // 0 = Sun, 6 = Sat
   const { data, error } = await supabase
     .from("quiz_events")
-    .select("id, day_of_week, start_time, entry_fee_pence, prize, venues ( name )")
+    .select("id, day_of_week, start_time, entry_fee_pence, prize, host_cancelled_at, venues ( name )")
     .in("id", savedQuizIds)
     .eq("is_active", true)
-    .eq("day_of_week", today);
+    .eq("day_of_week", today)
+    .is("host_cancelled_at", null);
 
   if (error || !data?.length) return;
 
@@ -214,4 +217,45 @@ export async function scheduleQuizNotificationsIfEnabled(savedIds: string[]): Pr
     onlyWithinMiles: prefs.onlyWithinMiles,
     userLatLng,
   });
+  await syncExpoPushTokenIfNeeded();
+}
+
+/**
+ * Upserts the device Expo push token into `push_tokens` so Edge Functions can reach this user.
+ * Safe to call whenever notifications are enabled; no-ops without session or permission.
+ */
+export async function syncExpoPushTokenIfNeeded(): Promise<void> {
+  const { data: sessionData } = await supabase.auth.getSession();
+  const user = sessionData.session?.user;
+  if (!user?.id) return;
+
+  const { status } = await Notifications.getPermissionsAsync();
+  if (status !== "granted") return;
+
+  try {
+    const expoExtra = Constants.expoConfig?.extra as { eas?: { projectId?: string } } | undefined;
+    const projectId =
+      expoExtra?.eas?.projectId ??
+      (Constants.easConfig as { projectId?: string } | undefined)?.projectId;
+    const expoToken = await Notifications.getExpoPushTokenAsync(
+      projectId ? { projectId } : undefined
+    );
+    const token = expoToken.data;
+    if (!token || typeof token !== "string") return;
+
+    const { error } = await supabase.from("push_tokens").upsert(
+      {
+        user_id: user.id,
+        token,
+        platform: Platform.OS,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "user_id,token" }
+    );
+    if (error) {
+      console.warn("push_tokens upsert:", error.message);
+    }
+  } catch (e) {
+    console.warn("Expo push token:", e);
+  }
 }

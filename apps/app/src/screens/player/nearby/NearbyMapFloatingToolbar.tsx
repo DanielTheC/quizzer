@@ -20,6 +20,7 @@ type Props = {
   sortBy: SortMode;
   onOpenSort: () => void;
   onOpenFilters: () => void;
+  activeFilterCount: number;
   resultLine: string;
 };
 
@@ -36,6 +37,7 @@ export function NearbyMapFloatingToolbar({
   sortBy,
   onOpenSort,
   onOpenFilters,
+  activeFilterCount,
   resultLine,
 }: Props) {
   const viewModeToggle = (
@@ -137,8 +139,11 @@ export function NearbyMapFloatingToolbar({
           <Pressable
             onPress={onOpenFilters}
             style={({ pressed }) => [styles.chipFilters, pressed && styles.chipPressed, styles.mapChipScrollItem]}
+            accessibilityLabel={activeFilterCount > 0 ? `Filters, ${activeFilterCount} active` : "Filters"}
           >
-            <Text style={styles.chipFiltersText}>Filters</Text>
+            <Text style={styles.chipFiltersText}>
+              {activeFilterCount > 0 ? `Filters · ${activeFilterCount}` : "Filters"}
+            </Text>
           </Pressable>
         </ScrollView>
         <Text style={styles.mapResultHint}>{resultLine}</Text>

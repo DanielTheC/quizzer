@@ -9,6 +9,7 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@sentry/nextjs": "^10.47.0",
     "@supabase/ssr": "^0.5.2",
     "@supabase/supabase-js": "^2.95.3",
     "next": "^15.5.12",

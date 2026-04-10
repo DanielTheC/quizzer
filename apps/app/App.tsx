@@ -2,11 +2,15 @@ import React, { Component, ErrorInfo, ReactNode, useEffect } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { useFonts, Anton_400Regular } from "@expo-google-fonts/anton";
 import * as SplashScreen from "expo-splash-screen";
+import * as Sentry from "@sentry/react-native";
 import { AuthProvider } from "./src/context/AuthContext";
 import { SavedQuizzesProvider } from "./src/context/SavedQuizzesContext";
 import { ThemeProvider } from "./src/context/ThemeContext";
 import { SafeAreaProvider } from "react-native-safe-area-context";
+import { initSentry } from "./src/lib/sentryInit";
 import RootNavigator from "./src/navigation/RootNavigator";
+
+initSentry();
 
 void SplashScreen.preventAutoHideAsync();
 
@@ -22,6 +26,9 @@ class ErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error("App error:", error, errorInfo);
+    if (process.env.EXPO_PUBLIC_SENTRY_DSN?.trim()) {
+      Sentry.captureException(error, { extra: { componentStack: errorInfo.componentStack } });
+    }
   }
 
   render() {

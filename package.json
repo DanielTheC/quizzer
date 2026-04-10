@@ -9,5 +9,8 @@
     "web": "npm run web --prefix apps/app",
     "dev:website": "npm run dev --prefix apps/website",
     "build:website": "npm run build --prefix apps/website"
+  },
+  "dependencies": {
+    "expo": "^55.0.11"
   }
 }

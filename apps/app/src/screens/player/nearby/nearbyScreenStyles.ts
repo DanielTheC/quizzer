@@ -173,6 +173,11 @@ export function buildNearbyStyles(semantic: SemanticTheme, isDark: boolean) {
       ...typography.body,
       color: semantic.textPrimary,
     },
+    collapsedTonightRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingTop: spacing.sm,
+    },
     toolbarMiniSummary: {
       paddingTop: spacing.sm,
       paddingBottom: spacing.xs,

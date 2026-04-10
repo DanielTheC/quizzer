@@ -1,5 +1,13 @@
-import React, { useMemo } from "react";
+import React, { useEffect, useMemo } from "react";
 import { View, StyleSheet } from "react-native";
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withRepeat,
+  withSequence,
+  withTiming,
+  Easing,
+} from "react-native-reanimated";
 import { useAppTheme } from "../context/ThemeContext";
 import { colors, spacing, radius, borderWidth, shadow, type SemanticTheme } from "../theme";
 
@@ -36,7 +44,6 @@ function buildStyles(semantic: SemanticTheme, isDark: boolean) {
       backgroundColor: block,
       borderWidth: borderWidth.thin,
       borderColor: blockBorder,
-      opacity: 0.85,
     },
     blockMetaShort: {
       marginTop: spacing.sm,
@@ -46,7 +53,6 @@ function buildStyles(semantic: SemanticTheme, isDark: boolean) {
       backgroundColor: block,
       borderWidth: borderWidth.thin,
       borderColor: blockBorder,
-      opacity: 0.85,
     },
   });
 }
@@ -56,14 +62,39 @@ export function QuizListSkeleton({ count = 5 }: Props) {
   const { semantic, isDark } = useAppTheme();
   const styles = useMemo(() => buildStyles(semantic, isDark), [semantic, isDark]);
 
+  const shimmer = useSharedValue(0);
+
+  useEffect(() => {
+    shimmer.value = withRepeat(
+      withSequence(
+        withTiming(1, { duration: 750, easing: Easing.inOut(Easing.sin) }),
+        withTiming(0, { duration: 750, easing: Easing.inOut(Easing.sin) }),
+      ),
+      -1,
+      false,
+    );
+  }, [shimmer]);
+
+  const shimmerStyle = useAnimatedStyle(() => ({
+    opacity: 0.45 + shimmer.value * 0.45,
+  }));
+
   return (
     <>
       {Array.from({ length: count }).map((_, i) => (
-        <View key={i} style={[styles.card, i < count - 1 && styles.cardSpacing]} accessible={false}>
+        <Animated.View
+          key={i}
+          style={[
+            styles.card,
+            i < count - 1 && styles.cardSpacing,
+            shimmerStyle,
+          ]}
+          accessible={false}
+        >
           <View style={styles.blockTitle} />
           <View style={styles.blockMeta} />
           <View style={styles.blockMetaShort} />
-        </View>
+        </Animated.View>
       ))}
     </>
   );

@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Pressable, Text, View, StyleSheet } from "react-native";
+import Animated, { FadeIn } from "react-native-reanimated";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
@@ -26,11 +27,15 @@ import NearbyScreen from "../screens/player/NearbyScreen";
 import QuizDetailScreen from "../screens/player/QuizDetailScreen";
 import SavedScreen from "../screens/player/SavedScreen";
 import HostSetupScreen from "../screens/host/HostSetupScreen";
+import HostOnboardingScreen from "../screens/host/HostOnboardingScreen";
 import HostDashboardScreen from "../screens/host/HostDashboardScreen";
+import HostProfileScreen from "../screens/host/HostProfileScreen";
 import HostApplyScreen from "../screens/host/HostApplyScreen";
 import RunQuizScreen from "../screens/host/RunQuizScreen";
 import PackQuestionsScreen from "../screens/host/PackQuestionsScreen";
 import { clearStoredRole, getStoredRole } from "../lib/roleStorage";
+import { getHostOnboardingComplete } from "../lib/hostSetupStorage";
+import { fetchIsAllowlistedHost } from "../lib/hostAccess";
 import type { QuizzerRole } from "../lib/roleStorage";
 import { hapticLight } from "../lib/playerHaptics";
 import { navigationRef } from "./navigationRef";
@@ -49,9 +54,11 @@ export type SavedStackParamList = {
 };
 
 export type HostStackParamList = {
+  HostOnboarding: { allowBack?: boolean } | undefined;
   HostSetup: undefined;
   HostApply: undefined;
   HostDashboard: undefined;
+  HostProfile: undefined;
   RunQuiz: { mode: "new" | "resume"; packId?: string; venueId?: string };
   PackQuestions: { packId: string };
   Settings: undefined;
@@ -131,11 +138,11 @@ function createPlayerTabBarStyles(semantic: SemanticTheme) {
       backgroundColor: colors.black,
       borderWidth: 0,
     },
-    /** Golden yellow CTA — black type (`colors.findQuizTabYellow`, ~#FDCA01). */
+    /** Golden yellow CTA — black type. */
     nearbyPressable: {
       flex: 3,
       position: "relative",
-      backgroundColor: colors.findQuizTabYellow,
+      backgroundColor: colors.yellow,
       borderRadius: 14,
       borderWidth: 0,
       flexDirection: "row",
@@ -314,8 +321,12 @@ const NearbyScreenSafe = typeof NearbyScreen === "function" ? NearbyScreen : () 
 const QuizDetailScreenSafe = typeof QuizDetailScreen === "function" ? QuizDetailScreen : () => <PlaceholderScreen name="QuizDetail" />;
 const SavedScreenSafe = typeof SavedScreen === "function" ? SavedScreen : () => <PlaceholderScreen name="Saved" />;
 const HostSetupScreenSafe = typeof HostSetupScreen === "function" ? HostSetupScreen : () => <PlaceholderScreen name="HostSetup" />;
+const HostOnboardingScreenSafe =
+  typeof HostOnboardingScreen === "function" ? HostOnboardingScreen : () => <PlaceholderScreen name="HostOnboarding" />;
 const HostDashboardScreenSafe =
   typeof HostDashboardScreen === "function" ? HostDashboardScreen : () => <PlaceholderScreen name="HostDashboard" />;
+const HostProfileScreenSafe =
+  typeof HostProfileScreen === "function" ? HostProfileScreen : () => <PlaceholderScreen name="HostProfile" />;
 const HostApplyScreenSafe =
   typeof HostApplyScreen === "function" ? HostApplyScreen : () => <PlaceholderScreen name="HostApply" />;
 const RunQuizScreenSafe = typeof RunQuizScreen === "function" ? RunQuizScreen : () => <PlaceholderScreen name="RunQuiz" />;
@@ -349,7 +360,9 @@ function SavedStackScreen() {
 }
 
 function HostStackScreen() {
+  const { session } = useAuth();
   const { semantic } = useAppTheme();
+  const navStyles = useMemo(() => createNavStyles(semantic), [semantic]);
   const hostStackScreenOptions = useMemo(
     () => ({
       headerStyle: { backgroundColor: semantic.accentYellow },
@@ -366,11 +379,43 @@ function HostStackScreen() {
     [semantic]
   );
 
+  const [hostInitialRoute, setHostInitialRoute] = useState<"HostOnboarding" | "HostSetup" | "HostApply" | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    void Promise.all([getHostOnboardingComplete(), fetchIsAllowlistedHost(session)]).then(([onboardingDone, allowlisted]) => {
+      if (cancelled) return;
+      if (!onboardingDone) {
+        setHostInitialRoute("HostOnboarding");
+        return;
+      }
+      if (allowlisted === true) {
+        setHostInitialRoute("HostSetup");
+        return;
+      }
+      setHostInitialRoute("HostApply");
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [session]);
+
+  if (hostInitialRoute === null) {
+    return (
+      <View style={navStyles.loadingGate}>
+        <ActivityIndicator size="large" color={semantic.accentYellow} />
+        <Text style={navStyles.loadingText}>Loading…</Text>
+      </View>
+    );
+  }
+
   return (
-    <HostStack.Navigator screenOptions={hostStackScreenOptions}>
+    <HostStack.Navigator initialRouteName={hostInitialRoute} screenOptions={hostStackScreenOptions}>
+      <HostStack.Screen name="HostOnboarding" component={HostOnboardingScreenSafe} options={{ headerTitle: "" }} />
       <HostStack.Screen name="HostSetup" component={HostSetupScreenSafe} options={{ headerTitle: "" }} />
       <HostStack.Screen name="HostApply" component={HostApplyScreenSafe} options={{ headerTitle: "Host access" }} />
       <HostStack.Screen name="HostDashboard" component={HostDashboardScreenSafe} options={{ headerTitle: "Listings" }} />
+      <HostStack.Screen name="HostProfile" component={HostProfileScreenSafe} options={{ headerTitle: "Profile" }} />
       <HostStack.Screen name="RunQuiz" component={RunQuizScreenSafe} options={{ headerTitle: "" }} />
       <HostStack.Screen name="PackQuestions" component={PackQuestionsScreenSafe} options={{ headerTitle: "" }} />
       <HostStack.Screen name="Settings" component={SettingsScreenSafe} options={{ headerShown: false }} />
@@ -488,7 +533,9 @@ export default function RootNavigator() {
   if (authInitializing) {
     return (
       <NavigationContainer>
-        <LoadingGate />
+        <Animated.View style={{ flex: 1 }} entering={FadeIn.duration(180)}>
+          <LoadingGate />
+        </Animated.View>
       </NavigationContainer>
     );
   }
@@ -496,7 +543,9 @@ export default function RootNavigator() {
   if (!session) {
     return (
       <NavigationContainer>
-        <AuthNavigator />
+        <Animated.View style={{ flex: 1 }} entering={FadeIn.duration(200)}>
+          <AuthNavigator />
+        </Animated.View>
       </NavigationContainer>
     );
   }
@@ -504,7 +553,9 @@ export default function RootNavigator() {
   if (roleLoading) {
     return (
       <NavigationContainer>
-        <LoadingGate />
+        <Animated.View style={{ flex: 1 }} entering={FadeIn.duration(180)}>
+          <LoadingGate />
+        </Animated.View>
       </NavigationContainer>
     );
   }
@@ -512,7 +563,9 @@ export default function RootNavigator() {
   if (role === null) {
     return (
       <NavigationContainer>
-        <RoleSelectScreen onSelect={handleRoleSelect} />
+        <Animated.View style={{ flex: 1 }} entering={FadeIn.duration(220)}>
+          <RoleSelectScreen onSelect={handleRoleSelect} />
+        </Animated.View>
       </NavigationContainer>
     );
   }
@@ -520,20 +573,24 @@ export default function RootNavigator() {
   if (role === "host") {
     return (
       <NavigationContainer>
-        <RoleProvider role={role} setRole={setRole}>
-          <HostStackScreen />
-        </RoleProvider>
+        <Animated.View style={{ flex: 1 }} entering={FadeIn.duration(220)}>
+          <RoleProvider role={role} setRole={setRole}>
+            <HostStackScreen />
+          </RoleProvider>
+        </Animated.View>
       </NavigationContainer>
     );
   }
 
   return (
     <NavigationContainer ref={navigationRef}>
-      <RoleProvider role={role} setRole={setRole}>
-        <PlayerQuizNotificationsScheduler />
-        <QuizNotificationResponseBridge />
-        <PlayerTabScreen />
-      </RoleProvider>
+      <Animated.View style={{ flex: 1 }} entering={FadeIn.duration(220)}>
+        <RoleProvider role={role} setRole={setRole}>
+          <PlayerQuizNotificationsScheduler />
+          <QuizNotificationResponseBridge />
+          <PlayerTabScreen />
+        </RoleProvider>
+      </Animated.View>
     </NavigationContainer>
   );
 }

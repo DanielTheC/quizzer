@@ -19,7 +19,8 @@ import { useAuth } from "../../context/AuthContext";
 import { supabase } from "../../lib/supabase";
 import {
   authEmailForHost,
-  fetchPendingHostApplication,
+  fetchLatestHostApplication,
+  invalidateHostAllowlistCache,
   type HostApplicationRow,
 } from "../../lib/hostAccess";
 import { ScreenTitle } from "../../components/ScreenTitle";
@@ -31,7 +32,7 @@ export default function HostApplyScreen() {
   const email = authEmailForHost(session);
 
   const [loading, setLoading] = useState(true);
-  const [pending, setPending] = useState<HostApplicationRow | null>(null);
+  const [latest, setLatest] = useState<HostApplicationRow | null>(null);
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
   const [notes, setNotes] = useState("");
@@ -40,24 +41,24 @@ export default function HostApplyScreen() {
   /** True after successful insert until refocus refresh. */
   const [justSubmitted, setJustSubmitted] = useState(false);
 
-  const loadPending = useCallback(async () => {
+  const loadLatestApplication = useCallback(async () => {
     if (!email) {
-      setPending(null);
+      setLatest(null);
       setLoading(false);
       return;
     }
     setLoading(true);
     setErrorMsg(null);
-    const row = await fetchPendingHostApplication(email);
-    setPending(row);
+    const row = await fetchLatestHostApplication(email);
+    setLatest(row);
     if (row) setJustSubmitted(false);
     setLoading(false);
   }, [email]);
 
   useFocusEffect(
     useCallback(() => {
-      void loadPending();
-    }, [loadPending])
+      void loadLatestApplication();
+    }, [loadLatestApplication])
   );
 
   useLayoutEffect(() => {
@@ -101,20 +102,20 @@ export default function HostApplyScreen() {
     if (error) {
       if (error.code === "23505" || error.message?.toLowerCase().includes("unique")) {
         setErrorMsg("You already have a pending application.");
-        await loadPending();
+        await loadLatestApplication();
         return;
       }
-      setErrorMsg(error.message);
+      setErrorMsg("Could not submit your application. Please try again.");
       return;
     }
     setJustSubmitted(true);
     setFullName("");
     setPhone("");
     setNotes("");
-    await loadPending();
-  }, [email, fullName, phone, notes, loadPending]);
+    await loadLatestApplication();
+  }, [email, fullName, phone, notes, loadLatestApplication]);
 
-  const showReceived = pending != null || justSubmitted;
+  const showPendingCard = latest?.status === "pending" || (justSubmitted && !latest);
 
   return (
     <SafeAreaView style={styles.safe} edges={["bottom"]}>
@@ -138,25 +139,75 @@ export default function HostApplyScreen() {
             </View>
           ) : loading ? (
             <ActivityIndicator size="large" color={semantic.textPrimary} style={styles.loader} />
-          ) : showReceived ? (
+          ) : latest?.status === "approved" ? (
             <View style={styles.card}>
-              <MaterialCommunityIcons name="check-circle-outline" size={40} color={semantic.textPrimary} style={styles.heroIcon} />
-              <Text style={styles.cardTitle}>Application received</Text>
+              <MaterialCommunityIcons name="check-decagram" size={40} color={semantic.success} style={styles.heroIcon} />
+              <Text style={styles.cardTitle}>Application approved</Text>
               <Text style={styles.body}>
-                Thanks — we’ve got your request for <Text style={styles.mono}>{email}</Text>
-                {pending ? ` submitted ${formatDate(pending.created_at)}.` : "."} We’ll review it and enable host tools on your account
-                when approved.
+                Your request for <Text style={styles.mono}>{email}</Text> was approved. You can use host setup, packs, listings, and
+                the run-quiz flow.
               </Text>
-              <Text style={styles.muted}>You can leave this screen; we’ll keep your place in the queue.</Text>
+              <Pressable
+                style={({ pressed }) => [styles.primaryBtn, pressed && styles.btnPressed]}
+                onPress={() => {
+                  invalidateHostAllowlistCache();
+                  navigation.replace("HostSetup");
+                }}
+                accessibilityLabel="Open host setup"
+              >
+                <Text style={styles.primaryBtnText}>Continue to host setup</Text>
+              </Pressable>
               <Pressable
                 style={({ pressed }) => [styles.secondaryBtn, pressed && styles.btnPressed]}
-                onPress={() => navigation.goBack()}
+                onPress={() => void loadLatestApplication()}
               >
-                <Text style={styles.secondaryBtnText}>Back to host home</Text>
+                <Text style={styles.secondaryBtnText}>Refresh status</Text>
+              </Pressable>
+            </View>
+          ) : showPendingCard ? (
+            <View style={styles.card}>
+              <MaterialCommunityIcons name="clock-outline" size={40} color={semantic.textPrimary} style={styles.heroIcon} />
+              <Text style={styles.cardTitle}>Application pending</Text>
+              <Text style={styles.body}>
+                Thanks — we’ve got your request for <Text style={styles.mono}>{email}</Text>
+                {latest ? ` submitted ${formatDate(latest.created_at)}.` : "."} We’ll review it and enable host tools on your account
+                when approved.
+              </Text>
+              <Text style={styles.muted}>
+                We’ll keep your place in the queue. Open host setup if you think you’ve already been approved — it will refresh access.
+              </Text>
+              <Pressable
+                style={({ pressed }) => [styles.secondaryBtn, pressed && styles.btnPressed]}
+                onPress={() => navigation.navigate("HostSetup")}
+              >
+                <Text style={styles.secondaryBtnText}>Open host setup</Text>
+              </Pressable>
+              <Pressable
+                style={({ pressed }) => [styles.applySecondary, pressed && styles.btnPressed]}
+                onPress={() => void loadLatestApplication()}
+              >
+                <Text style={styles.applySecondaryText}>Refresh status</Text>
               </Pressable>
             </View>
           ) : (
             <>
+              {latest?.status === "rejected" ? (
+                <View style={[styles.card, styles.rejectedCard]}>
+                  <MaterialCommunityIcons name="close-circle-outline" size={40} color={semantic.danger} style={styles.heroIcon} />
+                  <Text style={styles.cardTitle}>Application not approved</Text>
+                  <Text style={styles.body}>
+                    Your latest request ({formatDate(latest.created_at)}) was not approved for host access.
+                    {latest.rejection_reason?.trim() ? (
+                      <>
+                        {"\n\n"}
+                        <Text style={styles.rejectionReason}>{latest.rejection_reason.trim()}</Text>
+                      </>
+                    ) : null}
+                  </Text>
+                  <Text style={styles.muted}>You can submit a new application below if something has changed.</Text>
+                </View>
+              ) : null}
+
               <View style={styles.card}>
                 <Text style={styles.label}>Email (from your account)</Text>
                 <Text style={styles.emailReadonly}>{email}</Text>
@@ -170,6 +221,8 @@ export default function HostApplyScreen() {
                   placeholderTextColor={colors.grey400}
                   autoCapitalize="words"
                   editable={!submitting}
+                  maxLength={100}
+                  accessibilityLabel="Full name"
                 />
 
                 <Text style={styles.label}>Phone</Text>
@@ -181,6 +234,8 @@ export default function HostApplyScreen() {
                   placeholderTextColor={colors.grey400}
                   keyboardType="phone-pad"
                   editable={!submitting}
+                  maxLength={20}
+                  accessibilityLabel="Phone number"
                 />
 
                 <Text style={styles.label}>Hosting experience</Text>
@@ -193,6 +248,8 @@ export default function HostApplyScreen() {
                   multiline
                   textAlignVertical="top"
                   editable={!submitting}
+                  maxLength={1000}
+                  accessibilityLabel="Hosting experience notes"
                 />
 
                 {errorMsg ? (
@@ -300,4 +357,16 @@ const styles = StyleSheet.create({
   secondaryBtnText: { ...typography.bodyStrong, fontSize: 16, color: semantic.textPrimary },
   btnPressed: { transform: [{ translateY: 2 }], shadowOffset: { width: 1, height: 1 } },
   btnDisabled: { opacity: 0.5 },
+  rejectedCard: { borderColor: semantic.danger },
+  rejectionReason: { ...typography.body, fontStyle: "italic", color: semantic.textSecondary },
+  applySecondary: {
+    marginTop: spacing.md,
+    paddingVertical: spacing.md,
+    borderRadius: radius.medium,
+    borderWidth: borderWidth.default,
+    borderColor: semantic.borderPrimary,
+    backgroundColor: semantic.bgSecondary,
+    alignItems: "center",
+  },
+  applySecondaryText: { ...typography.bodyStrong, fontSize: 15, color: semantic.textPrimary },
 });

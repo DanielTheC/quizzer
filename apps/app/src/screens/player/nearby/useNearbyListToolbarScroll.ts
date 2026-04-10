@@ -1,33 +1,31 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { FlatList, LayoutChangeEvent, NativeScrollEvent, NativeSyntheticEvent } from "react-native";
+import type { FlatList, LayoutChangeEvent } from "react-native";
 import {
-  Extrapolation,
-  interpolate,
+  runOnJS,
+  useAnimatedReaction,
+  useAnimatedScrollHandler,
   useAnimatedStyle,
   useSharedValue,
+  withTiming,
 } from "react-native-reanimated";
-import {
-  LIST_TOOLBAR_EXPAND_FALLBACK_PX,
-  LIST_TOOLBAR_NEAR_TOP_PX,
-  LIST_TOOLBAR_SCROLL_COLLAPSE_RANGE_MAX,
-  LIST_SCROLL_DIRECTION_PX,
-} from "./nearbyConstants";
+import { LIST_TOOLBAR_EXPAND_FALLBACK_PX, LIST_TOOLBAR_NEAR_TOP_PX, LIST_SCROLL_DIRECTION_PX } from "./nearbyConstants";
 import type { QuizEvent } from "./nearbyTypes";
+
+const EXPAND_ANIM_MS = 220;
 
 export function useNearbyListToolbarScroll(nearbyView: "list" | "map") {
   const [listFiltersUserHidden, setListFiltersUserHidden] = useState(false);
-  const [showCollapsedToolbarChrome, setShowCollapsedToolbarChrome] = useState(false);
-  const listScrollYRef = useRef(0);
   const quizListRef = useRef<FlatList<QuizEvent>>(null);
-  const listFiltersUserHiddenRef = useRef(false);
 
-  const scrollY = useSharedValue(0);
+  const lastY = useSharedValue(0);
   const filtersHiddenSV = useSharedValue(0);
   const expandableHeightSV = useSharedValue(LIST_TOOLBAR_EXPAND_FALLBACK_PX);
+  /** 0 = visually collapsed, 1 = full expandable height — animated on manual hide only. */
+  const expandVisualSV = useSharedValue(1);
 
-  useEffect(() => {
-    listFiltersUserHiddenRef.current = listFiltersUserHidden;
-  }, [listFiltersUserHidden]);
+  const revealFiltersRow = useCallback(() => {
+    setListFiltersUserHidden((hidden) => (hidden ? false : hidden));
+  }, []);
 
   useEffect(() => {
     filtersHiddenSV.value = listFiltersUserHidden ? 1 : 0;
@@ -36,16 +34,22 @@ export function useNearbyListToolbarScroll(nearbyView: "list" | "map") {
   useEffect(() => {
     if (nearbyView === "map") {
       setListFiltersUserHidden(false);
-      scrollY.value = 0;
-      listScrollYRef.current = 0;
+      lastY.value = 0;
+      expandVisualSV.value = 1;
     }
-  }, [nearbyView, scrollY]);
+  }, [nearbyView, lastY, expandVisualSV]);
 
-  useEffect(() => {
-    const y = listScrollYRef.current;
-    const collapsedByScroll = y >= LIST_TOOLBAR_SCROLL_COLLAPSE_RANGE_MAX - 8;
-    setShowCollapsedToolbarChrome(listFiltersUserHidden || collapsedByScroll);
-  }, [listFiltersUserHidden]);
+  useAnimatedReaction(
+    () => (filtersHiddenSV.value > 0.5 ? 0 : 1),
+    (targetOpen, prevOpen) => {
+      if (prevOpen === null) {
+        expandVisualSV.value = targetOpen;
+        return;
+      }
+      if (targetOpen === prevOpen) return;
+      expandVisualSV.value = withTiming(targetOpen, { duration: EXPAND_ANIM_MS });
+    }
+  );
 
   const revealListToolbarFromCollapsed = useCallback(() => {
     setListFiltersUserHidden(false);
@@ -57,57 +61,46 @@ export function useNearbyListToolbarScroll(nearbyView: "list" | "map") {
   const onListToolbarExpandableLayout = useCallback(
     (ev: LayoutChangeEvent) => {
       const h = ev.nativeEvent.layout.height;
-      if (h > 0) expandableHeightSV.value = h;
+      if (h >= 40) expandableHeightSV.value = h;
     },
     [expandableHeightSV]
   );
 
   const listToolbarExpandableStyle = useAnimatedStyle(() => {
     const h = Math.max(expandableHeightSV.value, 1);
-    const fromScroll = interpolate(
-      scrollY.value,
-      [0, LIST_TOOLBAR_SCROLL_COLLAPSE_RANGE_MAX],
-      [h, 0],
-      Extrapolation.CLAMP
-    );
-    const maxH = filtersHiddenSV.value > 0.5 ? 0 : fromScroll;
+    const clipH = expandVisualSV.value * h;
     return {
-      maxHeight: maxH,
-      opacity: interpolate(maxH, [0, h * 0.25], [0, 1], Extrapolation.CLAMP),
+      height: clipH,
       overflow: "hidden",
     };
   });
 
-  const onListScroll = useCallback(
-    (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-      const y = e.nativeEvent.contentOffset.y;
-      const dy = y - listScrollYRef.current;
-      listScrollYRef.current = y;
-      scrollY.value = y;
-
-      const collapsedByScroll = y >= LIST_TOOLBAR_SCROLL_COLLAPSE_RANGE_MAX - 8;
-      const nextChrome = listFiltersUserHiddenRef.current || collapsedByScroll;
-      setShowCollapsedToolbarChrome((prev) => (prev === nextChrome ? prev : nextChrome));
+  /** Auto-expand filters when user scrolls back near the top (header is part of list content). */
+  const listScrollHandler = useAnimatedScrollHandler({
+    onScroll: (event) => {
+      const y = event.contentOffset.y;
+      const dy = y - lastY.value;
+      lastY.value = y;
 
       if (y < LIST_TOOLBAR_NEAR_TOP_PX) {
-        setListFiltersUserHidden(false);
+        if (filtersHiddenSV.value > 0.5) {
+          runOnJS(revealFiltersRow)();
+        }
         return;
       }
-      if (dy < -LIST_SCROLL_DIRECTION_PX) {
-        setListFiltersUserHidden(false);
+      if (dy < -LIST_SCROLL_DIRECTION_PX && filtersHiddenSV.value > 0.5) {
+        runOnJS(revealFiltersRow)();
       }
     },
-    [scrollY]
-  );
+  });
 
   return {
     listFiltersUserHidden,
     setListFiltersUserHidden,
-    showCollapsedToolbarChrome,
     quizListRef,
     listToolbarExpandableStyle,
     onListToolbarExpandableLayout,
-    onListScroll,
+    listScrollHandler,
     revealListToolbarFromCollapsed,
   };
 }

@@ -6,3 +6,6 @@ enabled = true
 
 [functions.notify-quiz-attendees]
 verify_jwt = true
+
+[functions.notify-quiz-cancelled]
+verify_jwt = true

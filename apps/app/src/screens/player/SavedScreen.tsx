@@ -67,7 +67,7 @@ function buildSavedStyles(semantic: SemanticTheme) {
       marginTop: spacing.xl,
       paddingVertical: spacing.md,
       paddingHorizontal: spacing.xl,
-      backgroundColor: semantic.accentBlue,
+      backgroundColor: semantic.accentYellow,
       borderRadius: radius.brutal,
       borderWidth: borderWidth.default,
       borderColor: semantic.borderPrimary,
@@ -75,7 +75,7 @@ function buildSavedStyles(semantic: SemanticTheme) {
     },
     emptyCtaPressed: { transform: [{ translateY: 2 }], shadowOffset: { width: 1, height: 1 } },
     emptyCtaIcon: { marginRight: spacing.sm },
-    emptyCtaText: { ...typography.bodyStrong, fontSize: 16, color: semantic.textInverse },
+    emptyCtaText: { ...typography.bodyStrong, fontSize: 16, color: semantic.textPrimary },
     emptyInline: { marginTop: spacing.lg, padding: spacing.lg, alignItems: "center" },
     errorBanner: {
       padding: spacing.md,
@@ -282,8 +282,7 @@ export default function SavedScreen() {
           <View style={styles.emptyBox}>
             <MaterialCommunityIcons name="heart-multiple-outline" size={44} color={semantic.accentPink} />
             <Text style={styles.emptyText}>
-              Heart a pub quiz in Nearby and it lands here — your personal shortlist, one tap from the map. Pull down
-              anytime to refresh.
+              Nothing saved yet — tap the heart on any quiz to add it here. Your next local pub quiz is one tab away.
             </Text>
             <View style={styles.hintRow}>
               <MaterialCommunityIcons name="bell-outline" size={20} color={semantic.textSecondary} style={styles.hintIcon} />
@@ -291,9 +290,14 @@ export default function SavedScreen() {
                 Turn on quiz-day reminders in Settings and we’ll nudge you when a saved quiz is on tonight.
               </Text>
             </View>
-            <Pressable style={({ pressed }) => [styles.emptyCta, pressed && styles.emptyCtaPressed]} onPress={goNearby}>
-              <MaterialCommunityIcons name="map-search" size={20} color={semantic.textInverse} style={styles.emptyCtaIcon} />
-              <Text style={styles.emptyCtaText}>Browse nearby</Text>
+            <Pressable
+              style={({ pressed }) => [styles.emptyCta, pressed && styles.emptyCtaPressed]}
+              onPress={goNearby}
+              accessibilityRole="button"
+              accessibilityLabel="Find a quiz near you"
+            >
+              <MaterialCommunityIcons name="map-search" size={20} color={semantic.textPrimary} style={styles.emptyCtaIcon} />
+              <Text style={styles.emptyCtaText}>Find a quiz near you</Text>
             </Pressable>
           </View>
         ) : errorMsg ? (
@@ -336,7 +340,12 @@ export default function SavedScreen() {
             ListEmptyComponent={
               <View style={styles.emptyInline}>
                 <Text style={styles.emptyListText}>Those quizzes may have moved — pull down to refresh.</Text>
-                <Pressable style={({ pressed }) => [styles.emptyCta, pressed && styles.emptyCtaPressed]} onPress={goNearby}>
+                <Pressable
+                  style={({ pressed }) => [styles.emptyCta, pressed && styles.emptyCtaPressed]}
+                  onPress={goNearby}
+                  accessibilityRole="button"
+                  accessibilityLabel="Find more quizzes nearby"
+                >
                   <Text style={styles.emptyCtaText}>Find more nearby</Text>
                 </Pressable>
               </View>
