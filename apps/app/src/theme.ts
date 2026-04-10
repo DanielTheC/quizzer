@@ -5,8 +5,8 @@
 
 // ——— Palette ———
 export const colors = {
-  yellow: “#FFD400”,
-  black: “#000000”,
+  yellow: "#FFD400",
+  black: "#000000",
   white: "#FFFFFF",
   pink: "#FF4F93",
   green: "#00D26A",
@@ -69,9 +69,9 @@ export const semanticDark: SemanticTheme = {
 
 /** Quiz detail screen — coloured card fields and accent rails (information hierarchy). */
 export const detailScreen = {
-  /** Hero “ticket”: when, where, money — warm gold field */
+  /** Hero "ticket": when, where, money — warm gold field */
   heroBackground: "#FFE8B3",
-  /** Address / maps — cool “go here” */
+  /** Address / maps — cool "go here" */
   locationBackground: "#CFE6FF",
   locationRail: colors.blue,
   locationEyebrow: "#1E40AF",
@@ -95,30 +95,30 @@ export type DetailScreenTheme = { [K in keyof typeof detailScreen]: string };
 /** Dark system UI — muted, deep-tinted panel fields with light ink for readability. */
 export const detailScreenDark: DetailScreenTheme = {
   /** Dark amber — retains warmth of the gold ticket without blowing out on OLED. */
-  heroBackground: “#3A2C00”,
-  /** Deep navy — keeps the “go here” cool blue association. */
-  locationBackground: “#0D2540”,
+  heroBackground: "#3A2C00",
+  /** Deep navy — keeps the "go here" cool blue association. */
+  locationBackground: "#0D2540",
   locationRail: colors.blue,
   /** Lighter blue eyebrow text — legible on dark navy panel. */
-  locationEyebrow: “#93C5FD”,
+  locationEyebrow: "#93C5FD",
   /** Deep magenta — retains the info/rules pink association. */
-  infoBackground: “#350A1A”,
+  infoBackground: "#350A1A",
   infoRail: colors.pink,
   /** Lighter pink eyebrow text — legible on dark magenta panel. */
-  infoEyebrow: “#F9A8D4”,
+  infoEyebrow: "#F9A8D4",
   /** Deep teal — retains the calm turn-up mint association. */
-  turnUpBackground: “#0A2418”,
+  turnUpBackground: "#0A2418",
   turnUpRail: colors.green,
   /** Lighter mint eyebrow text — legible on deep teal panel. */
-  turnUpEyebrow: “#6EE7B7”,
+  turnUpEyebrow: "#6EE7B7",
   /** Light cream — primary text on all dark panels. */
-  ticketInkPrimary: “#F4F1EA”,
+  ticketInkPrimary: "#F4F1EA",
   /** Muted light — secondary text on dark panels. */
-  ticketInkSecondary: “#C5BFB5”,
+  ticketInkSecondary: "#C5BFB5",
   /** Dark surface chip background. */
-  ticketChipBg: “#2A2620”,
+  ticketChipBg: "#2A2620",
   /** Slightly lighter dark surface for icon rings. */
-  ticketIconRingBg: “#332F28”,
+  ticketIconRingBg: "#332F28",
 };
 
 // ——— Spacing (px) ———
