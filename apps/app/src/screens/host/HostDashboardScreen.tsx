@@ -27,9 +27,6 @@ import { getHostCompletedQuizSessionsCount } from "../../lib/runQuizStorage";
  */
 const MANUAL_CLAIMED_QUIZ_EVENT_IDS_KEY = "host_dashboard_manual_claimed_quiz_event_ids";
 
-/** Demo only until payments are integrated. */
-const PLACEHOLDER_EARNINGS_LABEL = "£128";
-
 type HostDashboardRow = {
   quiz_event_id: string;
   venue_id: string;
@@ -42,6 +39,12 @@ type HostDashboardRow = {
 };
 
 type DashboardTab = "mine" | "all";
+
+type HostDashboardSummaryRow = {
+  total_sessions: number | string;
+  total_earnings_pence: number | string;
+  total_player_count: number | string;
+};
 
 async function loadManualClaimedQuizEventIds(): Promise<string[]> {
   try {
@@ -62,6 +65,9 @@ export default function HostDashboardScreen() {
   const [myClaimedQuizEventIds, setMyClaimedQuizEventIds] = useState<Set<string>>(() => new Set());
   const [claimsLoadError, setClaimsLoadError] = useState<string | null>(null);
   const [hostedSessionsCount, setHostedSessionsCount] = useState(0);
+  const [summaryLoading, setSummaryLoading] = useState(true);
+  const [totalEarningsPence, setTotalEarningsPence] = useState<number | null>(null);
+  const [totalSessions, setTotalSessions] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -90,47 +96,61 @@ export default function HostDashboardScreen() {
   const load = useCallback(async () => {
     setErrorMsg(null);
     setClaimsLoadError(null);
+    setSummaryLoading(true);
+    try {
+      const [rpcResult, hostedCount, manualIds, summaryResult] = await Promise.all([
+        supabase.rpc("host_quiz_dashboard_rows"),
+        getHostCompletedQuizSessionsCount(),
+        loadManualClaimedQuizEventIds(),
+        supabase.rpc("host_dashboard_summary").single(),
+      ]);
 
-    const [rpcResult, hostedCount, manualIds] = await Promise.all([
-      supabase.rpc("host_quiz_dashboard_rows"),
-      getHostCompletedQuizSessionsCount(),
-      loadManualClaimedQuizEventIds(),
-    ]);
+      setHostedSessionsCount(hostedCount);
 
-    setHostedSessionsCount(hostedCount);
-
-    const { data: apps, error: appsError } = await supabase
-      .from("host_applications")
-      .select("quiz_event_id")
-      .eq("status", "approved")
-      .not("quiz_event_id", "is", null);
-
-    if (appsError) {
-      setClaimsLoadError(appsError.message);
-    }
-
-    const fromApps = (apps ?? [])
-      .map((r: { quiz_event_id: string | null }) => r.quiz_event_id)
-      .filter((id): id is string => typeof id === "string" && id.length > 0);
-
-    setMyClaimedQuizEventIds(new Set([...fromApps, ...manualIds]));
-
-    if (rpcResult.error) {
-      setErrorMsg(rpcResult.error.message);
-      setRows([]);
-      return;
-    }
-    const list = (rpcResult.data as HostDashboardRow[] | null) ?? [];
-    setRows(list);
-    setNoteDrafts((prev) => {
-      const next = { ...prev };
-      for (const r of list) {
-        if (next[r.quiz_event_id] === undefined) {
-          next[r.quiz_event_id] = r.host_capacity_note ?? "";
-        }
+      if (summaryResult.error || !summaryResult.data) {
+        setTotalEarningsPence(null);
+        setTotalSessions(null);
+      } else {
+        const s = summaryResult.data as HostDashboardSummaryRow;
+        setTotalEarningsPence(Number(s.total_earnings_pence));
+        setTotalSessions(Number(s.total_sessions));
       }
-      return next;
-    });
+
+      const { data: apps, error: appsError } = await supabase
+        .from("host_applications")
+        .select("quiz_event_id")
+        .eq("status", "approved")
+        .not("quiz_event_id", "is", null);
+
+      if (appsError) {
+        setClaimsLoadError(appsError.message);
+      }
+
+      const fromApps = (apps ?? [])
+        .map((r: { quiz_event_id: string | null }) => r.quiz_event_id)
+        .filter((id): id is string => typeof id === "string" && id.length > 0);
+
+      setMyClaimedQuizEventIds(new Set([...fromApps, ...manualIds]));
+
+      if (rpcResult.error) {
+        setErrorMsg(rpcResult.error.message);
+        setRows([]);
+        return;
+      }
+      const list = (rpcResult.data as HostDashboardRow[] | null) ?? [];
+      setRows(list);
+      setNoteDrafts((prev) => {
+        const next = { ...prev };
+        for (const r of list) {
+          if (next[r.quiz_event_id] === undefined) {
+            next[r.quiz_event_id] = r.host_capacity_note ?? "";
+          }
+        }
+        return next;
+      });
+    } finally {
+      setSummaryLoading(false);
+    }
   }, []);
 
   useEffect(() => {
@@ -246,15 +266,23 @@ export default function HostDashboardScreen() {
 
         <View style={styles.summaryBar}>
           <View style={styles.summaryCol}>
-            <Text style={styles.summaryValue}>{hostedSessionsCount}</Text>
+            <Text style={styles.summaryValue}>
+              {totalSessions !== null ? totalSessions : hostedSessionsCount}
+            </Text>
             <Text style={styles.summaryLabel}>Quizzes hosted</Text>
             <Text style={styles.summaryHint}>Counted when you end a night from Results</Text>
           </View>
           <View style={styles.summaryDivider} />
           <View style={styles.summaryCol}>
-            <Text style={styles.summaryValue}>{PLACEHOLDER_EARNINGS_LABEL}</Text>
-            <Text style={styles.summaryLabel}>Earnings (demo)</Text>
-            <Text style={styles.summaryHint}>Placeholder — payments later</Text>
+            {summaryLoading ? (
+              <ActivityIndicator size="small" color={semantic.textPrimary} style={styles.summaryValueSpinner} />
+            ) : (
+              <Text style={styles.summaryValue}>
+                {totalEarningsPence != null ? `£${(totalEarningsPence / 100).toFixed(2)}` : "—"}
+              </Text>
+            )}
+            <Text style={styles.summaryLabel}>Total earnings</Text>
+            <Text style={styles.summaryHint}>From listing entry fees × players (when set)</Text>
           </View>
         </View>
 
@@ -422,6 +450,7 @@ const styles = StyleSheet.create({
   summaryCol: { flex: 1, minWidth: 0 },
   summaryDivider: { width: StyleSheet.hairlineWidth, backgroundColor: semantic.borderPrimary, marginHorizontal: spacing.md },
   summaryValue: { ...typography.bodyStrong, fontSize: 22, color: semantic.textPrimary },
+  summaryValueSpinner: { alignSelf: "flex-start", minHeight: 28, marginBottom: 2 },
   summaryLabel: { ...typography.caption, color: semantic.textSecondary, marginTop: spacing.xs },
   summaryHint: { ...typography.caption, fontSize: 11, color: semantic.textSecondary, marginTop: spacing.xs, opacity: 0.9 },
   tabRow: {
