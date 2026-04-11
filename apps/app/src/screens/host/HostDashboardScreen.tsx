@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -248,7 +249,7 @@ export default function HostDashboardScreen() {
 
   const emptyHintMine = useMemo(
     () =>
-      "No claimed listings yet. When an operator links your approved application to a quiz (host_applications.quiz_event_id), or you add IDs in local manual storage, they appear here.",
+      "No listings linked yet. If your host application was approved, contact us and we'll link your quiz slot to your account.",
     []
   );
 
@@ -305,7 +306,7 @@ export default function HostDashboardScreen() {
             {claimsLoadError ? (
               <View style={styles.warnBanner}>
                 <Text style={styles.warnBannerText}>
-                  Couldn’t load claimed slots ({claimsLoadError}). Manual IDs in storage still apply.
+                  Couldn’t load your linked listings ({claimsLoadError}). Pull to refresh or try again later.
                 </Text>
               </View>
             ) : null}
@@ -386,7 +387,24 @@ export default function HostDashboardScreen() {
                       <Text style={styles.fieldLabel}>Last-minute cancellation</Text>
                       <Pressable
                         disabled={busy}
-                        onPress={() => void setCancelled(r.quiz_event_id, !cancelled)}
+                        onPress={() => {
+                          if (cancelled) {
+                            void setCancelled(r.quiz_event_id, false);
+                            return;
+                          }
+                          Alert.alert(
+                            "Cancel tonight's quiz?",
+                            "Players who saved this quiz will be notified.",
+                            [
+                              { text: "Keep quiz on", style: "cancel" },
+                              {
+                                text: "Cancel quiz",
+                                style: "destructive",
+                                onPress: () => void setCancelled(r.quiz_event_id, true),
+                              },
+                            ]
+                          );
+                        }}
                         style={({ pressed }) => [
                           cancelled ? styles.cancelOnBtn : styles.cancelOffBtn,
                           pressed && styles.btnPressed,

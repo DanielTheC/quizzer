@@ -8,8 +8,12 @@ import {
   ScrollView,
   StyleSheet,
   Alert,
+  ActionSheetIOS,
+  Keyboard,
+  Platform,
   type TextInput as RNTextInput,
 } from "react-native";
+import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { useNavigation, useRoute, RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { HostStackParamList } from "../../navigation/RootNavigator";
@@ -46,6 +50,28 @@ const PODIUM_BRONZE = "#E8A87C";
 
 function generateId(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+}
+
+function phaseProgressStep(phase: RunQuizState["phase"]): number {
+  if (phase === "teams") return 0;
+  if (phase === "bonus") return 1;
+  if (phase === "halftime" || phase === "halftime_leaderboard") return 2;
+  if (phase === "second_half") return 3;
+  return 4;
+}
+
+function PhaseProgressDots({ phase }: { phase: RunQuizState["phase"] }) {
+  const step = phaseProgressStep(phase);
+  return (
+    <View style={styles.phaseDotsRow}>
+      {[0, 1, 2, 3, 4].map((i) => (
+        <View
+          key={i}
+          style={[styles.phaseDot, { backgroundColor: i === step ? colors.yellow : colors.grey200 }]}
+        />
+      ))}
+    </View>
+  );
 }
 
 export default function RunQuizScreen() {
@@ -209,6 +235,26 @@ export default function RunQuizScreen() {
     ]);
   }, [navigation]);
 
+  const openRunQuizOverflowMenu = useCallback(() => {
+    if (Platform.OS === "ios") {
+      ActionSheetIOS.showActionSheetWithOptions(
+        {
+          options: ["Cancel", "Reset night"],
+          cancelButtonIndex: 0,
+          destructiveButtonIndex: 1,
+        },
+        (buttonIndex) => {
+          if (buttonIndex === 1) resetNight();
+        }
+      );
+    } else {
+      Alert.alert("", undefined, [
+        { text: "Cancel", style: "cancel" },
+        { text: "Reset night", style: "destructive", onPress: () => resetNight() },
+      ]);
+    }
+  }, [resetNight]);
+
   const packId = state.packId;
   const openPackQuestions = useCallback(() => {
     if (packId) navigation.navigate("PackQuestions", { packId });
@@ -234,9 +280,16 @@ export default function RunQuizScreen() {
           <Pressable style={styles.viewQuestionsBtn} onPress={openPackQuestions}>
             <Text style={styles.viewQuestionsBtnText}>View questions</Text>
           </Pressable>
-        ) : null}
-        <Pressable style={styles.resetNightBtn} onPress={resetNight}>
-          <Text style={styles.resetNightBtnText}>Reset night</Text>
+        ) : (
+          <View style={styles.topBarSpacer} />
+        )}
+        <Pressable
+          style={styles.overflowMenuBtn}
+          onPress={openRunQuizOverflowMenu}
+          accessibilityLabel="More options"
+          accessibilityRole="button"
+        >
+          <MaterialCommunityIcons name="dots-vertical" size={26} color={semantic.textPrimary} />
         </Pressable>
       </View>
       <ScrollView
@@ -245,6 +298,7 @@ export default function RunQuizScreen() {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
+        <PhaseProgressDots phase={phase} />
         <ScreenTitle subtitle="Teams, scores, bonus rounds, and leaderboard.">Run quiz</ScreenTitle>
         {phase === "teams" && (
           <TeamsPhase
@@ -342,9 +396,11 @@ function Digit1To9Input({
 function PictureRoundScoreInput({
   value,
   onValue,
+  isLastTeam,
 }: {
   value: number;
   onValue: (v: number) => void;
+  isLastTeam: boolean;
 }) {
   return (
     <TextInput
@@ -353,6 +409,7 @@ function PictureRoundScoreInput({
       onChangeText={(text) => {
         if (text === "") {
           onValue(0);
+          if (isLastTeam) Keyboard.dismiss();
           return;
         }
         const digits = text.replace(/[^0-9]/g, "");
@@ -360,6 +417,7 @@ function PictureRoundScoreInput({
         const n = parseInt(digits.slice(0, 3), 10);
         if (!Number.isFinite(n)) return;
         onValue(Math.min(n, 999));
+        if (isLastTeam) Keyboard.dismiss();
       }}
       keyboardType="number-pad"
       placeholder="0"
@@ -434,7 +492,15 @@ function TeamsPhase({
               setTimeout(() => nameRefs.current[nextIndex]?.focus(), 0);
             }}
           />
-          <Pressable style={styles.removeBtn} onPress={() => onRemoveTeam(t.id)}>
+          <Pressable
+            style={styles.removeBtn}
+            onPress={() =>
+              Alert.alert("Remove team", "Remove this team?", [
+                { text: "Cancel", style: "cancel" },
+                { text: "Remove", style: "destructive", onPress: () => onRemoveTeam(t.id) },
+              ])
+            }
+          >
             <Text style={styles.removeBtnText}>Remove</Text>
           </Pressable>
         </View>
@@ -743,11 +809,13 @@ function SecondHalfTeamScores({
   teamIndex,
   roundLabels,
   onSetScore,
+  isLastTeam,
 }: {
   team: RunQuizTeam;
   teamIndex: number;
   roundLabels: string[];
   onSetScore: (teamId: string, index: number, value: number) => void;
+  isLastTeam: boolean;
 }) {
   const r4 = useRef<RNTextInput>(null);
   const r5 = useRef<RNTextInput>(null);
@@ -796,6 +864,7 @@ function SecondHalfTeamScores({
           <PictureRoundScoreInput
             value={team.scores[8] ?? 0}
             onValue={(v) => onSetScore(team.id, 8, v)}
+            isLastTeam={isLastTeam}
           />
         </View>
       </View>
@@ -827,6 +896,7 @@ function SecondHalfPhase({
           teamIndex={teamIndex}
           roundLabels={roundLabels}
           onSetScore={onSetScore}
+          isLastTeam={teamIndex === teams.length - 1}
         />
       ))}
       <Pressable style={styles.primaryButton} onPress={onShowResults}>
@@ -858,8 +928,29 @@ const styles = StyleSheet.create({
     ...shadow.small,
   },
   viewQuestionsBtnText: { color: semantic.textInverse, ...typography.bodyStrong, fontSize: 15 },
-  resetNightBtn: { paddingVertical: spacing.sm, paddingHorizontal: spacing.md },
-  resetNightBtnText: { color: semantic.textSecondary, ...typography.captionStrong },
+  topBarSpacer: { flex: 1 },
+  overflowMenuBtn: {
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    minWidth: 44,
+    minHeight: 44,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  phaseDotsRow: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 10,
+    marginBottom: spacing.md,
+  },
+  phaseDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    borderWidth: borderWidth.thin,
+    borderColor: semantic.borderPrimary,
+  },
   scroll: { flex: 1 },
   scrollContent: { padding: spacing.xxl, paddingBottom: 48 },
   centered: { flex: 1, justifyContent: "center", alignItems: "center" },
