@@ -130,6 +130,7 @@ export default function SavedScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [missingCount, setMissingCount] = useState(0);
 
   const fetchSavedData = useCallback(async () => {
     setErrorMsg(null);

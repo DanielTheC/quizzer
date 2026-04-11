@@ -11,7 +11,7 @@ export async function getSortMode(): Promise<SortMode> {
     const v = await AsyncStorage.getItem(KEY);
     if (v && VALID.includes(v as SortMode)) return v as SortMode;
   } catch {}
-  return "soonest";
+  return "distance";
 }
 
 export async function setSortMode(mode: SortMode): Promise<void> {

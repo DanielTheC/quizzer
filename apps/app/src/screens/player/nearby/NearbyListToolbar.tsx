@@ -1,17 +1,11 @@
 import React from "react";
-import { Linking, Pressable, Text, View, type ViewStyle } from "react-native";
+import { Pressable, Text, View, type ViewStyle } from "react-native";
 import Animated, { type AnimatedStyle } from "react-native-reanimated";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { hapticLight } from "../../../lib/playerHaptics";
-import {
-  LOCATION_PRIVACY_PRIMARY,
-  LOCATION_PRIVACY_SETTINGS,
-  LOCATION_PRIVACY_TAP_SETTINGS,
-} from "../../../lib/legalUrls";
 import { colors, spacing } from "../../../theme";
 import type { SemanticTheme } from "../../../theme";
 import type { NearbyScreenStyles } from "./nearbyScreenStyles";
-import type { LocationPermissionStatus } from "./nearbyTypes";
 import type { SortMode } from "../../../lib/sortStorage";
 import { NearbySearchField } from "./NearbySearchField";
 
@@ -31,7 +25,6 @@ type Props = {
   onOpenSort: () => void;
   onOpenFilters: () => void;
   activeFilterCount: number;
-  locationPermission: LocationPermissionStatus;
   resultLine: string;
   onHideFiltersRow: () => void;
   revealListToolbarFromCollapsed: () => void;
@@ -55,7 +48,6 @@ export function NearbyListToolbar({
   onOpenSort,
   onOpenFilters,
   activeFilterCount,
-  locationPermission,
   resultLine,
   onHideFiltersRow,
   revealListToolbarFromCollapsed,
@@ -168,16 +160,6 @@ export function NearbyListToolbar({
               </Text>
             </Pressable>
           </View>
-
-          {locationPermission === "denied" && (
-            <Pressable onPress={() => Linking.openSettings()} style={styles.locationHint}>
-              <Text style={styles.locationHintText}>{LOCATION_PRIVACY_PRIMARY}</Text>
-              <Text style={styles.locationHintSubtext}>{LOCATION_PRIVACY_SETTINGS}</Text>
-              <Text style={[styles.locationHintSubtext, { marginTop: spacing.sm }]}>
-                {LOCATION_PRIVACY_TAP_SETTINGS}
-              </Text>
-            </Pressable>
-          )}
 
           <Text style={styles.resultCount}>{resultLine}</Text>
           <Pressable

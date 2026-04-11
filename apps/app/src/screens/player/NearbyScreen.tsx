@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { Text, View, Pressable, Linking, RefreshControl, ScrollView } from "react-native";
+import { Text, View, Pressable, RefreshControl, ScrollView } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { StatusBar } from "expo-status-bar";
@@ -19,11 +19,6 @@ import { QuizListSkeleton } from "../../components/QuizListSkeleton";
 import { NearbyMapView } from "../../components/NearbyMapView";
 import { hapticLight, hapticMedium } from "../../lib/playerHaptics";
 import { semantic, spacing } from "../../theme";
-import {
-  LOCATION_PRIVACY_PRIMARY,
-  LOCATION_PRIVACY_SETTINGS,
-  LOCATION_PRIVACY_TAP_SETTINGS,
-} from "../../lib/legalUrls";
 import { formatNearbyListInterestLabel } from "../../lib/quizEventInterestCount";
 import { SEARCH_DEBOUNCE_MS } from "./nearby/nearbyConstants";
 import { buildNearbyStyles } from "./nearby/nearbyScreenStyles";
@@ -55,7 +50,7 @@ export default function NearbyScreen() {
   const [distanceFilterMiles, setDistanceFilterMiles] = useState<DistanceFilter>(null);
   const [savedOnly, setSavedOnly] = useState(false);
   const [filtersSheetVisible, setFiltersSheetVisible] = useState(false);
-  const [sortBy, setSortBy] = useState<SortMode>("soonest");
+  const [sortBy, setSortBy] = useState<SortMode>("distance");
   const [sortModalVisible, setSortModalVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
@@ -180,7 +175,6 @@ export default function NearbyScreen() {
         onOpenSort={() => setSortModalVisible(true)}
         onOpenFilters={() => setFiltersSheetVisible(true)}
         activeFilterCount={activeFilterCount}
-        locationPermission={locationPermission}
         resultLine={resultLine}
         onHideFiltersRow={() => setListFiltersUserHidden(true)}
         revealListToolbarFromCollapsed={revealListToolbarFromCollapsed}
@@ -200,7 +194,6 @@ export default function NearbyScreen() {
       toggleTonight,
       sortBy,
       activeFilterCount,
-      locationPermission,
       resultLine,
       revealListToolbarFromCollapsed,
       listToolbarCompactSummary,
@@ -249,22 +242,6 @@ export default function NearbyScreen() {
             </View>
           )}
 
-          {nearbyView === "map" && (
-            <>
-              {locationPermission === "denied" && (
-                <View style={{ paddingHorizontal: spacing.lg }}>
-                  <Pressable onPress={() => Linking.openSettings()} style={styles.locationHint}>
-                    <Text style={styles.locationHintText}>{LOCATION_PRIVACY_PRIMARY}</Text>
-                    <Text style={styles.locationHintSubtext}>{LOCATION_PRIVACY_SETTINGS}</Text>
-                    <Text style={[styles.locationHintSubtext, { marginTop: spacing.sm }]}>
-                      {LOCATION_PRIVACY_TAP_SETTINGS}
-                    </Text>
-                  </Pressable>
-                </View>
-              )}
-            </>
-          )}
-
           {nearbyView === "list" ? (
             <Animated.FlatList
               ref={quizListRef}
@@ -299,6 +276,7 @@ export default function NearbyScreen() {
                     showRank={sortBy === "distance"}
                     rank={sortBy === "distance" ? index + 1 : null}
                     interestPillLabel={formatNearbyListInterestLabel(item.interest_count, isSaved(item.id))}
+                    squareTopEdge={index === 0}
                   />
                 );
               }}

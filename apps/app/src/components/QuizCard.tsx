@@ -287,6 +287,8 @@ type QuizCardProps = {
   nextOccurrenceLabel?: string | null;
   /** Optional popularity line (e.g. from Nearby embed); omit when empty. */
   interestPillLabel?: string | null;
+  /** When true, top corners are square (e.g. flush with a header above the first list row). */
+  squareTopEdge?: boolean;
 };
 
 export function QuizCard({
@@ -302,6 +304,7 @@ export function QuizCard({
   listAccent: listAccentProp,
   nextOccurrenceLabel = null,
   interestPillLabel = null,
+  squareTopEdge = false,
 }: QuizCardProps) {
   const { semantic, isDark } = useAppTheme();
   const styles = useMemo(() => createQuizCardStyles(semantic, isDark), [semantic, isDark]);
@@ -325,7 +328,11 @@ export function QuizCard({
 
   return (
     <Pressable
-      style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
+      style={({ pressed }) => [
+        styles.card,
+        squareTopEdge && { borderTopLeftRadius: 0, borderTopRightRadius: 0 },
+        pressed && styles.cardPressed,
+      ]}
       onPress={onPress}
       onPressIn={onPressIn}
     >
