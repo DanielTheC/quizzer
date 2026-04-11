@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
   Linking,
+  Platform,
   Pressable,
   SafeAreaView,
   ScrollView,
@@ -644,8 +645,10 @@ export default function QuizDetailScreen() {
     const hasCoords = lat != null && lng != null && Number.isFinite(lat) && Number.isFinite(lng);
     const query = hasCoords ? `${lat},${lng}` : (fullAddress ? `${venueName}, ${fullAddress}` : venueName);
     const encoded = encodeURIComponent(query);
-    const url = `https://www.google.com/maps/search/?api=1&query=${encoded}`;
-    Linking.openURL(url).catch(() => {});
+    const url = Platform.OS === "ios" ? `maps://?q=${encoded}` : `geo:0,0?q=${encoded}`;
+    Linking.openURL(url).catch(() => {
+      Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${encoded}`).catch(() => {});
+    });
   }, [quiz]);
 
   const shareQuiz = useCallback(() => {

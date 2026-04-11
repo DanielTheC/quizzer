@@ -60,7 +60,7 @@ export default function NearbyScreen() {
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
   const [nearbyView, setNearbyView] = useState<"list" | "map">("list");
-  const [tonightMode, setTonightModeState] = useState(true);
+  const [tonightMode, setTonightModeState] = useState(false);
 
   const {
     listFiltersUserHidden,
@@ -245,7 +245,7 @@ export default function NearbyScreen() {
           {errorMsg && (
             <View style={[styles.errorBanner, nearbyView === "map" && { marginHorizontal: spacing.lg }]}>
               <Text style={styles.errorBannerTitle}>Couldn’t load quizzes</Text>
-              <Text style={styles.errorBannerText}>{errorMsg}</Text>
+              <Text style={styles.errorBannerText}>Check your connection and pull down to refresh.</Text>
             </View>
           )}
 

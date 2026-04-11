@@ -1,14 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import {
-  FlatList,
-  Pressable,
-  RefreshControl,
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { FlatList, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { StatusBar } from "expo-status-bar";
 import Animated, { FadeInDown } from "react-native-reanimated";
@@ -168,8 +160,12 @@ export default function SavedScreen() {
     if (error) {
       setErrorMsg(error.message);
       setQuizzes([]);
+      setMissingCount(0);
     } else {
-      setQuizzes((data as unknown as QuizEvent[]) ?? []);
+      const list = (data as unknown as QuizEvent[]) ?? [];
+      setQuizzes(list);
+      const fetchedIds = new Set(list.map((q) => q.id));
+      setMissingCount(savedIds.filter((id) => !fetchedIds.has(id)).length);
     }
   }, [savedIds]);
 
@@ -337,6 +333,13 @@ export default function SavedScreen() {
                 />
               </Animated.View>
             )}
+            ListFooterComponent={
+              missingCount > 0 ? (
+                <Text style={styles.emptyListText}>
+                  {missingCount} saved {missingCount === 1 ? "quiz" : "quizzes"} no longer available
+                </Text>
+              ) : null
+            }
             ListEmptyComponent={
               <View style={styles.emptyInline}>
                 <Text style={styles.emptyListText}>Those quizzes may have moved — pull down to refresh.</Text>

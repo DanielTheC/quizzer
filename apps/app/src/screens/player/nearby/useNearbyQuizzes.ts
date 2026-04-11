@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "../../../lib/supabase";
+import { captureSupabaseError } from "../../../lib/sentryInit";
 import { interestCountFromInterestEmbed } from "../../../lib/quizEventInterestCount";
 import { hapticRefreshDone } from "../../../lib/playerHaptics";
 import type { QuizEvent } from "./nearbyTypes";
@@ -68,6 +69,7 @@ export function useNearbyQuizzes() {
 
     if (resolved.error) {
       console.log("Error loading quizzes:", resolved.error);
+      captureSupabaseError("quiz_events list", resolved.error);
       setErrorMsg(resolved.error.message);
       setQuizzes([]);
     } else {
