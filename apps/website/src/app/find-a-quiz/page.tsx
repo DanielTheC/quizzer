@@ -3,7 +3,6 @@ import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { Container } from "@/components/ui/Container";
 import { PageHero } from "@/components/ui/PageHero";
-import { QuizCard } from "@/components/ui/QuizCard";
 import { Card } from "@/components/ui/Card";
 import { QuizListWithLocation } from "@/components/quiz/QuizListWithLocation";
 import { getQuizzesAndCitiesForFindAQuiz } from "@/lib/quizzes";

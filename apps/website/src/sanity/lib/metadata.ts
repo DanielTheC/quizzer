@@ -31,7 +31,7 @@ export function buildMetadata(options: {
     (pageDescription?.trim() || defaultDescription).slice(0, 160);
 
   return {
-    title: { default: defaultTitle, template },
+    title: { default: title, template },
     description: description,
     keywords: ["pub quiz", "quiz night", "pub quiz near me", "trivia"],
     openGraph: { type: "website" },

@@ -4,7 +4,6 @@ import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { Container } from "@/components/ui/Container";
 import { PageHero } from "@/components/ui/PageHero";
-import { QuizCard } from "@/components/ui/QuizCard";
 import { QuizListWithLocation } from "@/components/quiz/QuizListWithLocation";
 import { FeatureCard } from "@/components/ui/FeatureCard";
 import { getQuizzesForCity, cities as staticCities } from "@/data/quizzes";
@@ -43,11 +42,6 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       canonical: `/find-a-quiz/${slug}`,
     },
   };
-}
-
-function accentMap(accent?: string | null): "yellow" | "cream" | "green" {
-  if (accent === "cream" || accent === "green") return accent;
-  return "yellow";
 }
 
 export default async function CityPage({ params }: Props) {

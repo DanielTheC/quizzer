@@ -1,5 +1,3 @@
-import { type ReactNode } from "react";
-
 interface StatBadgeProps {
   value: string | number;
   label: string;
