@@ -94,6 +94,7 @@ export function AdminQuizzesDashboard() {
   const [venueCity, setVenueCity] = useState("");
   const [venuePostcode, setVenuePostcode] = useState("");
   const [venueSaveBusy, setVenueSaveBusy] = useState(false);
+  const [venueDeleteBusy, setVenueDeleteBusy] = useState<string | null>(null);
 
   const [addQuizOpen, setAddQuizOpen] = useState(false);
   const [editingQuiz, setEditingQuiz] = useState<QuizEventRow | null>(null);
@@ -107,6 +108,7 @@ export function AdminQuizzesDashboard() {
   const [qActive, setQActive] = useState(true);
   const [quizSaveBusy, setQuizSaveBusy] = useState(false);
   const [quizToggleBusy, setQuizToggleBusy] = useState<string | null>(null);
+  const [quizDeleteBusy, setQuizDeleteBusy] = useState<string | null>(null);
 
   const initialLoad = useRef(true);
   const loadGenerationRef = useRef(0);
@@ -393,6 +395,67 @@ export function AdminQuizzesDashboard() {
     }
   }
 
+  async function deleteVenue(row: VenueRow) {
+    if (
+      !window.confirm(
+        `Permanently delete "${row.name}"? All quiz events for this venue must be removed first.`,
+      )
+    ) {
+      return;
+    }
+    setVenueDeleteBusy(row.id);
+    setError(null);
+    try {
+      const supabase = createBrowserSupabaseClient();
+      const { error: e } = await supabase.from("venues").delete().eq("id", row.id);
+      if (e) {
+        captureSupabaseError("admin.venues_delete", e, { venueId: row.id });
+        if (e.code === "23503") {
+          setError("Remove all quiz events for this venue before deleting it.");
+          return;
+        }
+        throw new Error(e.message);
+      }
+      if (editingVenue?.id === row.id) {
+        setEditingVenue(null);
+        resetVenueForm();
+      }
+      if (qVenueId === row.id) {
+        setQVenueId("");
+      }
+      setToast("Venue deleted.");
+      void load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not delete venue.");
+    } finally {
+      setVenueDeleteBusy(null);
+    }
+  }
+
+  async function deleteQuiz(row: QuizEventRow) {
+    if (!window.confirm("Permanently delete this quiz event? This cannot be undone.")) return;
+    setQuizDeleteBusy(row.id);
+    setError(null);
+    try {
+      const supabase = createBrowserSupabaseClient();
+      const { error: e } = await supabase.from("quiz_events").delete().eq("id", row.id);
+      if (e) {
+        captureSupabaseError("admin.quiz_events_delete", e, { quizEventId: row.id });
+        throw new Error(e.message);
+      }
+      if (editingQuiz?.id === row.id) {
+        setEditingQuiz(null);
+        resetQuizForm();
+      }
+      setToast("Quiz event deleted.");
+      void load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not delete quiz event.");
+    } finally {
+      setQuizDeleteBusy(null);
+    }
+  }
+
   const venueFormVisible = addVenueOpen || editingVenue !== null;
   const quizFormVisible = addQuizOpen || editingQuiz !== null;
 
@@ -616,7 +679,7 @@ export function AdminQuizzesDashboard() {
                           </button>
                           <button
                             type="button"
-                            disabled={quizToggleBusy === row.id}
+                            disabled={quizToggleBusy === row.id || quizDeleteBusy === row.id}
                             onClick={() => void toggleQuizActive(row)}
                             className="rounded-[var(--radius-button)] border-2 border-quizzer-black bg-quizzer-white px-2 py-1 text-xs font-semibold text-quizzer-black shadow-[var(--shadow-button)] hover:translate-x-[1px] hover:translate-y-[1px] disabled:opacity-50"
                           >
@@ -625,6 +688,14 @@ export function AdminQuizzesDashboard() {
                               : row.is_active
                                 ? "Deactivate"
                                 : "Activate"}
+                          </button>
+                          <button
+                            type="button"
+                            disabled={quizDeleteBusy === row.id || quizToggleBusy === row.id}
+                            onClick={() => void deleteQuiz(row)}
+                            className="rounded-[var(--radius-button)] border-2 border-quizzer-black bg-red-600 px-2 py-1 text-xs font-semibold text-white shadow-[var(--shadow-button)] hover:translate-x-[1px] hover:translate-y-[1px] hover:bg-red-700 disabled:opacity-50"
+                          >
+                            {quizDeleteBusy === row.id ? "…" : "Delete"}
                           </button>
                         </div>
                       </td>
@@ -758,13 +829,24 @@ export function AdminQuizzesDashboard() {
                     <td className="px-3 py-2">{row.address ?? "—"}</td>
                     <td className="px-3 py-2">{row.postcode ?? "—"}</td>
                     <td className="px-3 py-2">
-                      <button
-                        type="button"
-                        onClick={() => openEditVenue(row)}
-                        className="rounded-[var(--radius-button)] border-2 border-quizzer-black bg-quizzer-yellow px-2 py-1 text-xs font-semibold text-quizzer-black shadow-[var(--shadow-button)] hover:translate-x-[1px] hover:translate-y-[1px]"
-                      >
-                        Edit
-                      </button>
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          disabled={venueDeleteBusy === row.id}
+                          onClick={() => openEditVenue(row)}
+                          className="rounded-[var(--radius-button)] border-2 border-quizzer-black bg-quizzer-yellow px-2 py-1 text-xs font-semibold text-quizzer-black shadow-[var(--shadow-button)] hover:translate-x-[1px] hover:translate-y-[1px] disabled:opacity-50"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          type="button"
+                          disabled={venueDeleteBusy === row.id || venueSaveBusy}
+                          onClick={() => void deleteVenue(row)}
+                          className="rounded-[var(--radius-button)] border-2 border-quizzer-black bg-red-600 px-2 py-1 text-xs font-semibold text-white shadow-[var(--shadow-button)] hover:translate-x-[1px] hover:translate-y-[1px] hover:bg-red-700 disabled:opacity-50"
+                        >
+                          {venueDeleteBusy === row.id ? "…" : "Delete"}
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))
