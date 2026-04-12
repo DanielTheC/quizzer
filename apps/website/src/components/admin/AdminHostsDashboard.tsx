@@ -56,9 +56,7 @@ type HostDetail = {
 };
 
 type AllowlistRow = {
-  id: string;
   email: string;
-  created_at: string;
 };
 
 type ApprovedHostRow = {
@@ -238,8 +236,8 @@ export function AdminHostsDashboard() {
         supabase.rpc("operator_host_roster").abortSignal(signal),
         supabase
           .from("host_allowlisted_emails")
-          .select("id, email, created_at")
-          .order("created_at", { ascending: false })
+          .select("email")
+          .order("email", { ascending: true })
           .abortSignal(signal),
         supabase
           .from("host_applications")
@@ -507,13 +505,13 @@ export function AdminHostsDashboard() {
   async function removeEmail(row: AllowlistRow) {
     const ok = window.confirm(`Remove ${row.email} from host allowlist?`);
     if (!ok) return;
-    setRemoveBusy(row.id);
+    setRemoveBusy(row.email);
     setError(null);
     try {
       const supabase = createBrowserSupabaseClient();
-      const { error: e } = await supabase.from("host_allowlisted_emails").delete().eq("id", row.id);
+      const { error: e } = await supabase.from("host_allowlisted_emails").delete().eq("email", row.email);
       if (e) {
-        captureSupabaseError("admin.host_allowlisted_emails_delete", e, { id: row.id });
+        captureSupabaseError("admin.host_allowlisted_emails_delete", e, { email: row.email });
         throw new Error(e.message);
       }
       setToast("Removed from allowlist.");
@@ -695,7 +693,7 @@ export function AdminHostsDashboard() {
                 ) : (
                   allowlist.map((row, rowIdx) => (
                     <div
-                      key={row.id}
+                      key={row.email}
                       className="animate-admin-row flex flex-wrap items-start justify-between gap-2 rounded-[var(--radius-button)] border-2 border-quizzer-black/15 bg-quizzer-cream/40 p-3"
                       style={
                         { "--admin-row-delay": `${Math.min(rowIdx, 12) * 42}ms` } as CSSProperties
@@ -703,15 +701,15 @@ export function AdminHostsDashboard() {
                     >
                       <div className="min-w-0 flex-1">
                         <p className="font-semibold text-quizzer-black break-all">{row.email}</p>
-                        <p className="text-xs text-quizzer-black/55">Added {formatDateTime(row.created_at)}</p>
+                        <p className="text-xs text-quizzer-black/55">Allowlisted host</p>
                       </div>
                       <button
                         type="button"
-                        disabled={removeBusy === row.id}
+                        disabled={removeBusy === row.email}
                         onClick={() => void removeEmail(row)}
                         className="shrink-0 rounded-[var(--radius-button)] border-2 border-quizzer-black bg-quizzer-white px-2 py-1 text-xs font-semibold text-quizzer-black shadow-[var(--shadow-button)] hover:translate-x-[1px] hover:translate-y-[1px] disabled:opacity-50"
                       >
-                        {removeBusy === row.id ? "…" : "Remove"}
+                        {removeBusy === row.email ? "…" : "Remove"}
                       </button>
                     </div>
                   ))
