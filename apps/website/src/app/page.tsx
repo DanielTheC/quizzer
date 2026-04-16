@@ -9,6 +9,7 @@ import { FeatureCard } from "@/components/ui/FeatureCard";
 import { QuizCard } from "@/components/ui/QuizCard";
 import { Accordion, AccordionItem } from "@/components/ui/Accordion";
 import { fetchQuizzesFromSupabase } from "@/lib/quizzes";
+import { buildStatItems } from "@/lib/stats";
 import { getHomePage, getSiteSettings, getAllFaqs } from "@/sanity/lib/fetch";
 import { buildPageMetadata } from "@/sanity/lib/metadata";
 
@@ -82,8 +83,9 @@ export default async function HomePage() {
 
   const heroTitle = homePage?.heroTitle?.trim() || DEFAULT_HERO_TITLE;
   const heroSubtitle = homePage?.heroSubtitle?.trim() || DEFAULT_HERO_SUBTITLE;
-  const statItems =
-    homePage?.statItems?.length ? homePage.statItems : DEFAULT_STATS;
+  const statItems = homePage?.statItems?.length
+    ? homePage.statItems
+    : await buildStatItems(DEFAULT_STATS);
   const featureCards =
     homePage?.featureCards?.length ? homePage.featureCards : DEFAULT_FEATURES;
   const hostSectionTitle =

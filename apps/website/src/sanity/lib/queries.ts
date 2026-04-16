@@ -81,6 +81,7 @@ export const FAQS_BY_CATEGORY_QUERY = `*[_type == "faq" && category == $category
 
 export const ALL_BLOG_POSTS_QUERY = `*[_type == "blogPost"] | order(publishedAt desc) {
   _id,
+  _updatedAt,
   title,
   "slug": slug.current,
   excerpt,

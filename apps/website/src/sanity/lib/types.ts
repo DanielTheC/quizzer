@@ -84,6 +84,7 @@ export interface BlogAuthorRef {
 
 export interface BlogPostListItem {
   _id: string;
+  _updatedAt?: string | null;
   title?: string | null;
   slug?: string | null;
   excerpt?: string | null;
