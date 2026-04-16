@@ -12,6 +12,7 @@ import {
   getQuizById,
   venueImageUrl,
 } from "@/lib/quizzes";
+import { buildBreadcrumbJsonLd, buildQuizEventJsonLd } from "@/lib/structured-data";
 import { getQuizPageByEventId, getQuizPageEventIds, getSiteSettings } from "@/sanity/lib/fetch";
 import { buildPageMetadata } from "@/sanity/lib/metadata";
 
@@ -105,8 +106,26 @@ export default async function QuizDetailPage({ params }: Props) {
 
   const shareUrl = `https://quizzer.co.uk/find-a-quiz/quiz/${quiz.id}`;
 
+  const SITE_URL = "https://quizzer.co.uk";
+
+  const eventJsonLd = buildQuizEventJsonLd(quiz, id);
+
+  const breadcrumbJsonLd = buildBreadcrumbJsonLd([
+    { name: "Find a Quiz", url: `${SITE_URL}/find-a-quiz` },
+    { name: cityLabel, url: `${SITE_URL}/find-a-quiz/${quiz.city}` },
+    { name: quiz.venueName, url: `${SITE_URL}/find-a-quiz/quiz/${id}` },
+  ]);
+
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(eventJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+      />
       <PageHero title={heroTitle} description={heroDescription} background="yellow" />
 
       <section className="py-12 bg-quizzer-white">
