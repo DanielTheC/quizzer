@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { Container } from "@/components/ui/Container";
 import { Section } from "@/components/ui/Section";
@@ -177,9 +178,9 @@ export default async function HomePage() {
           ) : (
             <p className="text-quizzer-black/60 text-lg">
               No quizzes listed for tonight — check back soon, or{" "}
-              <a href="/find-a-quiz" className="font-semibold underline text-quizzer-black">
+              <Link href="/find-a-quiz" className="font-semibold underline text-quizzer-black">
                 browse all quiz nights
-              </a>
+              </Link>
               .
             </p>
           )}
