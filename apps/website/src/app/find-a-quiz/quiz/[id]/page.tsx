@@ -104,9 +104,9 @@ export default async function QuizDetailPage({ params }: Props) {
     .filter(Boolean)
     .join("\n");
 
-  const shareUrl = `https://quizzer.co.uk/find-a-quiz/quiz/${quiz.id}`;
+  const SITE_URL = "https://quizzerapp.co.uk";
 
-  const SITE_URL = "https://quizzer.co.uk";
+  const shareUrl = `${SITE_URL}/find-a-quiz/quiz/${quiz.id}`;
 
   const eventJsonLd = buildQuizEventJsonLd(quiz, id);
 

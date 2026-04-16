@@ -2,7 +2,7 @@ import type { MetadataRoute } from "next";
 import { fetchQuizzesFromSupabase, getCities } from "@/lib/quizzes";
 import { getBlogPosts } from "@/sanity/lib/fetch";
 
-const SITE_URL = "https://quizzer.co.uk";
+const SITE_URL = "https://quizzerapp.co.uk";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // ── Static pages ──────────────────────────────────────────────────────────

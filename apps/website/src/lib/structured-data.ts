@@ -1,6 +1,6 @@
 import type { Quiz, QuizDetail } from "@/data/types";
 
-const SITE_URL = "https://quizzer.co.uk";
+const SITE_URL = "https://quizzerapp.co.uk";
 
 const DAY_SCHEMA: Record<number, string> = {
   0: "https://schema.org/Sunday",

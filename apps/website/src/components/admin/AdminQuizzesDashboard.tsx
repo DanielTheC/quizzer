@@ -36,6 +36,15 @@ type VenueRow = {
   city: string | null;
   address: string | null;
   postcode: string | null;
+  borough: string | null;
+  what_to_expect: string | null;
+};
+
+type VenueImage = {
+  id: string;
+  storage_path: string;
+  alt_text: string | null;
+  sort_order: number;
 };
 
 type QuizEventRow = {
@@ -93,6 +102,12 @@ export function AdminQuizzesDashboard() {
   const [venueAddress, setVenueAddress] = useState("");
   const [venueCity, setVenueCity] = useState("");
   const [venuePostcode, setVenuePostcode] = useState("");
+  const [venueBoroughState, setVenueBoroughState] = useState("");
+  const [venueWhatToExpect, setVenueWhatToExpect] = useState("");
+  const [venueImages, setVenueImages] = useState<VenueImage[]>([]);
+  const [imagesLoading, setImagesLoading] = useState(false);
+  const [imageUploading, setImageUploading] = useState(false);
+  const [imageError, setImageError] = useState<string | null>(null);
   const [venueSaveBusy, setVenueSaveBusy] = useState(false);
   const [venueDeleteBusy, setVenueDeleteBusy] = useState<string | null>(null);
 
@@ -120,6 +135,10 @@ export function AdminQuizzesDashboard() {
     setVenueAddress("");
     setVenueCity("");
     setVenuePostcode("");
+    setVenueBoroughState("");
+    setVenueWhatToExpect("");
+    setVenueImages([]);
+    setImageError(null);
   }, []);
 
   const resetQuizForm = useCallback(() => {
@@ -140,6 +159,11 @@ export function AdminQuizzesDashboard() {
     setVenueAddress(row.address ?? "");
     setVenueCity(row.city ?? "");
     setVenuePostcode(row.postcode ?? "");
+    setVenueBoroughState(row.borough ?? "");
+    setVenueWhatToExpect(row.what_to_expect ?? "");
+    setVenueImages([]);
+    setImageError(null);
+    void loadVenueImages(row.id);
   }, []);
 
   const openAddVenue = useCallback(() => {
@@ -190,7 +214,7 @@ export function AdminQuizzesDashboard() {
       const [v, q] = await Promise.all([
         supabase
           .from("venues")
-          .select("id, name, city, address, postcode")
+          .select("id, name, city, address, postcode, borough, what_to_expect")
           .order("name", { ascending: true })
           .abortSignal(signal),
         supabase
@@ -267,6 +291,86 @@ export function AdminQuizzesDashboard() {
     return () => window.clearTimeout(t);
   }, [toast]);
 
+  async function loadVenueImages(venueId: string) {
+    setImagesLoading(true);
+    setImageError(null);
+    try {
+      const supabase = createBrowserSupabaseClient();
+      const { data, error: e } = await supabase
+        .from("venue_images")
+        .select("id, storage_path, alt_text, sort_order")
+        .eq("venue_id", venueId)
+        .order("sort_order", { ascending: true });
+      if (e) throw new Error(e.message);
+      setVenueImages((data ?? []) as VenueImage[]);
+    } catch (e) {
+      setImageError(e instanceof Error ? e.message : "Could not load images.");
+    } finally {
+      setImagesLoading(false);
+    }
+  }
+
+  async function uploadVenueImage(venueId: string, file: File) {
+    if (!file.type.startsWith("image/")) {
+      setImageError("Only image files are supported.");
+      return;
+    }
+    if (file.size > 8 * 1024 * 1024) {
+      setImageError("Image must be under 8 MB.");
+      return;
+    }
+    setImageUploading(true);
+    setImageError(null);
+    try {
+      const supabase = createBrowserSupabaseClient();
+      const safeName = file.name.replace(/[^a-z0-9.\-_]/gi, "-").toLowerCase();
+      const path = `${venueId}/${Date.now()}-${safeName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("venue-images")
+        .upload(path, file, { contentType: file.type, upsert: false });
+      if (uploadError) throw new Error(uploadError.message);
+
+      const nextOrder =
+        venueImages.length > 0 ? Math.max(...venueImages.map((img) => img.sort_order)) + 1 : 0;
+
+      const { error: dbError } = await supabase.from("venue_images").insert({
+        venue_id: venueId,
+        storage_path: path,
+        alt_text: null,
+        sort_order: nextOrder,
+      });
+      if (dbError) throw new Error(dbError.message);
+
+      setToast("Photo uploaded.");
+      void loadVenueImages(venueId);
+    } catch (e) {
+      setImageError(e instanceof Error ? e.message : "Upload failed.");
+    } finally {
+      setImageUploading(false);
+    }
+  }
+
+  async function deleteVenueImage(venueId: string, image: VenueImage) {
+    if (!window.confirm("Remove this photo?")) return;
+    setImageError(null);
+    try {
+      const supabase = createBrowserSupabaseClient();
+      const { error: storageError } = await supabase.storage
+        .from("venue-images")
+        .remove([image.storage_path]);
+      if (storageError) throw new Error(storageError.message);
+
+      const { error: dbError } = await supabase.from("venue_images").delete().eq("id", image.id);
+      if (dbError) throw new Error(dbError.message);
+
+      setToast("Photo removed.");
+      void loadVenueImages(venueId);
+    } catch (e) {
+      setImageError(e instanceof Error ? e.message : "Could not remove photo.");
+    }
+  }
+
   async function saveVenue() {
     const name = venueName.trim();
     if (!name) {
@@ -282,6 +386,8 @@ export function AdminQuizzesDashboard() {
         address: venueAddress.trim() || null,
         city: venueCity.trim() || null,
         postcode: venuePostcode.trim() || null,
+        borough: venueBoroughState.trim() || null,
+        what_to_expect: venueWhatToExpect.trim() || null,
       };
       if (editingVenue) {
         const { error: e } = await supabase.from("venues").update(payload).eq("id", editingVenue.id);
@@ -767,6 +873,91 @@ export function AdminQuizzesDashboard() {
                 className="mt-1 w-full rounded-[var(--radius-button)] border-2 border-quizzer-black bg-quizzer-white px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-quizzer-yellow"
               />
             </label>
+            <label className="block text-xs font-medium text-quizzer-black">
+              Borough
+              <input
+                type="text"
+                value={venueBoroughState}
+                onChange={(e) => setVenueBoroughState(e.target.value)}
+                placeholder="e.g. Hackney"
+                className="mt-1 w-full rounded-[var(--radius-button)] border-2 border-quizzer-black bg-quizzer-white px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-quizzer-yellow"
+              />
+            </label>
+
+            <label className="block text-xs font-medium text-quizzer-black">
+              What to expect
+              <span className="ml-1 font-normal text-quizzer-black/50">
+                (one bullet per line — shown to players in the app and website)
+              </span>
+              <textarea
+                value={venueWhatToExpect}
+                onChange={(e) => setVenueWhatToExpect(e.target.value)}
+                rows={5}
+                placeholder={
+                  "8 rounds, 5 questions each, plus a picture round.\nAnswers on paper — host enters totals at the end.\nPrizes awarded immediately after the final round."
+                }
+                className="mt-1 w-full rounded-[var(--radius-button)] border-2 border-quizzer-black bg-quizzer-white px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-quizzer-yellow"
+              />
+            </label>
+
+            {editingVenue ? (
+              <div className="border-t border-quizzer-black/10 pt-4 space-y-3">
+                <p className="text-xs font-semibold uppercase tracking-wide text-quizzer-black">
+                  Photos
+                </p>
+                {imageError ? <p className="text-xs text-red-600">{imageError}</p> : null}
+                {imagesLoading ? (
+                  <p className="text-xs text-quizzer-black/50">Loading photos…</p>
+                ) : venueImages.length > 0 ? (
+                  <div className="grid grid-cols-3 gap-2">
+                    {venueImages.map((img) => {
+                      const supabase = createBrowserSupabaseClient();
+                      const { data: urlData } = supabase.storage
+                        .from("venue-images")
+                        .getPublicUrl(img.storage_path);
+                      return (
+                        <div
+                          key={img.id}
+                          className="relative group aspect-[4/3] rounded border-2 border-quizzer-black overflow-hidden bg-quizzer-cream"
+                        >
+                          <img
+                            src={urlData.publicUrl}
+                            alt={img.alt_text ?? "Venue photo"}
+                            className="w-full h-full object-cover"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => void deleteVenueImage(editingVenue.id, img)}
+                            className="absolute top-1 right-1 rounded bg-red-600 px-1.5 py-0.5 text-[10px] font-bold text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <p className="text-xs text-quizzer-black/50">No photos yet.</p>
+                )}
+                <label className="block">
+                  <span className="text-xs font-medium text-quizzer-black">
+                    {imageUploading ? "Uploading…" : "Upload a photo"}
+                  </span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    disabled={imageUploading}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) void uploadVenueImage(editingVenue.id, file);
+                      e.target.value = "";
+                    }}
+                    className="mt-1 block text-xs text-quizzer-black file:mr-3 file:rounded file:border-2 file:border-quizzer-black file:bg-quizzer-yellow file:px-2 file:py-1 file:text-xs file:font-semibold file:cursor-pointer disabled:opacity-50"
+                  />
+                  <p className="mt-1 text-[10px] text-quizzer-black/40">Max 8 MB · JPEG, PNG, WebP</p>
+                </label>
+              </div>
+            ) : null}
             <div className="flex flex-wrap gap-2">
               <button
                 type="button"
