@@ -7,7 +7,7 @@ import { StatBadge } from "@/components/ui/StatBadge";
 import { FeatureCard } from "@/components/ui/FeatureCard";
 import { QuizCard } from "@/components/ui/QuizCard";
 import { Accordion, AccordionItem } from "@/components/ui/Accordion";
-import { getFeaturedQuizzes } from "@/data/quizzes";
+import { fetchQuizzesFromSupabase } from "@/lib/quizzes";
 import { getHomePage, getSiteSettings, getAllFaqs } from "@/sanity/lib/fetch";
 import { buildPageMetadata } from "@/sanity/lib/metadata";
 
@@ -101,7 +101,14 @@ export default async function HomePage() {
         }))
       : DEFAULT_FAQ_PREVIEW;
 
-  const featuredQuizzes = getFeaturedQuizzes(3);
+  const ukTodayWeekday = new Intl.DateTimeFormat("en-GB", {
+    weekday: "long",
+    timeZone: "Europe/London",
+  }).format(new Date());
+  const allQuizzes = await fetchQuizzesFromSupabase();
+  const tonightQuizzes = allQuizzes
+    .filter((q) => q.day === ukTodayWeekday)
+    .slice(0, 6); // show up to 6 cards in a 3-col grid
 
   const featureAccent = (accent?: string | null): "yellow" | "cream" | "green" =>
     accent === "cream" || accent === "green" ? accent : "yellow";
@@ -161,11 +168,21 @@ export default async function HomePage() {
           <h2 className="font-heading text-3xl sm:text-4xl text-quizzer-black mb-10">
             Tonight&apos;s Quizzes
           </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {featuredQuizzes.map((quiz) => (
-              <QuizCard key={quiz.id} quiz={quiz} />
-            ))}
-          </div>
+          {tonightQuizzes.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {tonightQuizzes.map((quiz) => (
+                <QuizCard key={quiz.id} quiz={quiz} />
+              ))}
+            </div>
+          ) : (
+            <p className="text-quizzer-black/60 text-lg">
+              No quizzes listed for tonight — check back soon, or{" "}
+              <a href="/find-a-quiz" className="font-semibold underline text-quizzer-black">
+                browse all quiz nights
+              </a>
+              .
+            </p>
+          )}
           <div className="mt-10 text-center">
             <Button href="/find-a-quiz" size="lg">
               View all quizzes
