@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/Button";
 import { Container } from "@/components/ui/Container";
 import { PageHero } from "@/components/ui/PageHero";
 import { Card } from "@/components/ui/Card";
-import { QuizListWithLocation } from "@/components/quiz/QuizListWithLocation";
+import { QuizFilterAndList } from "@/components/quiz/QuizFilterAndList";
 import { getQuizzesAndCitiesForFindAQuiz } from "@/lib/quizzes";
 
 export const metadata: Metadata = {
@@ -80,10 +80,9 @@ export default async function FindAQuizPage() {
             All quizzes
           </h2>
           <p className="text-quizzer-black/80 mb-6">
-            Filters (e.g. day, area, prize) can be added here or in the app. When you allow
-            location, quizzes are sorted by distance.
+            Filter by day below. When you allow location access, quizzes are sorted by distance automatically.
           </p>
-          <QuizListWithLocation quizzes={quizzes} />
+          <QuizFilterAndList quizzes={quizzes} />
         </Container>
       </section>
 

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { Container } from "@/components/ui/Container";
 import { PageHero } from "@/components/ui/PageHero";
+import { QuizFilterAndList } from "@/components/quiz/QuizFilterAndList";
 import { QuizListWithLocation } from "@/components/quiz/QuizListWithLocation";
 import { FeatureCard } from "@/components/ui/FeatureCard";
 import { getQuizzesForCity, cities as staticCities } from "@/data/quizzes";
@@ -105,7 +106,7 @@ export default async function CityPage({ params }: Props) {
               .
             </p>
           ) : (
-            <QuizListWithLocation quizzes={cityQuizzesFromDbOrStatic} />
+            <QuizFilterAndList quizzes={cityQuizzesFromDbOrStatic} />
           )}
         </Container>
       </section>
