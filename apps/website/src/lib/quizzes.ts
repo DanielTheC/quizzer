@@ -1,6 +1,5 @@
 import { getSupabaseSafe } from "./supabase";
-import type { Quiz } from "@/data/types";
-import type { City } from "@/data/types";
+import type { City, Quiz, QuizDetail, VenueImage } from "@/data/types";
 
 const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
@@ -12,6 +11,7 @@ type VenueShape = {
   borough: string | null;
   lat: number | null;
   lng: number | null;
+  what_to_expect?: string | null;
 };
 
 /** If last segment looks like a UK postcode, treat the segment before it as the town/city hint. */
@@ -47,13 +47,20 @@ export function resolveVenueCityLabel(venue: VenueShape | null): string | null {
 /** PostgREST returns FK relation as "venue" when using venue:venues(...) in select. */
 type SupabaseQuizRow = {
   id: string;
+  venue_id?: string;
   day_of_week: number;
   start_time: string;
   entry_fee_pence?: number | null;
+  fee_basis?: string | null;
   prize?: string | null;
+  turn_up_guidance?: string | null;
+  host_cancelled_at?: string | null;
   venues?: VenueShape | null;
   venue?: VenueShape | null;
 };
+
+const QUIZ_EVENT_DETAIL_SELECT =
+  "id, venue_id, day_of_week, start_time, entry_fee_pence, fee_basis, prize, turn_up_guidance, host_cancelled_at, venues(name, address, postcode, city, borough, lat, lng, what_to_expect)";
 
 function formatTime(s: string): string {
   const str = String(s).trim();
@@ -193,11 +200,82 @@ export async function fetchQuizByIdFromSupabase(id: string): Promise<Quiz | null
   return rowToQuiz(data as unknown as SupabaseQuizRow);
 }
 
-export async function getQuizById(id: string): Promise<Quiz | null> {
-  const fromDb = await fetchQuizByIdFromSupabase(id);
-  if (fromDb) return fromDb;
+/**
+ * Full quiz row for detail pages: extra event + venue fields and gallery images.
+ */
+export async function fetchQuizDetailById(id: string): Promise<QuizDetail | null> {
+  const supabase = getSupabaseSafe();
+  if (!supabase) return null;
+
+  const { data: quizRow, error: quizError } = await supabase
+    .from("quiz_events")
+    .select(QUIZ_EVENT_DETAIL_SELECT)
+    .eq("id", id)
+    .eq("is_active", true)
+    .maybeSingle();
+
+  if (quizError || !quizRow) {
+    if (quizError) console.error("[website] Supabase quiz detail by id error:", quizError.message);
+    return null;
+  }
+
+  const row = quizRow as unknown as SupabaseQuizRow;
+  const venueId = row.venue_id ?? null;
+
+  let venueImages: VenueImage[] = [];
+  if (venueId) {
+    const { data: imageRows, error: imagesError } = await supabase
+      .from("venue_images")
+      .select("id, venue_id, storage_path, alt_text, sort_order")
+      .eq("venue_id", venueId)
+      .order("sort_order", { ascending: true });
+
+    if (imagesError) {
+      console.error("[website] Supabase venue_images fetch error:", imagesError.message);
+    } else {
+      venueImages = (
+        (imageRows ?? []) as Array<{
+          id: string;
+          venue_id: string;
+          storage_path: string;
+          alt_text: string | null;
+          sort_order: number;
+        }>
+      ).map((img) => ({
+        id: img.id,
+        storagePath: img.storage_path,
+        altText: img.alt_text,
+        sortOrder: img.sort_order,
+      }));
+    }
+  }
+
+  const base = rowToQuiz(row);
+  const venue = row.venues ?? row.venue ?? null;
+
+  return {
+    ...base,
+    feeBasis: row.fee_basis ?? "per_team",
+    turnUpGuidance: row.turn_up_guidance ?? null,
+    hostCancelledAt: row.host_cancelled_at ?? null,
+    whatToExpect: venue?.what_to_expect ?? null,
+    venueImages,
+  };
+}
+
+export async function getQuizById(id: string): Promise<QuizDetail | Quiz | null> {
+  const detail = await fetchQuizDetailById(id);
+  if (detail) return detail;
   const { quizzes } = await import("@/data/quizzes");
   return quizzes.find((q) => q.id === id) ?? null;
+}
+
+/** Public URL for a file path in the `venue-images` storage bucket. */
+export function venueImageUrl(storagePath: string): string {
+  const supabase = getSupabaseSafe();
+  if (!supabase) return "";
+  const { data } = supabase.storage.from("venue-images").getPublicUrl(storagePath);
+  return data.publicUrl;
 }
 
 /**

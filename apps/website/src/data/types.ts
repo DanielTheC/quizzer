@@ -20,6 +20,22 @@ export interface Quiz {
   postcode?: string;
 }
 
+/** Enriched detail for the quiz detail page — superset of Quiz */
+export interface QuizDetail extends Quiz {
+  feeBasis: string; // "per_team" | "per_person"
+  turnUpGuidance: string | null;
+  hostCancelledAt: string | null;
+  whatToExpect: string | null; // newline-separated bullets from venues.what_to_expect
+  venueImages: VenueImage[];
+}
+
+export interface VenueImage {
+  id: string;
+  storagePath: string;
+  altText: string | null;
+  sortOrder: number;
+}
+
 /** City for find-a-quiz */
 export interface City {
   slug: string;

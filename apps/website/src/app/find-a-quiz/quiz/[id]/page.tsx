@@ -2,11 +2,16 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { BlogBody } from "@/components/blog/BlogBody";
-import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Container } from "@/components/ui/Container";
 import { PageHero } from "@/components/ui/PageHero";
-import { citySlugToLabel, getQuizById } from "@/lib/quizzes";
+import { ShareButton } from "@/components/ui/ShareButton";
+import {
+  citySlugToLabel,
+  fetchQuizDetailById,
+  getQuizById,
+  venueImageUrl,
+} from "@/lib/quizzes";
 import { getQuizPageByEventId, getQuizPageEventIds, getSiteSettings } from "@/sanity/lib/fetch";
 import { buildPageMetadata } from "@/sanity/lib/metadata";
 
@@ -55,14 +60,15 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-const mapsButtonClass =
-  "inline-flex items-center justify-center font-semibold border-[3px] border-solid rounded-[12px] transition-all duration-150 " +
-  "bg-quizzer-pink text-quizzer-white border-quizzer-black shadow-[4px_4px_0_#000] hover:shadow-[2px_2px_0_#000] hover:translate-x-[2px] hover:translate-y-[2px] " +
-  "px-6 py-3 text-base no-underline";
+const DEFAULT_WHAT_TO_EXPECT = [
+  "8 rounds, 5 questions each, plus a picture round.",
+  "Answers on paper; host enters totals halfway and at the end.",
+  "Bonus round (double points) for one round only.",
+];
 
 export default async function QuizDetailPage({ params }: Props) {
   const { id } = await params;
-  const [quiz, quizPage] = await Promise.all([getQuizById(id), getQuizPageByEventId(id)]);
+  const [quiz, quizPage] = await Promise.all([fetchQuizDetailById(id), getQuizPageByEventId(id)]);
   if (!quiz) notFound();
 
   const cityLabel = citySlugToLabel(quiz.city);
@@ -72,6 +78,32 @@ export default async function QuizDetailPage({ params }: Props) {
   const mapsQuery = [quiz.venueName, quiz.address, quiz.postcode].filter(Boolean).join(", ");
   const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapsQuery || quiz.venueName)}`;
   const bodyBlocks = Array.isArray(quizPage?.body) ? quizPage.body : null;
+
+  const turnUp = quiz.turnUpGuidance ? quiz.turnUpGuidance : "Arrive 10–15 minutes early to bag a table.";
+  const venueLines = quiz.whatToExpect
+    ? quiz.whatToExpect
+        .split(/\r?\n/)
+        .map((l) => l.trim())
+        .filter(Boolean)
+    : DEFAULT_WHAT_TO_EXPECT;
+  const whatToExpectLines = [turnUp, ...venueLines];
+
+  const isCancelled = !!quiz.hostCancelledAt;
+  const feeBasis = quiz.feeBasis === "per_team" ? " per team" : " per person";
+  const venueImages = quiz.venueImages;
+
+  const shareText = [
+    "Pub quiz near you on Quizzer:",
+    "",
+    quiz.venueName,
+    quiz.address ? `📍 ${quiz.address}${quiz.postcode ? `, ${quiz.postcode}` : ""}` : "",
+    `${quiz.day} · ${quiz.time}`,
+    `Entry: ${quiz.entryFee}${feeBasis} • Prize: ${quiz.prize}`,
+  ]
+    .filter(Boolean)
+    .join("\n");
+
+  const shareUrl = `https://quizzer.co.uk/find-a-quiz/quiz/${quiz.id}`;
 
   return (
     <>
@@ -98,42 +130,111 @@ export default async function QuizDetailPage({ params }: Props) {
             <span className="text-quizzer-black font-medium">{quiz.venueName}</span>
           </nav>
 
-          <div className="rounded-[12px] border-[3px] border-quizzer-black bg-quizzer-white p-6 shadow-[5px_5px_0_#000] text-quizzer-black">
-            <p className="text-sm text-quizzer-black/80 mb-3">
-              {quiz.area}, {quiz.day} · {quiz.time}
-            </p>
-            <div className="flex flex-wrap gap-2 mb-3">
-              <span className="text-sm font-semibold">Entry {quiz.entryFee}</span>
-              <span className="text-sm">· Prize: {quiz.prize}</span>
-            </div>
-            {quiz.tags.length > 0 ? (
-              <div className="flex flex-wrap gap-1.5 mb-4">
-                {quiz.tags.map((tag) => (
-                  <Badge key={tag} variant="yellow">
-                    {tag}
-                  </Badge>
-                ))}
-              </div>
-            ) : null}
-            {(quiz.address || quiz.postcode) && (
-              <p className="text-sm text-quizzer-black/80 mb-6">
-                {[quiz.address, quiz.postcode].filter(Boolean).join(", ")}
+          {isCancelled && (
+            <div className="mb-6 flex items-start gap-3 rounded-[10px] border-[3px] border-red-500 bg-red-50 p-4">
+              <span className="text-red-600 text-xl mt-0.5">⚠</span>
+              <p className="text-sm font-semibold text-red-700">
+                This week&apos;s quiz is cancelled. Check with the venue before you travel.
               </p>
-            )}
-            <div className="flex flex-wrap gap-3">
-              <a
-                href={mapsUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={mapsButtonClass}
-              >
-                Open in Maps
-              </a>
-              <Button href={`/find-a-quiz/${quiz.city}`} variant="primary" size="md">
-                More in {quiz.city === "other" ? "this area" : cityLabel}
-              </Button>
+            </div>
+          )}
+
+          <div className="rounded-[12px] border-[3px] border-quizzer-black bg-quizzer-white shadow-[5px_5px_0_#000] overflow-hidden mb-8">
+            <div className="h-2 bg-quizzer-yellow border-b-[3px] border-quizzer-black" />
+            <div className="p-6">
+              <div className="flex items-start justify-between gap-4 mb-4">
+                <div className="flex-1 min-w-0">
+                  <h2 className="font-heading text-2xl font-normal text-quizzer-black leading-tight">
+                    {quiz.venueName}
+                  </h2>
+                  {quiz.postcode && (
+                    <p className="text-sm font-semibold text-quizzer-black/60 mt-0.5">{quiz.postcode}</p>
+                  )}
+                </div>
+                <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
+                  <span className="px-3 py-1 text-xs font-black bg-quizzer-yellow border-2 border-quizzer-black rounded-full">
+                    {quiz.time}
+                  </span>
+                  <span className="px-3 py-1 text-xs font-black bg-quizzer-black text-quizzer-yellow border-2 border-quizzer-black rounded-full text-center min-w-[52px]">
+                    {quiz.day.slice(0, 3).toUpperCase()}
+                  </span>
+                </div>
+              </div>
+
+              <div className="border-t-[2px] border-quizzer-black/10 mb-4" />
+
+              <div className="space-y-2 mb-4">
+                <p className="text-sm font-semibold text-quizzer-black">
+                  💰 Entry · {quiz.entryFee}
+                  {feeBasis}
+                </p>
+                <p className="text-sm font-semibold text-quizzer-black">🏆 Prize · {quiz.prize}</p>
+              </div>
+
+              {(quiz.address || quiz.postcode) && (
+                <div className="border-t-[1px] border-quizzer-black/10 pt-4 mb-4">
+                  <p className="text-sm text-quizzer-black/70">
+                    {[quiz.address, quiz.postcode].filter(Boolean).join(", ")}
+                  </p>
+                </div>
+              )}
+
+              <div className="border-t-[1px] border-quizzer-black/10 pt-4 mb-4">
+                <p className="text-xs font-black uppercase tracking-widest text-quizzer-black mb-3">
+                  What to expect
+                </p>
+                <ul className="space-y-2">
+                  {whatToExpectLines.map((line, i) => (
+                    <li key={i} className="flex items-start gap-2 text-sm text-quizzer-black/80">
+                      <span className="mt-1.5 w-1.5 h-1.5 rounded-sm bg-quizzer-black flex-shrink-0" />
+                      {line}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              <div className="border-t-[1px] border-quizzer-black/10 pt-4 space-y-2">
+                <div className="flex gap-2">
+                  <ShareButton title={`Quiz: ${quiz.venueName}`} text={shareText} url={shareUrl} />
+                  <a
+                    href={mapsUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex-1 inline-flex items-center justify-center gap-2 font-bold text-sm border-[3px] border-solid border-quizzer-black rounded-[12px] px-4 py-3 bg-quizzer-pink text-quizzer-white shadow-[3px_3px_0_#000] hover:shadow-[1px_1px_0_#000] hover:translate-x-[2px] hover:translate-y-[2px] transition-all duration-150 no-underline"
+                  >
+                    Maps
+                  </a>
+                </div>
+              </div>
             </div>
           </div>
+
+          {venueImages.length > 0 && (
+            <div className="mb-8">
+              <p className="text-xs font-black uppercase tracking-widest text-quizzer-black mb-3">
+                Photos
+              </p>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {venueImages.map((img) => (
+                  <div
+                    key={img.id}
+                    className="aspect-[4/3] rounded-[10px] border-[3px] border-quizzer-black overflow-hidden bg-quizzer-cream"
+                  >
+                    <img
+                      src={venueImageUrl(img.storagePath)}
+                      alt={img.altText ?? quiz.venueName}
+                      className="w-full h-full object-cover"
+                      loading="lazy"
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <Button href={`/find-a-quiz/${quiz.city}`} variant="primary" size="md">
+            More quizzes in {quiz.city === "other" ? "this area" : cityLabel}
+          </Button>
 
           {bodyBlocks && bodyBlocks.length > 0 ? (
             <div className="mt-12 max-w-[720px]">
