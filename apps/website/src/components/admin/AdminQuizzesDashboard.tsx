@@ -65,20 +65,6 @@ type QuizEventRow = {
   turn_up_guidance: string | null;
 };
 
-type PublicanProfileRow = {
-  id: string;
-  venue_id: string;
-  email: string;
-  first_name: string | null;
-  last_name: string | null;
-};
-
-function publicanDisplayName(p: Pick<PublicanProfileRow, "first_name" | "last_name">): string {
-  const fn = p.first_name?.trim() || "";
-  const ln = p.last_name?.trim() || "";
-  return [fn, ln].filter(Boolean).join(" ") || "—";
-}
-
 function formatTimeDisplay(t: string) {
   const x = t.trim();
   if (/^\d{2}:\d{2}/.test(x)) return x.slice(0, 5);
@@ -171,14 +157,6 @@ export function AdminQuizzesDashboard() {
   const [quizToggleBusy, setQuizToggleBusy] = useState<string | null>(null);
   const [quizDeleteBusy, setQuizDeleteBusy] = useState<string | null>(null);
   const [viewTab, setViewTab] = useState<"list" | "schedule">("list");
-
-  const [publicanProfile, setPublicanProfile] = useState<PublicanProfileRow | null>(null);
-  const [publicanLoading, setPublicanLoading] = useState(false);
-  const [inviteEmail, setInviteEmail] = useState("");
-  const [inviteFirst, setInviteFirst] = useState("");
-  const [inviteLast, setInviteLast] = useState("");
-  const [publicanRemoveBusy, setPublicanRemoveBusy] = useState(false);
-  const [inviteBusy, setInviteBusy] = useState(false);
 
   const initialLoad = useRef(true);
   const loadGenerationRef = useRef(0);
@@ -387,36 +365,6 @@ export function AdminQuizzesDashboard() {
     const t = window.setTimeout(() => setToast(null), 3200);
     return () => window.clearTimeout(t);
   }, [toast]);
-
-  useEffect(() => {
-    const quizFormOpen = addQuizOpen || editingQuiz !== null;
-    if (!quizFormOpen || !qVenueId.trim()) {
-      setPublicanProfile(null);
-      setPublicanLoading(false);
-      return;
-    }
-    let cancelled = false;
-    void (async () => {
-      setPublicanLoading(true);
-      const supabase = createBrowserSupabaseClient();
-      const { data, error } = await supabase
-        .from("publican_profiles")
-        .select("id, venue_id, email, first_name, last_name")
-        .eq("venue_id", qVenueId.trim())
-        .maybeSingle();
-      if (cancelled) return;
-      if (error) {
-        captureSupabaseError("publican_profiles admin read", error);
-        setPublicanProfile(null);
-      } else {
-        setPublicanProfile((data ?? null) as PublicanProfileRow | null);
-      }
-      setPublicanLoading(false);
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [addQuizOpen, editingQuiz, qVenueId]);
 
   async function loadVenueImages(venueId: string) {
     setImagesLoading(true);
@@ -694,77 +642,6 @@ export function AdminQuizzesDashboard() {
     }
   }
 
-  async function removeLinkedPublican(venueId: string) {
-    if (!window.confirm("Remove the linked publican account from this venue? They will lose portal access for this venue.")) {
-      return;
-    }
-    setPublicanRemoveBusy(true);
-    setError(null);
-    try {
-      const supabase = createBrowserSupabaseClient();
-      const { error: e } = await supabase.from("publican_profiles").delete().eq("venue_id", venueId);
-      if (e) {
-        captureSupabaseError("publican_profiles admin delete", e, { venueId });
-        throw new Error(e.message);
-      }
-      setPublicanProfile(null);
-      setInviteEmail("");
-      setInviteFirst("");
-      setInviteLast("");
-      setToast("Publican link removed.");
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not remove publican.");
-    } finally {
-      setPublicanRemoveBusy(false);
-    }
-  }
-
-  async function invitePublican(venueId: string) {
-    const email = inviteEmail.trim();
-    if (!email) {
-      setError("Publican email is required.");
-      return;
-    }
-    setInviteBusy(true);
-    setError(null);
-    try {
-      const res = await fetch("/api/admin/create-publican", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email,
-          venue_id: venueId,
-          first_name: inviteFirst.trim() || null,
-          last_name: inviteLast.trim() || null,
-        }),
-      });
-      const body = (await res.json()) as { error?: string; ok?: boolean };
-      if (!res.ok) {
-        throw new Error(body.error ?? "Invite failed.");
-      }
-      setToast("Invitation sent. The publican will receive an email to set their password.");
-      setInviteEmail("");
-      setInviteFirst("");
-      setInviteLast("");
-      const supabase = createBrowserSupabaseClient();
-      const { data, error: qErr } = await supabase
-        .from("publican_profiles")
-        .select("id, venue_id, email, first_name, last_name")
-        .eq("venue_id", venueId)
-        .maybeSingle();
-      if (qErr) {
-        captureSupabaseError("publican_profiles admin read after invite", qErr);
-        setPublicanProfile(null);
-      } else {
-        setPublicanProfile((data ?? null) as PublicanProfileRow | null);
-      }
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not invite publican.");
-    } finally {
-      setInviteBusy(false);
-    }
-  }
-
   const venueFormVisible = addVenueOpen || editingVenue !== null;
   const quizFormVisible = addQuizOpen || editingQuiz !== null;
 
@@ -967,72 +844,6 @@ export function AdminQuizzesDashboard() {
               />
               Active
             </label>
-
-            <div className="border-t border-quizzer-black/10 pt-4">
-              <p className="text-xs font-semibold uppercase tracking-wide text-quizzer-black">Publican account</p>
-              {!qVenueId.trim() ? (
-                <p className="mt-2 text-xs text-quizzer-black/60">Select a venue to manage the publican link.</p>
-              ) : publicanLoading ? (
-                <p className="mt-2 text-xs text-quizzer-black/60">Loading…</p>
-              ) : publicanProfile ? (
-                <div className="mt-2 space-y-2 rounded-[var(--radius-button)] border-2 border-quizzer-black/15 bg-quizzer-cream/40 p-3 text-sm">
-                  <p className="font-medium text-quizzer-black">{publicanProfile.email}</p>
-                  <p className="text-quizzer-black/80">
-                    Name: <span className="font-semibold text-quizzer-black">{publicanDisplayName(publicanProfile)}</span>
-                  </p>
-                  <button
-                    type="button"
-                    disabled={publicanRemoveBusy}
-                    onClick={() => void removeLinkedPublican(qVenueId)}
-                    className="rounded-[var(--radius-button)] border-2 border-quizzer-black bg-red-600 px-2 py-1 text-xs font-semibold text-white shadow-[var(--shadow-button)] hover:translate-x-[1px] hover:translate-y-[1px] hover:bg-red-700 disabled:opacity-50"
-                  >
-                    {publicanRemoveBusy ? "Removing…" : "Remove"}
-                  </button>
-                </div>
-              ) : (
-                <div className="mt-2 space-y-2">
-                  <p className="text-xs text-quizzer-black/70">No publican linked. Invite someone to manage this venue in the portal.</p>
-                  <label className="block text-xs font-medium text-quizzer-black">
-                    Email *
-                    <input
-                      type="email"
-                      value={inviteEmail}
-                      onChange={(e) => setInviteEmail(e.target.value)}
-                      autoComplete="off"
-                      className="mt-1 w-full max-w-md rounded-[var(--radius-button)] border-2 border-quizzer-black bg-quizzer-white px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-quizzer-yellow"
-                    />
-                  </label>
-                  <div className="grid gap-2 sm:grid-cols-2 sm:gap-3">
-                    <label className="block text-xs font-medium text-quizzer-black">
-                      First name
-                      <input
-                        type="text"
-                        value={inviteFirst}
-                        onChange={(e) => setInviteFirst(e.target.value)}
-                        className="mt-1 w-full rounded-[var(--radius-button)] border-2 border-quizzer-black bg-quizzer-white px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-quizzer-yellow"
-                      />
-                    </label>
-                    <label className="block text-xs font-medium text-quizzer-black">
-                      Last name
-                      <input
-                        type="text"
-                        value={inviteLast}
-                        onChange={(e) => setInviteLast(e.target.value)}
-                        className="mt-1 w-full rounded-[var(--radius-button)] border-2 border-quizzer-black bg-quizzer-white px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-quizzer-yellow"
-                      />
-                    </label>
-                  </div>
-                  <button
-                    type="button"
-                    disabled={inviteBusy || !inviteEmail.trim()}
-                    onClick={() => void invitePublican(qVenueId)}
-                    className="rounded-[var(--radius-button)] border-2 border-quizzer-black bg-quizzer-yellow px-3 py-1.5 text-xs font-semibold text-quizzer-black shadow-[var(--shadow-button)] hover:translate-x-[1px] hover:translate-y-[1px] disabled:opacity-50"
-                  >
-                    {inviteBusy ? "Sending…" : "Create account"}
-                  </button>
-                </div>
-              )}
-            </div>
 
             <div className="flex flex-wrap gap-2">
               <button
