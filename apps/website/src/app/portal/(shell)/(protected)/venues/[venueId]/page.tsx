@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { mapPublicanVenueRows } from "@/components/portal/portal-types";
+import { venueLinksFromPublicanProfile } from "@/components/portal/portal-types";
 import { PortalSupabaseEnvMissing } from "@/components/portal/PortalSupabaseEnvMissing";
 import { VenueQuizSchedule, type VenueQuizEventRow } from "@/components/portal/VenueQuizSchedule";
 import { createServerSupabaseClientSafe } from "@/lib/supabase/server";
@@ -24,11 +24,24 @@ export default async function PublicanVenueSchedulePage({ params }: PageProps) {
     return <PortalSupabaseEnvMissing />;
   }
 
-  const { data: pvRows } = await supabase
-    .from("publican_venues")
-    .select("id, venue_id, venues ( name )")
-    .order("created_at", { ascending: true });
-  const links = mapPublicanVenueRows(pvRows ?? []);
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return null;
+  }
+
+  const { data: profile } = await supabase
+    .from("publican_profiles")
+    .select("venue_id, venues ( name )")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (!profile || profile.venue_id !== venueId) {
+    notFound();
+  }
+
+  const links = venueLinksFromPublicanProfile(profile);
   const current = links.find((l) => l.venueId === venueId);
   if (!current) {
     notFound();
@@ -50,17 +63,30 @@ export default async function PublicanVenueSchedulePage({ params }: PageProps) {
   const scheduled = rows.filter((r) => r.host_cancelled_at == null);
   const cancelled = rows.filter((r) => r.host_cancelled_at != null);
 
+  const interestByEventId = new Map<string, number>();
   const { data: countData, error: countError } = await supabase.rpc("publican_venue_quiz_interest_counts", {
     p_venue_id: venueId,
   });
   if (countError) {
     console.error("[portal] publican_venue_quiz_interest_counts:", countError.message);
-  }
-
-  const interestByEventId = new Map<string, number>();
-  for (const row of (countData ?? []) as InterestCountRow[]) {
-    if (row?.quiz_event_id) {
-      interestByEventId.set(row.quiz_event_id, Number(row.interest_count) || 0);
+    const eventIds = rows.map((r) => r.id);
+    if (eventIds.length > 0) {
+      const { data: interestRows, error: intErr } = await supabase
+        .from("quiz_event_interests")
+        .select("quiz_event_id")
+        .in("quiz_event_id", eventIds);
+      if (!intErr) {
+        for (const r of interestRows ?? []) {
+          const qid = r.quiz_event_id as string;
+          interestByEventId.set(qid, (interestByEventId.get(qid) ?? 0) + 1);
+        }
+      }
+    }
+  } else {
+    for (const row of (countData ?? []) as InterestCountRow[]) {
+      if (row?.quiz_event_id) {
+        interestByEventId.set(row.quiz_event_id, Number(row.interest_count) || 0);
+      }
     }
   }
 

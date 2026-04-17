@@ -26,6 +26,8 @@ type PayrollSessionRow = {
 type AllowlistRow = {
   email: string;
   default_fee_pence: number;
+  first_name: string | null;
+  last_name: string | null;
 };
 
 type ClaimStatus = "pending" | "confirmed" | "rejected" | "cancelled";
@@ -98,6 +100,13 @@ function parseStatus(s: string): ClaimStatus {
   return "cancelled";
 }
 
+function allowlistDisplayName(row: Pick<AllowlistRow, "first_name" | "last_name">): string | null {
+  const fn = row.first_name?.trim() || "";
+  const ln = row.last_name?.trim() || "";
+  if (!fn && !ln) return null;
+  return [fn, ln].filter(Boolean).join(" ");
+}
+
 function BtnSpinner() {
   return (
     <span
@@ -167,6 +176,10 @@ export function AdminHostsDashboard() {
   const [editingFeeEmail, setEditingFeeEmail] = useState<string | null>(null);
   const [defaultFeeDraft, setDefaultFeeDraft] = useState("");
   const [defaultFeeBusy, setDefaultFeeBusy] = useState<string | null>(null);
+  const [editingNameEmail, setEditingNameEmail] = useState<string | null>(null);
+  const [firstNameDraft, setFirstNameDraft] = useState("");
+  const [lastNameDraft, setLastNameDraft] = useState("");
+  const [nameSaveBusy, setNameSaveBusy] = useState<string | null>(null);
   const [removeBusy, setRemoveBusy] = useState<string | null>(null);
 
   const [claimRows, setClaimRows] = useState<ClaimRow[]>([]);
@@ -200,7 +213,7 @@ export function AdminHostsDashboard() {
     const supabase = createBrowserSupabaseClient();
     const { data, error: listError } = await supabase
       .from("host_allowlisted_emails")
-      .select("email, default_fee_pence")
+      .select("email, default_fee_pence, first_name, last_name")
       .order("email", { ascending: true });
 
     if (listError) {
@@ -211,10 +224,14 @@ export function AdminHostsDashboard() {
     }
 
     setRosterError(null);
-    const rows: AllowlistRow[] = (data ?? []).map((r: { email: string; default_fee_pence: number | null }) => ({
-      email: r.email,
-      default_fee_pence: r.default_fee_pence != null && Number.isFinite(Number(r.default_fee_pence)) ? Number(r.default_fee_pence) : 0,
-    }));
+    const rows: AllowlistRow[] = (data ?? []).map(
+      (r: { email: string; default_fee_pence: number | null; first_name: string | null; last_name: string | null }) => ({
+        email: r.email,
+        default_fee_pence: r.default_fee_pence != null && Number.isFinite(Number(r.default_fee_pence)) ? Number(r.default_fee_pence) : 0,
+        first_name: r.first_name?.trim() ? r.first_name : null,
+        last_name: r.last_name?.trim() ? r.last_name : null,
+      }),
+    );
     setAllowlist(rows);
   }, []);
 
@@ -477,6 +494,34 @@ export function AdminHostsDashboard() {
     [loadRoster]
   );
 
+  const saveHostNames = useCallback(
+    async (email: string, first: string, last: string) => {
+      setNameSaveBusy(email);
+      const supabase = createBrowserSupabaseClient();
+      const fn = first.trim() || null;
+      const ln = last.trim() || null;
+      const { error: upErr } = await supabase
+        .from("host_allowlisted_emails")
+        .update({ first_name: fn, last_name: ln })
+        .eq("email", email);
+
+      setNameSaveBusy(null);
+
+      if (upErr) {
+        captureSupabaseError("host_allowlisted_emails update names", upErr);
+        setToastError(upErr.message);
+        return;
+      }
+
+      setToast("Name saved.");
+      await loadRoster();
+      setEditingNameEmail(null);
+      setFirstNameDraft("");
+      setLastNameDraft("");
+    },
+    [loadRoster]
+  );
+
   const removeAllowlisted = useCallback(
     async (email: string) => {
       if (!window.confirm(`Remove ${email} from the allowlist?`)) return;
@@ -498,10 +543,15 @@ export function AdminHostsDashboard() {
         setEditingFeeEmail(null);
         setDefaultFeeDraft("");
       }
+      if (editingNameEmail === email) {
+        setEditingNameEmail(null);
+        setFirstNameDraft("");
+        setLastNameDraft("");
+      }
       await loadRoster();
       await loadClaims();
     },
-    [loadRoster, loadClaims, selectedRosterEmail, editingFeeEmail]
+    [loadRoster, loadClaims, selectedRosterEmail, editingFeeEmail, editingNameEmail]
   );
 
   const hostPayCell = (row: ClaimRow) => {
@@ -724,7 +774,16 @@ export function AdminHostsDashboard() {
                         }`}
                         style={{ "--admin-row-delay": `${Math.min(rowIdx, 20) * 24}ms` } as CSSProperties}
                       >
-                        <td className={`${tdClass} font-medium`}>{row.email}</td>
+                        <td className={`${tdClass} font-medium`}>
+                          {allowlistDisplayName(row) ? (
+                            <>
+                              <span>{allowlistDisplayName(row)}</span>
+                              <span className="text-quizzer-black/70"> · {row.email}</span>
+                            </>
+                          ) : (
+                            row.email
+                          )}
+                        </td>
                         <td className={tdClass}>{formatDefaultFeePence(row.default_fee_pence)}</td>
                       </tr>
                     ))}
@@ -735,7 +794,16 @@ export function AdminHostsDashboard() {
                 {selectedRosterRow ? (
                   <div className="rounded-[var(--radius-button)] border-2 border-quizzer-black bg-quizzer-cream/50 p-4">
                     <h3 className="font-heading text-xs uppercase tracking-wide text-quizzer-black">Host detail</h3>
-                    <p className="mt-2 font-semibold text-quizzer-black">{selectedRosterRow.email}</p>
+                    <p className="mt-2 font-semibold text-quizzer-black">
+                      {allowlistDisplayName(selectedRosterRow) ? (
+                        <>
+                          {allowlistDisplayName(selectedRosterRow)}
+                          <span className="font-normal text-quizzer-black/75"> · {selectedRosterRow.email}</span>
+                        </>
+                      ) : (
+                        selectedRosterRow.email
+                      )}
+                    </p>
                     <p className="mt-2 text-sm text-quizzer-black/80">
                       Default pay:{" "}
                       <span className="font-semibold text-quizzer-black">
@@ -778,6 +846,61 @@ export function AdminHostsDashboard() {
                     >
                       {removeBusy === row.email ? "Removing…" : "Remove"}
                     </button>
+                  </div>
+                  <div className="mt-2 text-sm">
+                    <span className="text-quizzer-black/80">Name</span>
+                    {editingNameEmail === row.email ? (
+                      <div className="mt-1 flex flex-wrap items-center gap-2">
+                        <input
+                          type="text"
+                          value={firstNameDraft}
+                          onChange={(e) => setFirstNameDraft(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              void saveHostNames(row.email, firstNameDraft, lastNameDraft);
+                            }
+                          }}
+                          onBlur={() => void saveHostNames(row.email, firstNameDraft, lastNameDraft)}
+                          autoFocus
+                          placeholder="First"
+                          className="min-w-[6rem] rounded-[var(--radius-button)] border-2 border-quizzer-black bg-quizzer-white px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-quizzer-yellow"
+                          aria-label={`First name for ${row.email}`}
+                        />
+                        <input
+                          type="text"
+                          value={lastNameDraft}
+                          onChange={(e) => setLastNameDraft(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              void saveHostNames(row.email, firstNameDraft, lastNameDraft);
+                            }
+                          }}
+                          onBlur={() => void saveHostNames(row.email, firstNameDraft, lastNameDraft)}
+                          placeholder="Last"
+                          className="min-w-[6rem] rounded-[var(--radius-button)] border-2 border-quizzer-black bg-quizzer-white px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-quizzer-yellow"
+                          aria-label={`Last name for ${row.email}`}
+                        />
+                        <span className="text-xs text-quizzer-black/60">{nameSaveBusy === row.email ? "Saving…" : ""}</span>
+                      </div>
+                    ) : (
+                      <div className="mt-1">
+                        <button
+                          type="button"
+                          className="border-b-2 border-quizzer-black font-semibold text-quizzer-black underline decoration-2 underline-offset-2 hover:bg-quizzer-cream/50"
+                          onClick={() => {
+                            setEditingNameEmail(row.email);
+                            setFirstNameDraft(row.first_name ?? "");
+                            setLastNameDraft(row.last_name ?? "");
+                          }}
+                        >
+                          {allowlistDisplayName(row) ?? (
+                            <span className="font-normal text-quizzer-black/40">No name set</span>
+                          )}
+                        </button>
+                      </div>
+                    )}
                   </div>
                   <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
                     <span className="text-quizzer-black/80">Default fee</span>

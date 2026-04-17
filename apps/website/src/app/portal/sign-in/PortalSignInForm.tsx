@@ -10,6 +10,7 @@ export function PortalSignInForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const nextPath = searchParams.get("next")?.trim() || "/portal";
+  const accessError = searchParams.get("error") === "no-access";
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -24,6 +25,13 @@ export function PortalSignInForm() {
           <p className="mt-2 text-sm text-quizzer-black/75">
             Sign in with the email and password for your Quizzer account.
           </p>
+
+          {accessError ? (
+            <p className="mt-4 rounded-[var(--radius-button)] border-2 border-quizzer-black bg-amber-50 px-3 py-2 text-sm text-amber-950">
+              This account doesn’t have publican portal access. If you were invited, make sure you’re using the same email
+              as your invitation, or contact Quizzer support.
+            </p>
+          ) : null}
 
           <form
             className="mt-8 space-y-4"

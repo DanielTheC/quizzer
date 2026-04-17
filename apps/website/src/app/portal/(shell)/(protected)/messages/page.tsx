@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { PublicanMessagesList, type PublicanMessageListRow } from "@/components/portal/PublicanMessagesList";
 import { PublicanNewMessageForm } from "@/components/portal/PublicanNewMessageForm";
-import { mapPublicanVenueRows } from "@/components/portal/portal-types";
+import { venueLinksFromPublicanProfile } from "@/components/portal/portal-types";
 import { PortalSupabaseEnvMissing } from "@/components/portal/PortalSupabaseEnvMissing";
 import { createServerSupabaseClientSafe } from "@/lib/supabase/server";
 
@@ -16,11 +16,29 @@ export default async function PublicanMessagesPage() {
     return <PortalSupabaseEnvMissing />;
   }
 
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return null;
+  }
+
+  const { data: profile } = await supabase
+    .from("publican_profiles")
+    .select("venue_id, venues ( name )")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (!profile) {
+    return null;
+  }
+
   const { data: msgRows, error: msgError } = await supabase
     .from("publican_messages")
     .select(
       "id, venue_id, quiz_event_id, message_type, body, status, operator_reply, created_at, resolved_at, venues ( name ), quiz_events ( day_of_week, start_time )"
     )
+    .eq("venue_id", profile.venue_id)
     .order("created_at", { ascending: false });
 
   if (msgError) {
@@ -29,11 +47,7 @@ export default async function PublicanMessagesPage() {
 
   const messages = (msgRows ?? []) as unknown as PublicanMessageListRow[];
 
-  const { data: pvRows } = await supabase
-    .from("publican_venues")
-    .select("id, venue_id, venues ( name )")
-    .order("created_at", { ascending: true });
-  const links = mapPublicanVenueRows(pvRows ?? []);
+  const links = venueLinksFromPublicanProfile(profile);
   const venueOrder = new Map(links.map((l, i) => [l.venueId, i]));
 
   const byVenue = new Map<string, { venueName: string; messages: PublicanMessageListRow[] }>();
