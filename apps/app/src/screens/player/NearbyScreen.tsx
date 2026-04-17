@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { Text, View, Pressable, RefreshControl, ScrollView } from "react-native";
+import { Text, View, RefreshControl, ScrollView } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { StatusBar } from "expo-status-bar";
@@ -18,7 +18,7 @@ import { QuizCard } from "../../components/QuizCard";
 import { QuizListSkeleton } from "../../components/QuizListSkeleton";
 import { NearbyMapView } from "../../components/NearbyMapView";
 import { hapticLight, hapticMedium } from "../../lib/playerHaptics";
-import { semantic, spacing } from "../../theme";
+import { spacing } from "../../theme";
 import { formatNearbyListInterestLabel } from "../../lib/quizEventInterestCount";
 import { SEARCH_DEBOUNCE_MS } from "./nearby/nearbyConstants";
 import { buildNearbyStyles } from "./nearby/nearbyScreenStyles";
@@ -311,18 +311,10 @@ export default function NearbyScreen() {
               <NearbyMapFloatingToolbar
                 styles={styles}
                 semantic={semantic}
-                searchQuery={searchQuery}
-                onSearchQueryChange={setSearchQuery}
                 nearbyView={nearbyView}
-                showCollapsedToolbarChrome={listFiltersUserHidden}
                 onSetNearbyView={setNearbyView}
                 tonightMode={tonightMode}
                 onToggleTonight={toggleTonight}
-                sortBy={sortBy}
-                onOpenSort={() => setSortModalVisible(true)}
-                onOpenFilters={() => setFiltersSheetVisible(true)}
-                activeFilterCount={activeFilterCount}
-                resultLine={resultLine}
               />
             </View>
           )}

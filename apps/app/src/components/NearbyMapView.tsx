@@ -165,7 +165,6 @@ export function NearbyMapView({ quizzes, userLocation, onSelectQuiz }: Props) {
               coordinate={{ latitude: p.latitude, longitude: p.longitude }}
               title={p.title}
               onPress={() => onSelectQuiz(p.id)}
-              tracksViewChanges={false}
             >
               <View style={styles.markerBubble}>
                 <MaterialCommunityIcons name="glass-mug-variant" size={14} color={semantic.textPrimary} />
