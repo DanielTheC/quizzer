@@ -59,6 +59,9 @@ type QuizEventRow = {
   entry_fee_pence: number | null;
   fee_basis: string | null;
   prize: string | null;
+  prize_1st: string | null;
+  prize_2nd: string | null;
+  prize_3rd: string | null;
   turn_up_guidance: string | null;
 };
 
@@ -124,6 +127,9 @@ export function AdminQuizzesDashboard() {
   const [qFeePence, setQFeePence] = useState("");
   const [qFeeBasis, setQFeeBasis] = useState<"per_person" | "per_team">("per_person");
   const [qPrize, setQPrize] = useState<string>(PRIZE_OPTIONS[4]);
+  const [qPrize1st, setQPrize1st] = useState("");
+  const [qPrize2nd, setQPrize2nd] = useState("");
+  const [qPrize3rd, setQPrize3rd] = useState("");
   const [qTurnUp, setQTurnUp] = useState("");
   const [qActive, setQActive] = useState(true);
   const [quizSaveBusy, setQuizSaveBusy] = useState(false);
@@ -155,6 +161,9 @@ export function AdminQuizzesDashboard() {
     setQFeePence("");
     setQFeeBasis("per_person");
     setQPrize(PRIZE_OPTIONS[4]);
+    setQPrize1st("");
+    setQPrize2nd("");
+    setQPrize3rd("");
     setQTurnUp("");
     setQActive(true);
   }, []);
@@ -197,6 +206,9 @@ export function AdminQuizzesDashboard() {
           ? row.prize
           : "other",
       );
+      setQPrize1st(row.prize_1st ?? "");
+      setQPrize2nd(row.prize_2nd ?? "");
+      setQPrize3rd(row.prize_3rd ?? "");
       setQTurnUp(row.turn_up_guidance ?? "");
       setQActive(row.is_active);
     },
@@ -229,7 +241,7 @@ export function AdminQuizzesDashboard() {
         supabase
           .from("quiz_events")
           .select(
-            "id, venue_id, day_of_week, start_time, is_active, entry_fee_pence, fee_basis, prize, turn_up_guidance",
+            "id, venue_id, day_of_week, start_time, is_active, entry_fee_pence, fee_basis, prize, prize_1st, prize_2nd, prize_3rd, turn_up_guidance",
           )
           .order("day_of_week", { ascending: true })
           .order("start_time", { ascending: true })
@@ -459,6 +471,9 @@ export function AdminQuizzesDashboard() {
         entry_fee_pence,
         fee_basis: qFeeBasis,
         prize: qPrize,
+        prize_1st: qPrize1st.trim() || null,
+        prize_2nd: qPrize2nd.trim() || null,
+        prize_3rd: qPrize3rd.trim() || null,
         turn_up_guidance: qTurnUp.trim() || null,
         is_active: qActive,
       };
@@ -694,6 +709,39 @@ export function AdminQuizzesDashboard() {
                   ))}
                 </select>
               </label>
+              <div className="sm:col-span-2 space-y-3">
+                <p className="text-xs font-semibold text-quizzer-black">Prize descriptions</p>
+                <label className="block text-xs font-medium text-quizzer-black">
+                  1st place prize
+                  <input
+                    type="text"
+                    value={qPrize1st}
+                    onChange={(e) => setQPrize1st(e.target.value)}
+                    placeholder="e.g. £50 bar tab"
+                    className="mt-1 w-full rounded-[var(--radius-button)] border-2 border-quizzer-black bg-quizzer-white px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-quizzer-yellow"
+                  />
+                </label>
+                <label className="block text-xs font-medium text-quizzer-black">
+                  2nd place prize
+                  <input
+                    type="text"
+                    value={qPrize2nd}
+                    onChange={(e) => setQPrize2nd(e.target.value)}
+                    placeholder="e.g. £25 bar tab"
+                    className="mt-1 w-full rounded-[var(--radius-button)] border-2 border-quizzer-black bg-quizzer-white px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-quizzer-yellow"
+                  />
+                </label>
+                <label className="block text-xs font-medium text-quizzer-black">
+                  3rd place prize
+                  <input
+                    type="text"
+                    value={qPrize3rd}
+                    onChange={(e) => setQPrize3rd(e.target.value)}
+                    placeholder="e.g. £10 bar tab"
+                    className="mt-1 w-full rounded-[var(--radius-button)] border-2 border-quizzer-black bg-quizzer-white px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-quizzer-yellow"
+                  />
+                </label>
+              </div>
             </div>
             <label className="block text-xs font-medium text-quizzer-black">
               Turn-up guidance

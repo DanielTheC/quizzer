@@ -37,13 +37,6 @@ import { buildRoundLabelsFromPack, getCachedPack } from "../../lib/quizPack";
 import { ScreenTitle } from "../../components/ScreenTitle";
 import { colors, semantic, spacing, radius, borderWidth, shadow, typography } from "../../theme";
 
-/** Shown on leaderboard for top 3 — edit to match your venue’s prizes. */
-const LEADERBOARD_PRIZES: Record<number, { badge: string; prize: string }> = {
-  1: { badge: "1st place", prize: "Winner’s trophy & £50 bar tab" },
-  2: { badge: "2nd place", prize: "£30 bar tab" },
-  3: { badge: "3rd place", prize: "£15 bar tab" },
-};
-
 const PODIUM_GOLD = colors.yellow;
 const PODIUM_SILVER = "#E2E8F0";
 const PODIUM_BRONZE = "#E8A87C";
@@ -84,6 +77,9 @@ export default function RunQuizScreen() {
   const [state, setState] = useState<RunQuizState>(DEFAULT_STATE);
   const [hydrated, setHydrated] = useState(false);
   const [roundLabels, setRoundLabels] = useState<string[]>(() => buildRoundLabelsFromPack(null));
+  const [prize1st, setPrize1st] = useState<string | null>(null);
+  const [prize2nd, setPrize2nd] = useState<string | null>(null);
+  const [prize3rd, setPrize3rd] = useState<string | null>(null);
 
   useEffect(() => {
     if (mode !== "resume") {
@@ -118,6 +114,40 @@ export default function RunQuizScreen() {
       cancelled = true;
     };
   }, [state.packId]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (!state.venueId) {
+        if (!cancelled) {
+          setPrize1st(null);
+          setPrize2nd(null);
+          setPrize3rd(null);
+        }
+        return;
+      }
+      const { data, error } = await supabase
+        .from("quiz_events")
+        .select("prize_1st, prize_2nd, prize_3rd")
+        .eq("venue_id", state.venueId)
+        .eq("is_active", true)
+        .limit(1)
+        .single();
+      if (cancelled) return;
+      if (error) {
+        setPrize1st(null);
+        setPrize2nd(null);
+        setPrize3rd(null);
+        return;
+      }
+      setPrize1st(data.prize_1st ?? null);
+      setPrize2nd(data.prize_2nd ?? null);
+      setPrize3rd(data.prize_3rd ?? null);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [state.venueId]);
 
   const persist = useCallback((next: RunQuizState) => {
     setState(next);
@@ -332,6 +362,9 @@ export default function RunQuizScreen() {
             mode="halftime"
             teams={teams}
             roundLabels={roundLabels}
+            prize1st={prize1st}
+            prize2nd={prize2nd}
+            prize3rd={prize3rd}
             onBackToScores={backToHalftimeScores}
             onContinue={goToSecondHalf}
           />
@@ -345,7 +378,15 @@ export default function RunQuizScreen() {
           />
         )}
         {phase === "results" && (
-          <LeaderboardPhase mode="final" teams={teams} roundLabels={roundLabels} onFinish={finishAndClear} />
+          <LeaderboardPhase
+            mode="final"
+            teams={teams}
+            roundLabels={roundLabels}
+            prize1st={prize1st}
+            prize2nd={prize2nd}
+            prize3rd={prize3rd}
+            onFinish={finishAndClear}
+          />
         )}
       </ScrollView>
     </SafeAreaView>
@@ -613,6 +654,9 @@ function LeaderboardPhase({
   mode,
   teams,
   roundLabels,
+  prize1st,
+  prize2nd,
+  prize3rd,
   onBackToScores,
   onContinue,
   onFinish,
@@ -620,6 +664,9 @@ function LeaderboardPhase({
   mode: "halftime" | "final";
   teams: RunQuizTeam[];
   roundLabels: string[];
+  prize1st: string | null;
+  prize2nd: string | null;
+  prize3rd: string | null;
   onBackToScores?: () => void;
   onContinue?: () => void;
   onFinish?: () => void;
@@ -645,7 +692,6 @@ function LeaderboardPhase({
 
       {ranked.map(({ team, origIndex, total }, index) => {
         const place = index + 1;
-        const prize = LEADERBOARD_PRIZES[place];
         const bonus = getBonusAppliedState(team, context, roundTitle);
         const podiumStyle =
           place === 1 ? styles.podiumRow1 : place === 2 ? styles.podiumRow2 : place === 3 ? styles.podiumRow3 : null;
@@ -657,6 +703,11 @@ function LeaderboardPhase({
               : place === 3
                 ? styles.podiumRank3
                 : styles.podiumRankOther;
+
+        const prizeTextForPlace =
+          place === 1 ? prize1st : place === 2 ? prize2nd : place === 3 ? prize3rd : null;
+        const showPrizeText =
+          prizeTextForPlace != null && prizeTextForPlace.trim() !== "";
 
         return (
           <View key={team.id} style={[styles.leaderCard, podiumStyle]}>
@@ -682,10 +733,12 @@ function LeaderboardPhase({
                   <Text style={styles.bonusStatusHeadline}>{bonus.headline}</Text>
                   <Text style={styles.bonusStatusDetail}>{bonus.detail}</Text>
                 </View>
-                {prize ? (
+                {place <= 3 ? (
                   <View style={styles.prizeBox}>
-                    <Text style={styles.prizeBadge}>{prize.badge}</Text>
-                    <Text style={styles.prizeText}>{prize.prize}</Text>
+                    <Text style={styles.prizeBadge}>
+                      {place === 1 ? "1st place" : place === 2 ? "2nd place" : "3rd place"}
+                    </Text>
+                    {showPrizeText ? <Text style={styles.prizeText}>{prizeTextForPlace}</Text> : null}
                   </View>
                 ) : (
                   <Text style={styles.prizeOther}>Outside the prizes — thanks for playing!</Text>
