@@ -7,7 +7,7 @@ import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 
 const DAY_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
 
-type NetworkSummary = {
+export type NetworkSummary = {
   active_quiz_count: number;
   total_interests: number;
   teams_last_7d: number;

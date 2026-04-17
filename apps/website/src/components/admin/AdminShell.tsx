@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
 
 const NAV = [
-  { href: "/admin", label: "Triage" },
+  { href: "/admin", label: "Home" },
   { href: "/admin/analytics", label: "Analytics" },
   { href: "/admin/hosts", label: "Hosts" },
   { href: "/admin/messages", label: "Messages" },

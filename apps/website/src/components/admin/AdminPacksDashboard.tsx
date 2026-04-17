@@ -489,8 +489,6 @@ export function AdminPacksDashboard() {
       const supabase = createBrowserSupabaseClient();
 
       for (const round of rounds) {
-        const title =
-          round.title.trim() || defaultRoundTitle(round.roundNumber);
         for (const q of round.questions) {
           if (!q.questionText.trim()) {
             throw new Error(

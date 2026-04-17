@@ -151,6 +151,7 @@ export function AdminHostsDashboard() {
   }, []);
 
   const loadClaims = useCallback(async () => {
+    await Promise.resolve();
     const supabase = createBrowserSupabaseClient();
     setClaimsError(null);
     setClaimsLoading(true);
@@ -284,6 +285,8 @@ export function AdminHostsDashboard() {
   useEffect(() => {
     let cancelled = false;
     void (async () => {
+      await Promise.resolve();
+      if (cancelled) return;
       setRosterLoading(true);
       await loadRoster();
       if (!cancelled) setRosterLoading(false);
@@ -294,12 +297,28 @@ export function AdminHostsDashboard() {
   }, [loadRoster]);
 
   useEffect(() => {
-    void loadClaims();
+    let cancelled = false;
+    void (async () => {
+      await Promise.resolve();
+      if (cancelled) return;
+      await loadClaims();
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [loadClaims]);
 
   useEffect(() => {
     if (tab !== "claims") return;
-    void loadClaims();
+    let cancelled = false;
+    void (async () => {
+      await Promise.resolve();
+      if (cancelled) return;
+      await loadClaims();
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [tab, loadClaims]);
 
   const saveDefaultFee = useCallback(
