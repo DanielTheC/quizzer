@@ -9,7 +9,6 @@ const NAV = [
   { href: "/admin", label: "Triage" },
   { href: "/admin/analytics", label: "Analytics" },
   { href: "/admin/hosts", label: "Hosts" },
-  { href: "/admin/claims", label: "Claims" },
   { href: "/admin/messages", label: "Messages" },
   { href: "/admin/quizzes", label: "Quizzes" },
   { href: "/admin/packs", label: "Packs" },
@@ -79,7 +78,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
                   ? triageCount
                   : item.href === "/admin/messages" && messagesCount > 0
                     ? messagesCount
-                    : item.href === "/admin/claims" && claimsCount > 0
+                    : item.href === "/admin/hosts" && claimsCount > 0
                       ? claimsCount
                       : null;
 

@@ -95,9 +95,18 @@ function venueNameById(venues: VenueRow[], id: string) {
   return venues.find((v) => v.id === id)?.name ?? id;
 }
 
+function truncateEmail(email: string, maxLen: number) {
+  const t = email.trim();
+  if (t.length <= maxLen) return t;
+  return `${t.slice(0, maxLen)}…`;
+}
+
+type QuizClaimSummary = { status: string; host_email: string };
+
 export function AdminQuizzesDashboard() {
   const [venues, setVenues] = useState<VenueRow[]>([]);
   const [quizzes, setQuizzes] = useState<QuizEventRow[]>([]);
+  const [quizClaimByEventId, setQuizClaimByEventId] = useState<Map<string, QuizClaimSummary>>(() => new Map());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
@@ -259,8 +268,40 @@ export function AdminQuizzesDashboard() {
         throw new Error(q.error.message);
       }
 
+      const quizRows = (q.data ?? []) as QuizEventRow[];
+      const quizIds = quizRows.map((r) => r.id);
+
+      let nextClaimMap = new Map<string, QuizClaimSummary>();
+      if (quizIds.length > 0) {
+        const { data: claimRows, error: claimsErr } = await supabase
+          .from("quiz_claims")
+          .select("quiz_event_id, status, host_email")
+          .in("status", ["pending", "confirmed"])
+          .in("quiz_event_id", quizIds)
+          .order("claimed_at", { ascending: false })
+          .abortSignal(signal);
+
+        if (gen !== loadGenerationRef.current) return;
+
+        if (claimsErr) {
+          captureSupabaseError("admin.quiz_claims_for_events", claimsErr);
+          nextClaimMap = new Map();
+        } else {
+          for (const r of (claimRows ?? []) as {
+            quiz_event_id: string;
+            status: string;
+            host_email: string;
+          }[]) {
+            if (!nextClaimMap.has(r.quiz_event_id)) {
+              nextClaimMap.set(r.quiz_event_id, { status: r.status, host_email: r.host_email });
+            }
+          }
+        }
+      }
+
       setVenues((v.data ?? []) as VenueRow[]);
-      setQuizzes((q.data ?? []) as QuizEventRow[]);
+      setQuizzes(quizRows);
+      setQuizClaimByEventId(nextClaimMap);
     } catch (e) {
       if (gen !== loadGenerationRef.current) return;
       setError(e instanceof Error ? e.message : "Failed to load data.");
@@ -795,24 +836,26 @@ export function AdminQuizzesDashboard() {
                 <th className="px-3 py-2 font-semibold">Fee</th>
                 <th className="px-3 py-2 font-semibold">Prize</th>
                 <th className="px-3 py-2 font-semibold">Active</th>
+                <th className="px-3 py-2 font-semibold">Host</th>
                 <th className="px-3 py-2 font-semibold">Actions</th>
               </tr>
             </thead>
             <tbody>
               {loading && quizzes.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-3 py-4 text-quizzer-black/60">
+                  <td colSpan={8} className="px-3 py-4 text-quizzer-black/60">
                     Loading…
                   </td>
                 </tr>
               ) : quizzes.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-3 py-4 text-quizzer-black/60">
+                  <td colSpan={8} className="px-3 py-4 text-quizzer-black/60">
                     No quiz events yet.
                   </td>
                 </tr>
               ) : (
                 quizzes.map((row, rowIdx) => {
+                  const claim = quizClaimByEventId.get(row.id);
                   const dow =
                     row.day_of_week >= 0 && row.day_of_week < DAY_NAMES.length
                       ? DAY_NAMES[row.day_of_week]
@@ -832,6 +875,22 @@ export function AdminQuizzesDashboard() {
                       <td className="px-3 py-2">{formatPrizeDisplay(row.prize)}</td>
                       <td className="px-3 py-2" aria-label={row.is_active ? "Active" : "Inactive"}>
                         {row.is_active ? "✓" : "✗"}
+                      </td>
+                      <td className="px-3 py-2">
+                        {claim?.status === "confirmed" ? (
+                          <span
+                            className="inline-block rounded-full border border-green-700 bg-green-50 px-2 py-0.5 text-xs font-semibold text-green-800"
+                            title={claim.host_email}
+                          >
+                            ✓ {truncateEmail(claim.host_email, 20)}
+                          </span>
+                        ) : claim?.status === "pending" ? (
+                          <span className="inline-block rounded-full border border-amber-600 bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-800">
+                            ⏳ Pending
+                          </span>
+                        ) : (
+                          <span className="text-xs text-quizzer-black/40">Unclaimed</span>
+                        )}
                       </td>
                       <td className="px-3 py-2">
                         <div className="flex flex-wrap gap-2">
