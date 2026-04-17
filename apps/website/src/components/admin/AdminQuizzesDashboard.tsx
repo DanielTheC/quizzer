@@ -38,6 +38,8 @@ type VenueRow = {
   postcode: string | null;
   borough: string | null;
   what_to_expect: string | null;
+  lat: number | null;
+  lng: number | null;
 };
 
 type VenueImage = {
@@ -102,6 +104,8 @@ export function AdminQuizzesDashboard() {
   const [venueAddress, setVenueAddress] = useState("");
   const [venueCity, setVenueCity] = useState("");
   const [venuePostcode, setVenuePostcode] = useState("");
+  const [venueLat, setVenueLat] = useState("");
+  const [venueLng, setVenueLng] = useState("");
   const [venueBoroughState, setVenueBoroughState] = useState("");
   const [venueWhatToExpect, setVenueWhatToExpect] = useState("");
   const [venueImages, setVenueImages] = useState<VenueImage[]>([]);
@@ -135,6 +139,8 @@ export function AdminQuizzesDashboard() {
     setVenueAddress("");
     setVenueCity("");
     setVenuePostcode("");
+    setVenueLat("");
+    setVenueLng("");
     setVenueBoroughState("");
     setVenueWhatToExpect("");
     setVenueImages([]);
@@ -159,6 +165,8 @@ export function AdminQuizzesDashboard() {
     setVenueAddress(row.address ?? "");
     setVenueCity(row.city ?? "");
     setVenuePostcode(row.postcode ?? "");
+    setVenueLat(row.lat != null ? String(row.lat) : "");
+    setVenueLng(row.lng != null ? String(row.lng) : "");
     setVenueBoroughState(row.borough ?? "");
     setVenueWhatToExpect(row.what_to_expect ?? "");
     setVenueImages([]);
@@ -214,7 +222,7 @@ export function AdminQuizzesDashboard() {
       const [v, q] = await Promise.all([
         supabase
           .from("venues")
-          .select("id, name, city, address, postcode, borough, what_to_expect")
+          .select("id, name, city, address, postcode, borough, what_to_expect, lat, lng")
           .order("name", { ascending: true })
           .abortSignal(signal),
         supabase
@@ -388,6 +396,8 @@ export function AdminQuizzesDashboard() {
         postcode: venuePostcode.trim() || null,
         borough: venueBoroughState.trim() || null,
         what_to_expect: venueWhatToExpect.trim() || null,
+        lat: venueLat.trim() !== "" ? parseFloat(venueLat) : null,
+        lng: venueLng.trim() !== "" ? parseFloat(venueLng) : null,
       };
       if (editingVenue) {
         const { error: e } = await supabase.from("venues").update(payload).eq("id", editingVenue.id);
@@ -776,6 +786,14 @@ export function AdminQuizzesDashboard() {
                       </td>
                       <td className="px-3 py-2">
                         <div className="flex flex-wrap gap-2">
+                          <a
+                            href={`/find-a-quiz/quiz/${row.id}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="rounded-[var(--radius-button)] border-2 border-quizzer-black/30 bg-quizzer-white px-2 py-1 text-xs font-semibold text-quizzer-black shadow-[var(--shadow-button)] hover:translate-x-[1px] hover:translate-y-[1px]"
+                          >
+                            Preview ↗
+                          </a>
                           <button
                             type="button"
                             onClick={() => openEditQuiz(row)}
@@ -873,6 +891,44 @@ export function AdminQuizzesDashboard() {
                 className="mt-1 w-full rounded-[var(--radius-button)] border-2 border-quizzer-black bg-quizzer-white px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-quizzer-yellow"
               />
             </label>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="block text-xs font-medium text-quizzer-black">
+                Latitude
+                <input
+                  type="number"
+                  step="any"
+                  value={venueLat}
+                  onChange={(e) => setVenueLat(e.target.value)}
+                  placeholder="e.g. 51.5234"
+                  className="mt-1 w-full rounded-[var(--radius-button)] border-2 border-quizzer-black bg-quizzer-white px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-quizzer-yellow"
+                />
+              </label>
+              <label className="block text-xs font-medium text-quizzer-black">
+                Longitude
+                <input
+                  type="number"
+                  step="any"
+                  value={venueLng}
+                  onChange={(e) => setVenueLng(e.target.value)}
+                  placeholder="e.g. -0.0755"
+                  className="mt-1 w-full rounded-[var(--radius-button)] border-2 border-quizzer-black bg-quizzer-white px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-quizzer-yellow"
+                />
+              </label>
+            </div>
+            {venueLat.trim() && venueLng.trim() ? (
+              <a
+                href={`https://www.google.com/maps?q=${venueLat.trim()},${venueLng.trim()}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-block text-xs font-semibold text-quizzer-black underline hover:opacity-70"
+              >
+                Verify on Google Maps ↗
+              </a>
+            ) : (
+              <p className="text-[10px] text-quizzer-black/40">
+                Coordinates power distance sorting in the app. Find them by right-clicking the venue on Google Maps.
+              </p>
+            )}
             <label className="block text-xs font-medium text-quizzer-black">
               Borough
               <input

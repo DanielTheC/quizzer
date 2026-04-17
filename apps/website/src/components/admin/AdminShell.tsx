@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
 
 const NAV = [
@@ -12,12 +12,40 @@ const NAV = [
   { href: "/admin/messages", label: "Messages" },
   { href: "/admin/quizzes", label: "Quizzes" },
   { href: "/admin/observability", label: "Observability" },
-] as const;
+];
 
 export function AdminShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const [signingOut, setSigningOut] = useState(false);
+  const [triageCount, setTriageCount] = useState(0);
+  const [messagesCount, setMessagesCount] = useState(0);
+
+  const fetchCounts = useCallback(async () => {
+    try {
+      const supabase = createBrowserSupabaseClient();
+      const [appRes, msgRes] = await Promise.all([
+        supabase
+          .from("host_applications")
+          .select("id", { count: "exact", head: true })
+          .eq("status", "pending"),
+        supabase
+          .from("publican_messages")
+          .select("id", { count: "exact", head: true })
+          .in("status", ["open", "in_progress"]),
+      ]);
+      setTriageCount(appRes.count ?? 0);
+      setMessagesCount(msgRes.count ?? 0);
+    } catch {
+      // counts are best-effort — silence errors
+    }
+  }, []);
+
+  useEffect(() => {
+    void fetchCounts();
+    const t = setInterval(() => void fetchCounts(), 60_000);
+    return () => clearInterval(t);
+  }, [fetchCounts]);
 
   return (
     <div className="flex min-h-screen flex-col bg-[var(--color-quizzer-cream)] text-[var(--color-quizzer-black)]">
@@ -32,11 +60,19 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
                 item.href === "/admin"
                   ? pathname === "/admin" || pathname === "/admin/"
                   : pathname === item.href || pathname.startsWith(`${item.href}/`);
+
+              const badge =
+                item.href === "/admin" && triageCount > 0
+                  ? triageCount
+                  : item.href === "/admin/messages" && messagesCount > 0
+                    ? messagesCount
+                    : null;
+
               return (
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`rounded-[var(--radius-button)] border-2 px-3 py-2 text-sm font-medium transition ${
+                  className={`relative rounded-[var(--radius-button)] border-2 px-3 py-2 text-sm font-medium transition ${
                     active
                       ? "border-quizzer-black bg-quizzer-yellow text-quizzer-black"
                       : "border-transparent text-quizzer-black hover:border-quizzer-black/25 hover:bg-quizzer-cream"
@@ -44,6 +80,11 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
                   aria-current={active ? "page" : undefined}
                 >
                   {item.label}
+                  {badge ? (
+                    <span className="ml-1.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-bold leading-none text-white">
+                      {badge > 99 ? "99+" : badge}
+                    </span>
+                  ) : null}
                 </Link>
               );
             })}
