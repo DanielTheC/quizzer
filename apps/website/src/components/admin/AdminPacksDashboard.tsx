@@ -104,7 +104,7 @@ function buildRoundsFromCsv(csvText: string): { rounds: RoundRow[]; error: strin
   if (header.length < expected.length || !expected.every((e, i) => header[i] === e)) {
     return {
       rounds: [],
-      error: `Header must be: ${expected.join(",")}`,
+      error: `Header must be: ${expected.join(",")} — received: ${header.join(",")}`,
     };
   }
 
