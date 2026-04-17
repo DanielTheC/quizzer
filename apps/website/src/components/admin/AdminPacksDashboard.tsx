@@ -35,7 +35,7 @@ function defaultRoundTitle(roundNumber: number) {
   return roundNumber === 9 ? "Picture Round" : `Round ${roundNumber}`;
 }
 
-function parseCsv(text: string): string[][] {
+function parseCsv(text: string, delimiter = ","): string[][] {
   const rows: string[][] = [];
   let row: string[] = [];
   let cur = "";
@@ -55,7 +55,7 @@ function parseCsv(text: string): string[][] {
       }
     } else if (c === '"') {
       inQuotes = true;
-    } else if (c === ",") {
+    } else if (c === delimiter) {
       row.push(cur);
       cur = "";
     } else if (c === "\n" || c === "\r") {
@@ -90,9 +90,13 @@ function buildRoundsFromCsv(csvText: string): { rounds: RoundRow[]; error: strin
   const headerIndex = lines.findIndex((l) => l.trim().toLowerCase().startsWith("round_number"));
   const cleaned = headerIndex >= 0 ? lines.slice(headerIndex).join("\n") : raw;
 
+  // Auto-detect delimiter: if the header line has tabs but no commas, treat as TSV
+  const firstLine = cleaned.trim().split("\n")[0] ?? "";
+  const delimiter = firstLine.includes("\t") && !firstLine.includes(",") ? "\t" : ",";
+
   let rows: string[][];
   try {
-    rows = parseCsv(cleaned.trim());
+    rows = parseCsv(cleaned.trim(), delimiter);
   } catch {
     return { rounds: [], error: "Could not parse CSV." };
   }
@@ -104,7 +108,7 @@ function buildRoundsFromCsv(csvText: string): { rounds: RoundRow[]; error: strin
   if (header.length < expected.length || !expected.every((e, i) => header[i] === e)) {
     return {
       rounds: [],
-      error: `Header must be: ${expected.join(",")} — received: ${header.join(",")}`,
+      error: `Header must be: ${expected.join(",")} — got: ${header.slice(0, 6).join(",")}`,
     };
   }
 
