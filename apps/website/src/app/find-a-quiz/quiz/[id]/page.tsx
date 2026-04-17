@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { BlogBody } from "@/components/blog/BlogBody";
@@ -237,13 +238,14 @@ export default async function QuizDetailPage({ params }: Props) {
                 {venueImages.map((img) => (
                   <div
                     key={img.id}
-                    className="aspect-[4/3] rounded-[10px] border-[3px] border-quizzer-black overflow-hidden bg-quizzer-cream"
+                    className="relative aspect-[4/3] rounded-[10px] border-[3px] border-quizzer-black overflow-hidden bg-quizzer-cream"
                   >
-                    <img
+                    <Image
                       src={venueImageUrl(img.storagePath)}
                       alt={img.altText ?? quiz.venueName}
-                      className="w-full h-full object-cover"
-                      loading="lazy"
+                      fill
+                      className="object-cover"
+                      sizes="(max-width: 640px) 50vw, 33vw"
                     />
                   </div>
                 ))}

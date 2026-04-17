@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
 import { captureSupabaseError } from "@/lib/observability/supabaseErrors";
 import type { CSSProperties } from "react";
@@ -976,10 +977,12 @@ export function AdminQuizzesDashboard() {
                           key={img.id}
                           className="relative group aspect-[4/3] rounded border-2 border-quizzer-black overflow-hidden bg-quizzer-cream"
                         >
-                          <img
+                          <Image
                             src={urlData.publicUrl}
                             alt={img.alt_text ?? "Venue photo"}
-                            className="w-full h-full object-cover"
+                            fill
+                            className="object-cover"
+                            sizes="(max-width: 640px) 50vw, 33vw"
                           />
                           <button
                             type="button"

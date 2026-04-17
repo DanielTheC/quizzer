@@ -32,6 +32,7 @@ interface ButtonAsButton extends ButtonBaseProps {
   href?: never;
   type?: "button" | "submit";
   onClick?: () => void;
+  disabled?: boolean;
 }
 
 interface ButtonAsLink extends ButtonBaseProps {
@@ -50,7 +51,7 @@ export function Button({
   ...rest
 }: ButtonProps) {
   const base =
-    "inline-flex items-center justify-center font-semibold border-[3px] border-solid rounded-[12px] transition-all duration-150 " +
+    "inline-flex items-center justify-center font-semibold border-[3px] border-solid rounded-[12px] transition-all duration-150 disabled:pointer-events-none disabled:opacity-50 " +
     variantStyles[variant] +
     " " +
     sizeStyles[size];
@@ -71,6 +72,7 @@ export function Button({
     <button
       type={rest.type ?? "button"}
       onClick={rest.onClick}
+      disabled={"disabled" in rest ? rest.disabled : undefined}
       className={`${base} ${className}`}
     >
       {children}

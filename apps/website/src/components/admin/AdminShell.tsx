@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
 
 const NAV = [
@@ -21,31 +21,36 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   const [triageCount, setTriageCount] = useState(0);
   const [messagesCount, setMessagesCount] = useState(0);
 
-  const fetchCounts = useCallback(async () => {
-    try {
-      const supabase = createBrowserSupabaseClient();
-      const [appRes, msgRes] = await Promise.all([
-        supabase
-          .from("host_applications")
-          .select("id", { count: "exact", head: true })
-          .eq("status", "pending"),
-        supabase
-          .from("publican_messages")
-          .select("id", { count: "exact", head: true })
-          .in("status", ["open", "in_progress"]),
-      ]);
-      setTriageCount(appRes.count ?? 0);
-      setMessagesCount(msgRes.count ?? 0);
-    } catch {
-      // counts are best-effort — silence errors
-    }
-  }, []);
-
   useEffect(() => {
+    let active = true;
+    async function fetchCounts() {
+      try {
+        const supabase = createBrowserSupabaseClient();
+        const [appRes, msgRes] = await Promise.all([
+          supabase
+            .from("host_applications")
+            .select("id", { count: "exact", head: true })
+            .eq("status", "pending"),
+          supabase
+            .from("publican_messages")
+            .select("id", { count: "exact", head: true })
+            .in("status", ["open", "in_progress"]),
+        ]);
+        if (active) {
+          setTriageCount(appRes.count ?? 0);
+          setMessagesCount(msgRes.count ?? 0);
+        }
+      } catch {
+        // counts are best-effort — silence errors
+      }
+    }
     void fetchCounts();
     const t = setInterval(() => void fetchCounts(), 60_000);
-    return () => clearInterval(t);
-  }, [fetchCounts]);
+    return () => {
+      active = false;
+      clearInterval(t);
+    };
+  }, []);
 
   return (
     <div className="flex min-h-screen flex-col bg-[var(--color-quizzer-cream)] text-[var(--color-quizzer-black)]">
