@@ -9,6 +9,7 @@ const NAV = [
   { href: "/admin", label: "Triage" },
   { href: "/admin/analytics", label: "Analytics" },
   { href: "/admin/hosts", label: "Hosts" },
+  { href: "/admin/claims", label: "Claims" },
   { href: "/admin/messages", label: "Messages" },
   { href: "/admin/quizzes", label: "Quizzes" },
   { href: "/admin/packs", label: "Packs" },
@@ -21,13 +22,14 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   const [signingOut, setSigningOut] = useState(false);
   const [triageCount, setTriageCount] = useState(0);
   const [messagesCount, setMessagesCount] = useState(0);
+  const [claimsCount, setClaimsCount] = useState(0);
 
   useEffect(() => {
     let active = true;
     async function fetchCounts() {
       try {
         const supabase = createBrowserSupabaseClient();
-        const [appRes, msgRes] = await Promise.all([
+        const [appRes, msgRes, claimsRes] = await Promise.all([
           supabase
             .from("host_applications")
             .select("id", { count: "exact", head: true })
@@ -36,10 +38,15 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
             .from("publican_messages")
             .select("id", { count: "exact", head: true })
             .in("status", ["open", "in_progress"]),
+          supabase
+            .from("quiz_claims")
+            .select("id", { count: "exact", head: true })
+            .eq("status", "pending"),
         ]);
         if (active) {
           setTriageCount(appRes.count ?? 0);
           setMessagesCount(msgRes.count ?? 0);
+          setClaimsCount(claimsRes.count ?? 0);
         }
       } catch {
         // counts are best-effort — silence errors
@@ -72,7 +79,9 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
                   ? triageCount
                   : item.href === "/admin/messages" && messagesCount > 0
                     ? messagesCount
-                    : null;
+                    : item.href === "/admin/claims" && claimsCount > 0
+                      ? claimsCount
+                      : null;
 
               return (
                 <Link
