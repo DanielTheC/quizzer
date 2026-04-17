@@ -1,6 +1,5 @@
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "./supabase";
-import { isDevBypassSession } from "./devAuthBypass";
 
 const ALLOWLIST_CACHE_TTL_MS = 45_000;
 let allowlistCache: { userId: string; value: boolean; at: number } | null = null;
@@ -21,10 +20,8 @@ export function authEmailForHost(session: Session | null | undefined): string | 
 
 /**
  * True if JWT is allowlisted for host tools. Null if RPC failed (network/JWT).
- * Dev auth bypass is treated as allowlisted so local host flows keep working.
  */
 export async function fetchIsAllowlistedHost(session: Session | null): Promise<boolean | null> {
-  if (isDevBypassSession(session)) return true;
   const uid = session?.user?.id;
   const now = Date.now();
   if (

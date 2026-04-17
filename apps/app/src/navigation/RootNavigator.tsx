@@ -29,6 +29,8 @@ import SavedScreen from "../screens/player/SavedScreen";
 import HostSetupScreen from "../screens/host/HostSetupScreen";
 import HostOnboardingScreen from "../screens/host/HostOnboardingScreen";
 import HostDashboardScreen from "../screens/host/HostDashboardScreen";
+import AvailableQuizzesScreen from "../screens/host/AvailableQuizzesScreen";
+import MyClaimsScreen from "../screens/host/MyClaimsScreen";
 import HostProfileScreen from "../screens/host/HostProfileScreen";
 import HostApplyScreen from "../screens/host/HostApplyScreen";
 import RunQuizScreen from "../screens/host/RunQuizScreen";
@@ -58,6 +60,8 @@ export type HostStackParamList = {
   HostSetup: undefined;
   HostApply: undefined;
   HostDashboard: undefined;
+  AvailableQuizzes: undefined;
+  MyClaims: undefined;
   HostProfile: undefined;
   RunQuiz: { mode: "new" | "resume"; packId?: string; venueId?: string };
   PackQuestions: { packId: string };
@@ -325,6 +329,10 @@ const HostOnboardingScreenSafe =
   typeof HostOnboardingScreen === "function" ? HostOnboardingScreen : () => <PlaceholderScreen name="HostOnboarding" />;
 const HostDashboardScreenSafe =
   typeof HostDashboardScreen === "function" ? HostDashboardScreen : () => <PlaceholderScreen name="HostDashboard" />;
+const AvailableQuizzesScreenSafe =
+  typeof AvailableQuizzesScreen === "function" ? AvailableQuizzesScreen : () => <PlaceholderScreen name="AvailableQuizzes" />;
+const MyClaimsScreenSafe =
+  typeof MyClaimsScreen === "function" ? MyClaimsScreen : () => <PlaceholderScreen name="MyClaims" />;
 const HostProfileScreenSafe =
   typeof HostProfileScreen === "function" ? HostProfileScreen : () => <PlaceholderScreen name="HostProfile" />;
 const HostApplyScreenSafe =
@@ -415,6 +423,12 @@ function HostStackScreen() {
       <HostStack.Screen name="HostSetup" component={HostSetupScreenSafe} options={{ headerTitle: "" }} />
       <HostStack.Screen name="HostApply" component={HostApplyScreenSafe} options={{ headerTitle: "Host access" }} />
       <HostStack.Screen name="HostDashboard" component={HostDashboardScreenSafe} options={{ headerTitle: "Listings" }} />
+      <HostStack.Screen
+        name="AvailableQuizzes"
+        component={AvailableQuizzesScreenSafe}
+        options={{ headerTitle: "Available Quizzes" }}
+      />
+      <HostStack.Screen name="MyClaims" component={MyClaimsScreenSafe} options={{ headerTitle: "My Claims" }} />
       <HostStack.Screen name="HostProfile" component={HostProfileScreenSafe} options={{ headerTitle: "Profile" }} />
       <HostStack.Screen name="RunQuiz" component={RunQuizScreenSafe} options={{ headerTitle: "" }} />
       <HostStack.Screen name="PackQuestions" component={PackQuestionsScreenSafe} options={{ headerTitle: "" }} />

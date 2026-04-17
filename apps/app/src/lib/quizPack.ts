@@ -131,7 +131,7 @@ export async function clearPackCache(): Promise<void> {
 /** Get latest pack: from cache if id matches, else fetch and cache. */
 export async function getLatestPack(): Promise<QuizPack | null> {
   const cachedId = await AsyncStorage.getItem(LATEST_PACK_ID_KEY);
-  if (cachedId) {
+  if (cachedId && !cachedId.startsWith("local-")) {
     const cached = await getCachedPack(cachedId);
     if (cached) return cached;
   }
@@ -165,6 +165,6 @@ export async function getLatestPackOrFallback(): Promise<QuizPack> {
   const pack = await getLatestPack();
   if (pack) return pack;
   await setCachedPack(FALLBACK_PACK);
-  await AsyncStorage.setItem(LATEST_PACK_ID_KEY, FALLBACK_PACK.id);
+  // Do NOT set LATEST_PACK_ID_KEY — fallback is ephemeral, not a real pack
   return FALLBACK_PACK;
 }

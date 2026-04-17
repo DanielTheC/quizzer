@@ -1,4 +1,3 @@
-import * as Linking from "expo-linking";
 import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -49,16 +48,6 @@ export default function LoginScreen({ navigation, route }: Props) {
     const id = setTimeout(() => setSuccessMsg(null), 6000);
     return () => clearTimeout(id);
   }, [successMsg]);
-
-  /** In Expo Go, copy this URL from the Metro terminal into Supabase → Auth → Redirect URLs. */
-  useEffect(() => {
-    if (__DEV__) {
-      console.log(
-        "[Quizzer] Add this to Supabase Redirect URLs (Expo Go):",
-        Linking.createURL("auth/callback")
-      );
-    }
-  }, []);
 
   const onSubmit = useCallback(async () => {
     setSuccessMsg(null);

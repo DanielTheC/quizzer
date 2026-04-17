@@ -265,6 +265,25 @@ export default function HostDashboardScreen() {
           Listings
         </ScreenTitle>
 
+        <View style={styles.promoRow}>
+          <Pressable
+            onPress={() => navigation.navigate("AvailableQuizzes")}
+            style={({ pressed }) => [styles.promoBtnPrimary, pressed && styles.btnPressed]}
+            accessibilityRole="button"
+            accessibilityLabel="Find a quiz"
+          >
+            <Text style={styles.promoBtnPrimaryText}>Find a quiz</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => navigation.navigate("MyClaims")}
+            style={({ pressed }) => [styles.promoBtnSecondary, pressed && styles.btnPressed]}
+            accessibilityRole="button"
+            accessibilityLabel="My claims"
+          >
+            <Text style={styles.promoBtnSecondaryText}>My claims</Text>
+          </Pressable>
+        </View>
+
         <View style={styles.summaryBar}>
           <View style={styles.summaryCol}>
             <Text style={styles.summaryValue}>
@@ -452,6 +471,35 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: semantic.bgSecondary },
   scroll: { flex: 1 },
   scrollContent: { padding: spacing.xxl, paddingBottom: 48 },
+  promoRow: {
+    flexDirection: "row",
+    gap: spacing.sm,
+    marginBottom: spacing.lg,
+  },
+  promoBtnPrimary: {
+    flex: 1,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.sm,
+    borderRadius: radius.medium,
+    borderWidth: borderWidth.default,
+    borderColor: semantic.borderPrimary,
+    backgroundColor: semantic.accentYellow,
+    alignItems: "center",
+    ...shadow.small,
+  },
+  promoBtnPrimaryText: { ...typography.bodyStrong, fontSize: 15, color: semantic.textPrimary, textAlign: "center" },
+  promoBtnSecondary: {
+    flex: 1,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.sm,
+    borderRadius: radius.medium,
+    borderWidth: borderWidth.default,
+    borderColor: semantic.borderPrimary,
+    backgroundColor: semantic.bgPrimary,
+    alignItems: "center",
+    ...shadow.small,
+  },
+  promoBtnSecondaryText: { ...typography.bodyStrong, fontSize: 15, color: semantic.textPrimary, textAlign: "center" },
   headerRightRow: { flexDirection: "row", alignItems: "center", marginRight: spacing.xs },
   headerRight: { padding: spacing.sm },
   loader: { marginTop: spacing.xl },

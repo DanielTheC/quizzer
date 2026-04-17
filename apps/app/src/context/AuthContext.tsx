@@ -5,7 +5,6 @@ import { signInWithApple } from "../lib/auth/appleSignIn";
 import { signInWithGoogle } from "../lib/auth/googleSignIn";
 import { normalizePhoneE164, requestPhoneOtp, verifyPhoneOtp } from "../lib/auth/phoneAuth";
 import { clearPackCache } from "../lib/quizPack";
-import { createDevBypassSession, isDevAuthBypassEnabled } from "../lib/devAuthBypass";
 
 type AuthContextValue = {
   session: Session | null;
@@ -25,18 +24,9 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
-  const [bypassSuspended, setBypassSuspended] = useState(false);
-  const devBypassActive = isDevAuthBypassEnabled() && !bypassSuspended;
-  const [initializing, setInitializing] = useState(() => !isDevAuthBypassEnabled());
-
-  const devSession = useMemo(() => createDevBypassSession(), []);
+  const [initializing, setInitializing] = useState(true);
 
   useEffect(() => {
-    if (devBypassActive) {
-      setInitializing(false);
-      return;
-    }
-
     let mounted = true;
     setInitializing(true);
 
@@ -63,7 +53,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       mounted = false;
       subscription.unsubscribe();
     };
-  }, [devBypassActive]);
+  }, []);
 
   const signInWithEmail = useCallback(async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
@@ -103,22 +93,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signOut = useCallback(async () => {
-    // Leaving dev bypass must also clear any real Supabase session in storage — otherwise
-    // getSession() immediately restores it and sign-out appears to do nothing.
-    if (isDevAuthBypassEnabled() && !bypassSuspended) {
-      await clearPackCache();
-      await supabase.auth.signOut();
-      setBypassSuspended(true);
-      return;
-    }
     await clearPackCache();
     await supabase.auth.signOut({ scope: "local" });
-  }, [bypassSuspended]);
+  }, []);
 
   const value = useMemo<AuthContextValue>(
     () => ({
-      session: devBypassActive ? devSession : session,
-      user: devBypassActive ? devSession.user : session?.user ?? null,
+      session,
+      user: session?.user ?? null,
       initializing,
       signInWithEmail,
       signUpWithEmail,
@@ -129,8 +111,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       signOut,
     }),
     [
-      devBypassActive,
-      devSession,
       session,
       initializing,
       signInWithEmail,
