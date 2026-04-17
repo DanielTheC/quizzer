@@ -20,6 +20,7 @@ export type QuizEventDetail = {
     lng?: number | null;
     /** Line breaks become bullet items in the quiz detail card. */
     what_to_expect: string | null;
+    venue_images?: { storage_path: string; alt_text: string | null; sort_order: number }[] | null;
   } | null;
 };
 
@@ -39,7 +40,12 @@ const QUIZ_EVENT_DETAIL_SELECT = `
             city,
             lat,
             lng,
-            what_to_expect
+            what_to_expect,
+            venue_images (
+              storage_path,
+              alt_text,
+              sort_order
+            )
           )
         `;
 

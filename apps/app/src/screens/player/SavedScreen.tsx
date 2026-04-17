@@ -16,8 +16,10 @@ import { SavedStackParamList } from "../../navigation/RootNavigator";
 import { ScreenTitle } from "../../components/ScreenTitle";
 import { QuizCard } from "../../components/QuizCard";
 import { QuizListSkeleton } from "../../components/QuizListSkeleton";
-import { radius, spacing, shadow, typography, borderWidth, type SemanticTheme } from "../../theme";
+import { colors, radius, spacing, shadow, typography, borderWidth, type SemanticTheme } from "../../theme";
 import { computeNextOccurrence, formatNextOccurrenceLabel } from "../../lib/nextOccurrence";
+
+const DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 type Venue = {
   name: string;
@@ -117,6 +119,40 @@ function buildSavedStyles(semantic: SemanticTheme) {
       color: semantic.textInverse,
       opacity: 0.92,
     },
+    dayFilterRow: {
+      flexDirection: "row",
+      paddingHorizontal: spacing.xs,
+      paddingBottom: spacing.md,
+      gap: spacing.sm,
+    },
+    dayPill: {
+      paddingVertical: spacing.sm,
+      paddingHorizontal: spacing.md,
+      borderRadius: radius.brutal,
+      borderWidth: borderWidth.default,
+      borderColor: semantic.borderPrimary,
+      backgroundColor: semantic.bgPrimary,
+      ...shadow.small,
+    },
+    dayPillActive: {
+      backgroundColor: colors.black,
+      borderColor: colors.black,
+    },
+    dayPillToday: {
+      borderColor: semantic.accentYellow,
+      backgroundColor: semantic.accentYellow,
+    },
+    dayPillPressed: {
+      transform: [{ translateY: 2 }],
+      shadowOffset: { width: 1, height: 1 },
+    },
+    dayPillText: {
+      ...typography.captionStrong,
+      color: semantic.textPrimary,
+    },
+    dayPillTextActive: {
+      color: colors.white,
+    },
   });
 }
 
@@ -131,6 +167,11 @@ export default function SavedScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [missingCount, setMissingCount] = useState(0);
+  const [selectedDay, setSelectedDay] = useState<number | null>(null);
+
+  const toggleDayFilter = useCallback((day: number) => {
+    setSelectedDay((prev) => (prev === day ? null : day));
+  }, []);
 
   const fetchSavedData = useCallback(async () => {
     setErrorMsg(null);
@@ -237,6 +278,19 @@ export default function SavedScreen() {
     return rows;
   }, [quizzes]);
 
+  const availableDays = useMemo(() => {
+    const days = new Set(quizzes.map((q) => q.day_of_week));
+    return [0, 1, 2, 3, 4, 5, 6].filter((d) => days.has(d));
+  }, [quizzes]);
+
+  const displayedQuizzes = useMemo(
+    () =>
+      selectedDay === null
+        ? sortedQuizzesWithNext
+        : sortedQuizzesWithNext.filter((r) => r.quiz.day_of_week === selectedDay),
+    [sortedQuizzesWithNext, selectedDay]
+  );
+
   const renderTonightListHeader = useCallback(() => {
     if (!hasSavedTonight) return null;
     return (
@@ -303,58 +357,92 @@ export default function SavedScreen() {
             <Text style={styles.errorBannerText}>{errorMsg}</Text>
           </View>
         ) : (
-          <FlatList
-            style={styles.list}
-            data={sortedQuizzesWithNext}
-            keyExtractor={(item) => item.quiz.id}
-            ListHeaderComponent={renderTonightListHeader}
-            ItemSeparatorComponent={() => <View style={styles.listSeparator} />}
-            showsVerticalScrollIndicator={false}
-            refreshControl={
-              <RefreshControl
-                refreshing={refreshing}
-                onRefresh={onRefresh}
-                tintColor={semantic.textPrimary}
-                colors={[semantic.accentYellow, semantic.textPrimary]}
-              />
-            }
-            renderItem={({ item, index }) => (
-              <Animated.View entering={FadeInDown.delay(Math.min(index * 42, 400)).duration(340)}>
-                <QuizCard
-                  quiz={item.quiz}
-                  distanceLabel={null}
-                  isSaved={isSaved(item.quiz.id)}
-                  onToggleSaved={() => toggleSaved(item.quiz.id)}
-                  onPressIn={() => prefetchQuizEventDetail(item.quiz.id)}
-                  onPress={() => navigation.navigate("QuizDetail", { quizEventId: item.quiz.id })}
-                  isTonightMode={false}
-                  showRank={false}
-                  rank={null}
-                  nextOccurrenceLabel={item.nextLabel}
-                />
-              </Animated.View>
+          <>
+            {availableDays.length > 1 && (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.dayFilterRow}
+              >
+                {availableDays.map((day) => {
+                  const isToday = day === new Date().getDay();
+                  const active = selectedDay === day;
+                  return (
+                    <Pressable
+                      key={day}
+                      onPress={() => {
+                        hapticLight();
+                        toggleDayFilter(day);
+                      }}
+                      style={({ pressed }) => [
+                        styles.dayPill,
+                        active && styles.dayPillActive,
+                        isToday && !active && styles.dayPillToday,
+                        pressed && styles.dayPillPressed,
+                      ]}
+                    >
+                      <Text style={[styles.dayPillText, active && styles.dayPillTextActive]}>
+                        {DAY_LABELS[day]}
+                        {isToday ? " · Today" : ""}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </ScrollView>
             )}
-            ListFooterComponent={
-              missingCount > 0 ? (
-                <Text style={styles.emptyListText}>
-                  {missingCount} saved {missingCount === 1 ? "quiz" : "quizzes"} no longer available
-                </Text>
-              ) : null
-            }
-            ListEmptyComponent={
-              <View style={styles.emptyInline}>
-                <Text style={styles.emptyListText}>Those quizzes may have moved — pull down to refresh.</Text>
-                <Pressable
-                  style={({ pressed }) => [styles.emptyCta, pressed && styles.emptyCtaPressed]}
-                  onPress={goNearby}
-                  accessibilityRole="button"
-                  accessibilityLabel="Find more quizzes nearby"
-                >
-                  <Text style={styles.emptyCtaText}>Find more nearby</Text>
-                </Pressable>
-              </View>
-            }
-          />
+            <FlatList
+              style={styles.list}
+              data={displayedQuizzes}
+              keyExtractor={(item) => item.quiz.id}
+              ListHeaderComponent={renderTonightListHeader}
+              ItemSeparatorComponent={() => <View style={styles.listSeparator} />}
+              showsVerticalScrollIndicator={false}
+              refreshControl={
+                <RefreshControl
+                  refreshing={refreshing}
+                  onRefresh={onRefresh}
+                  tintColor={semantic.textPrimary}
+                  colors={[semantic.accentYellow, semantic.textPrimary]}
+                />
+              }
+              renderItem={({ item, index }) => (
+                <Animated.View entering={FadeInDown.delay(Math.min(index * 42, 400)).duration(340)}>
+                  <QuizCard
+                    quiz={item.quiz}
+                    distanceLabel={null}
+                    isSaved={isSaved(item.quiz.id)}
+                    onToggleSaved={() => toggleSaved(item.quiz.id)}
+                    onPressIn={() => prefetchQuizEventDetail(item.quiz.id)}
+                    onPress={() => navigation.navigate("QuizDetail", { quizEventId: item.quiz.id })}
+                    isTonightMode={false}
+                    showRank={false}
+                    rank={null}
+                    nextOccurrenceLabel={item.nextLabel}
+                  />
+                </Animated.View>
+              )}
+              ListFooterComponent={
+                missingCount > 0 ? (
+                  <Text style={styles.emptyListText}>
+                    {missingCount} saved {missingCount === 1 ? "quiz" : "quizzes"} no longer available
+                  </Text>
+                ) : null
+              }
+              ListEmptyComponent={
+                <View style={styles.emptyInline}>
+                  <Text style={styles.emptyListText}>Those quizzes may have moved — pull down to refresh.</Text>
+                  <Pressable
+                    style={({ pressed }) => [styles.emptyCta, pressed && styles.emptyCtaPressed]}
+                    onPress={goNearby}
+                    accessibilityRole="button"
+                    accessibilityLabel="Find more quizzes nearby"
+                  >
+                    <Text style={styles.emptyCtaText}>Find more nearby</Text>
+                  </Pressable>
+                </View>
+              }
+            />
+          </>
         )}
       </View>
     </SafeAreaView>

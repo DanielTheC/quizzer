@@ -1,10 +1,1 @@
-export type VenueLite = {
-  name?: string | null;
-  lat?: number | null;
-  lng?: number | null;
-};
-
-export type MapQuizPin = {
-  id: string;
-  venues: VenueLite | null;
-};
+export type { QuizEvent as MapQuizPin } from "../screens/player/nearby/nearbyTypes";

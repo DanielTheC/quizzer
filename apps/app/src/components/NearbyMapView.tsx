@@ -1,17 +1,43 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { View, Text, Pressable, StyleSheet, Platform } from "react-native";
 import MapView, { Marker, PROVIDER_GOOGLE, type Region } from "react-native-maps";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
+import Animated, { runOnJS, useAnimatedStyle, useSharedValue, withSpring } from "react-native-reanimated";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAppTheme } from "../context/ThemeContext";
+import { useSavedQuizzes } from "../context/SavedQuizzesContext";
+import { hapticLight, hapticSavedQuiz } from "../lib/playerHaptics";
 import { spacing, radius, borderWidth, shadow, typography, type SemanticTheme } from "../theme";
 import type { MapQuizPin } from "./NearbyMapView.types";
 
 export type { MapQuizPin } from "./NearbyMapView.types";
 
+const DAY_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+function dayShort(day: number): string {
+  return DAY_SHORT[day] ?? String(day);
+}
+
+function formatPreviewTime(time: string): string {
+  const s = String(time);
+  if (s.length >= 5) return s.slice(0, 5);
+  return s;
+}
+
+function formatEntryFeeLine(pence: number): string {
+  if (pence === 0) return "Free entry";
+  return `Entry £${(pence / 100).toFixed(2)}`;
+}
+
+const SHEET_HIDDEN = 320;
+const SPRING_IN = { damping: 22, stiffness: 280 };
+const SPRING_OUT = { damping: 26, stiffness: 280 };
+
 type Props = {
   quizzes: MapQuizPin[];
   userLocation: { lat: number; lng: number } | null;
-  onSelectQuiz: (quizEventId: string) => void;
+  /** Called when the user opens full quiz detail from the preview card. */
+  onOpenQuizDetail: (quizEventId: string) => void;
 };
 
 function buildMapStyles(semantic: SemanticTheme) {
@@ -55,6 +81,84 @@ function buildMapStyles(semantic: SemanticTheme) {
     },
     emptyTitle: { marginTop: spacing.md, ...typography.heading, color: semantic.textPrimary },
     emptyText: { marginTop: spacing.sm, textAlign: "center", ...typography.body, color: semantic.textSecondary },
+    sheetOuter: {
+      position: "absolute",
+      left: 0,
+      right: 0,
+      bottom: 0,
+      pointerEvents: "box-none",
+    },
+    sheetCard: {
+      marginHorizontal: spacing.md,
+      backgroundColor: semantic.bgPrimary,
+      borderWidth: borderWidth.default,
+      borderColor: semantic.borderPrimary,
+      borderRadius: radius.large,
+      paddingHorizontal: spacing.lg,
+      paddingTop: spacing.md,
+      ...shadow.medium,
+    },
+    sheetAccent: {
+      position: "absolute",
+      left: 0,
+      right: 0,
+      top: 0,
+      height: 6,
+      borderTopLeftRadius: radius.large,
+      borderTopRightRadius: radius.large,
+      borderBottomWidth: borderWidth.thin,
+      borderBottomColor: semantic.borderPrimary,
+    },
+    sheetRowTop: {
+      flexDirection: "row",
+      alignItems: "flex-start",
+      justifyContent: "space-between",
+      gap: spacing.sm,
+    },
+    sheetMainPress: {
+      flex: 1,
+      minWidth: 0,
+    },
+    sheetVenueName: {
+      flex: 1,
+      minWidth: 0,
+      ...typography.bodyStrong,
+      fontSize: 18,
+      color: semantic.textPrimary,
+    },
+    heartBtn: {
+      padding: spacing.xs,
+      marginTop: -spacing.xs,
+      marginRight: -spacing.xs,
+    },
+    sheetDayTime: {
+      marginTop: spacing.sm,
+      ...typography.body,
+      fontSize: 15,
+      fontWeight: "600",
+      color: semantic.textSecondary,
+    },
+    sheetFee: {
+      marginTop: spacing.xs,
+      ...typography.body,
+      fontSize: 15,
+      fontWeight: "700",
+      color: semantic.textPrimary,
+    },
+    sheetHint: {
+      marginTop: spacing.md,
+      marginBottom: spacing.sm,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.xs,
+    },
+    sheetHintText: {
+      ...typography.captionStrong,
+      fontSize: 13,
+      color: semantic.textSecondary,
+      textTransform: "uppercase",
+      letterSpacing: 0.6,
+    },
   });
 }
 
@@ -77,11 +181,47 @@ const UK_FALLBACK: Region = {
   longitudeDelta: 0.25,
 };
 
-export function NearbyMapView({ quizzes, userLocation, onSelectQuiz }: Props) {
+export function NearbyMapView({ quizzes, userLocation, onOpenQuizDetail }: Props) {
   const { semantic } = useAppTheme();
   const styles = useMemo(() => buildMapStyles(semantic), [semantic]);
+  const insets = useSafeAreaInsets();
+  const { isSaved, toggleSaved } = useSavedQuizzes();
   const mapRef = useRef<MapView | null>(null);
   const [mapReady, setMapReady] = useState(false);
+  const [sheetQuiz, setSheetQuiz] = useState<MapQuizPin | null>(null);
+  const wasOpenRef = useRef(false);
+  const translateY = useSharedValue(SHEET_HIDDEN);
+
+  const onSheetFullyClosed = useCallback(() => {
+    setSheetQuiz(null);
+    wasOpenRef.current = false;
+  }, []);
+
+  const closeSheet = useCallback(() => {
+    if (sheetQuiz == null) return;
+    translateY.value = withSpring(SHEET_HIDDEN, SPRING_OUT, (finished) => {
+      if (finished) runOnJS(onSheetFullyClosed)();
+    });
+  }, [sheetQuiz, onSheetFullyClosed, translateY]);
+
+  useLayoutEffect(() => {
+    if (!sheetQuiz) return;
+    if (!wasOpenRef.current) {
+      translateY.value = SHEET_HIDDEN;
+      translateY.value = withSpring(0, SPRING_IN);
+    }
+    wasOpenRef.current = true;
+  }, [sheetQuiz?.id, translateY]);
+
+  useEffect(() => {
+    if (sheetQuiz && !quizzes.some((q) => q.id === sheetQuiz.id)) {
+      closeSheet();
+    }
+  }, [quizzes, sheetQuiz, closeSheet]);
+
+  const sheetAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: translateY.value }],
+  }));
 
   const placemarks = useMemo(() => {
     const out: { id: string; title: string; latitude: number; longitude: number }[] = [];
@@ -125,7 +265,7 @@ export function NearbyMapView({ quizzes, userLocation, onSelectQuiz }: Props) {
     if (userLocation) coords.push({ latitude: userLocation.lat, longitude: userLocation.lng });
     if (coords.length === 0) return;
     mapRef.current.fitToCoordinates(coords, {
-      edgePadding: { top: 100, right: 48, bottom: 48, left: 48 },
+      edgePadding: { top: 100, right: 48, bottom: 120, left: 48 },
       animated: true,
     });
   }, [placemarks, userLocation]);
@@ -137,6 +277,36 @@ export function NearbyMapView({ quizzes, userLocation, onSelectQuiz }: Props) {
   }, [mapReady, placemarks, fitAll]);
 
   const mapProvider = Platform.OS === "android" ? PROVIDER_GOOGLE : undefined;
+
+  const openDetailFromSheet = useCallback(() => {
+    if (!sheetQuiz) return;
+    onOpenQuizDetail(sheetQuiz.id);
+  }, [sheetQuiz, onOpenQuizDetail]);
+
+  const onMarkerPress = useCallback(
+    (quizId: string) => {
+      if (sheetQuiz?.id === quizId) {
+        closeSheet();
+        return;
+      }
+      const q = quizzes.find((x) => x.id === quizId);
+      if (!q) return;
+      if (sheetQuiz != null) {
+        translateY.value = withSpring(0, SPRING_IN);
+      }
+      setSheetQuiz(q);
+    },
+    [quizzes, sheetQuiz, closeSheet, translateY]
+  );
+
+  const onToggleHeart = useCallback(() => {
+    if (!sheetQuiz) return;
+    if (isSaved(sheetQuiz.id)) hapticLight();
+    else hapticSavedQuiz();
+    toggleSaved(sheetQuiz.id);
+  }, [sheetQuiz, isSaved, toggleSaved]);
+
+  const saved = sheetQuiz != null && isSaved(sheetQuiz.id);
 
   return (
     <View style={styles.wrap}>
@@ -158,13 +328,14 @@ export function NearbyMapView({ quizzes, userLocation, onSelectQuiz }: Props) {
           showsUserLocation={!!userLocation}
           showsMyLocationButton={false}
           onMapReady={() => setMapReady(true)}
+          onPress={() => closeSheet()}
         >
           {placemarks.map((p) => (
             <Marker
               key={p.id}
               coordinate={{ latitude: p.latitude, longitude: p.longitude }}
               title={p.title}
-              onPress={() => onSelectQuiz(p.id)}
+              onPress={() => onMarkerPress(p.id)}
             >
               <View style={styles.markerBubble}>
                 <MaterialCommunityIcons name="glass-mug-variant" size={14} color={semantic.textPrimary} />
@@ -179,6 +350,54 @@ export function NearbyMapView({ quizzes, userLocation, onSelectQuiz }: Props) {
           <MaterialCommunityIcons name="crosshairs-gps" size={22} color={semantic.textPrimary} />
           <Text style={styles.recenterText}>Fit all</Text>
         </Pressable>
+      ) : null}
+
+      {sheetQuiz ? (
+        <Animated.View
+          style={[
+            styles.sheetOuter,
+            { paddingBottom: Math.max(insets.bottom, spacing.md) },
+            sheetAnimatedStyle,
+          ]}
+          pointerEvents="box-none"
+        >
+          <View style={styles.sheetCard}>
+            <View style={[styles.sheetAccent, { backgroundColor: semantic.accentYellow }]} />
+            <View style={[styles.sheetRowTop, { paddingTop: spacing.md + 4 }]}>
+              <Pressable
+                onPress={openDetailFromSheet}
+                style={styles.sheetMainPress}
+                accessibilityRole="button"
+                accessibilityLabel={`${sheetQuiz.venues?.name ?? "Quiz"}, open full details`}
+              >
+                <Text style={styles.sheetVenueName} numberOfLines={2}>
+                  {sheetQuiz.venues?.name?.trim() || "Quiz night"}
+                </Text>
+                <Text style={styles.sheetDayTime}>
+                  {dayShort(sheetQuiz.day_of_week)} · {formatPreviewTime(sheetQuiz.start_time)}
+                </Text>
+                <Text style={styles.sheetFee}>{formatEntryFeeLine(sheetQuiz.entry_fee_pence)}</Text>
+                <View style={styles.sheetHint}>
+                  <Text style={styles.sheetHintText}>Full details</Text>
+                  <MaterialCommunityIcons name="chevron-right" size={20} color={semantic.textSecondary} />
+                </View>
+              </Pressable>
+              <Pressable
+                onPress={onToggleHeart}
+                style={styles.heartBtn}
+                hitSlop={12}
+                accessibilityLabel={saved ? "Remove from saved" : "Save quiz"}
+                accessibilityRole="button"
+              >
+                <MaterialCommunityIcons
+                  name={saved ? "heart" : "heart-outline"}
+                  size={26}
+                  color={saved ? semantic.accentRed : semantic.textSecondary}
+                />
+              </Pressable>
+            </View>
+          </View>
+        </Animated.View>
       ) : null}
     </View>
   );

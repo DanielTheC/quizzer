@@ -451,6 +451,7 @@ function PlayerTabScreen() {
   return (
     <View style={{ flex: 1 }}>
       <PlayerTab.Navigator
+        initialRouteName="Nearby"
         tabBar={(props) => (
           <PlayerTabBar
             {...props}

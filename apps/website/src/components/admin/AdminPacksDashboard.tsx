@@ -78,13 +78,21 @@ function parseCsv(text: string): string[][] {
 }
 
 function buildRoundsFromCsv(csvText: string): { rounds: RoundRow[]; error: string | null } {
-  const trimmed = csvText.trim();
-  if (!trimmed) {
+  // Strip BOM and normalise line endings
+  const raw = csvText.replace(/^\uFEFF/, "").replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+  if (!raw.trim()) {
     return { rounds: [], error: "Paste CSV content first." };
   }
+
+  // Skip any preamble lines (e.g. markdown code fences, Claude commentary)
+  // by finding the first line that looks like our header row.
+  const lines = raw.split("\n");
+  const headerIndex = lines.findIndex((l) => l.trim().toLowerCase().startsWith("round_number"));
+  const cleaned = headerIndex >= 0 ? lines.slice(headerIndex).join("\n") : raw;
+
   let rows: string[][];
   try {
-    rows = parseCsv(trimmed);
+    rows = parseCsv(cleaned.trim());
   } catch {
     return { rounds: [], error: "Could not parse CSV." };
   }

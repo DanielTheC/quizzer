@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { Text, View, RefreshControl, ScrollView } from "react-native";
+import { Text, View, RefreshControl, ScrollView, type ListRenderItemInfo } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { StatusBar } from "expo-status-bar";
@@ -157,6 +157,39 @@ export default function NearbyScreen() {
     (distanceFilterMiles != null ? 1 : 0) +
     (savedOnly ? 1 : 0);
 
+  const renderQuizCard = useCallback(
+    ({ item, index }: ListRenderItemInfo<(typeof filteredQuizzes)[number]>) => {
+      const miles = locationPermission !== "denied" && referenceLocation ? getMiles(item.venues) : null;
+      const distanceLabel = miles != null ? `${miles.toFixed(1)} mi` : null;
+      return (
+        <QuizCard
+          quiz={item}
+          distanceLabel={distanceLabel}
+          isSaved={isSaved(item.id)}
+          onToggleSaved={() => toggleSaved(item.id)}
+          onPressIn={() => prefetchQuizEventDetail(item.id)}
+          onPress={() => navigation.navigate("QuizDetail", { quizEventId: item.id })}
+          isTonightMode={tonightMode}
+          showRank={sortBy === "distance"}
+          rank={sortBy === "distance" ? index + 1 : null}
+          interestPillLabel={formatNearbyListInterestLabel(item.interest_count, isSaved(item.id))}
+          squareTopEdge={index === 0}
+        />
+      );
+    },
+    [
+      locationPermission,
+      referenceLocation,
+      getMiles,
+      isSaved,
+      toggleSaved,
+      navigation,
+      tonightMode,
+      sortBy,
+      filteredQuizzes,
+    ]
+  );
+
   const nearbyListHeader = useMemo(
     () => (
       <NearbyListToolbar
@@ -261,25 +294,7 @@ export default function NearbyScreen() {
                   colors={[semantic.accentYellow, semantic.textPrimary]}
                 />
               }
-              renderItem={({ item, index }) => {
-                const miles = locationPermission !== "denied" && referenceLocation ? getMiles(item.venues) : null;
-                const distanceLabel = miles != null ? `${miles.toFixed(1)} mi` : null;
-                return (
-                  <QuizCard
-                    quiz={item}
-                    distanceLabel={distanceLabel}
-                    isSaved={isSaved(item.id)}
-                    onToggleSaved={() => toggleSaved(item.id)}
-                    onPressIn={() => prefetchQuizEventDetail(item.id)}
-                    onPress={() => navigation.navigate("QuizDetail", { quizEventId: item.id })}
-                    isTonightMode={tonightMode}
-                    showRank={sortBy === "distance"}
-                    rank={sortBy === "distance" ? index + 1 : null}
-                    interestPillLabel={formatNearbyListInterestLabel(item.interest_count, isSaved(item.id))}
-                    squareTopEdge={index === 0}
-                  />
-                );
-              }}
+              renderItem={renderQuizCard}
               ListEmptyComponent={
                 <View style={styles.emptyBox}>
                   <MaterialCommunityIcons
@@ -303,7 +318,7 @@ export default function NearbyScreen() {
               <NearbyMapView
                 quizzes={filteredQuizzes}
                 userLocation={referenceLocation}
-                onSelectQuiz={(quizEventId) => {
+                onOpenQuizDetail={(quizEventId) => {
                   prefetchQuizEventDetail(quizEventId);
                   navigation.navigate("QuizDetail", { quizEventId });
                 }}

@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
+  Image,
   Linking,
   Platform,
   Pressable,
@@ -30,6 +31,7 @@ import {
   prefetchQuizEventDetail,
   type QuizEventDetail,
 } from "../../lib/quizEventDetailCache";
+import { supabase } from "../../lib/supabase";
 import { fetchClosestOtherQuizzes, type ClosestOtherQuizRow } from "../../lib/fetchClosestOtherQuizzes";
 import { fetchQuizEventInterestCount, formatInterestCaption } from "../../lib/quizEventInterestCount";
 import { postcodeOutwardOrArea } from "../../lib/venueLocationSnippet";
@@ -136,6 +138,10 @@ function whatToExpectVenueLines(quiz: QuizEventDetail): string[] {
 function buildWhatToExpectLines(quiz: QuizEventDetail): string[] {
   const turnUp = quiz.turn_up_guidance?.trim() || "Arrive 10–15 minutes early to bag a table.";
   return [turnUp, ...whatToExpectVenueLines(quiz)];
+}
+
+function venueImagePublicUrl(storagePath: string): string {
+  return supabase.storage.from("venue-images").getPublicUrl(storagePath).data.publicUrl;
 }
 
 function QuizDetailHeartAction({
@@ -433,6 +439,21 @@ function createQuizDetailStyles(semantic: SemanticTheme, detail: DetailScreenThe
       fontWeight: "600",
       color: detail.ticketInkSecondary,
       lineHeight: 22,
+    },
+    galleryScroll: {
+      marginTop: spacing.md,
+      marginHorizontal: -spacing.lg,
+    },
+    galleryContent: {
+      paddingHorizontal: spacing.lg,
+      gap: spacing.sm,
+    },
+    galleryImage: {
+      width: 220,
+      height: 140,
+      borderRadius: radius.large,
+      borderWidth: borderWidth.default,
+      borderColor: semantic.borderPrimary,
     },
     ticketAddressBlock: {
       marginTop: spacing.md,
@@ -777,6 +798,26 @@ export default function QuizDetailScreen() {
                 <MaterialCommunityIcons name="trophy-outline" size={20} color={detail.ticketInkPrimary} style={styles.factIcon} />
                 <Text style={styles.factText}>Prize · {prize}</Text>
               </View>
+              {quiz.venues?.venue_images && quiz.venues.venue_images.length > 0 ? (
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  style={styles.galleryScroll}
+                  contentContainerStyle={styles.galleryContent}
+                >
+                  {[...quiz.venues.venue_images]
+                    .sort((a, b) => a.sort_order - b.sort_order)
+                    .map((img, i) => (
+                      <Image
+                        key={img.storage_path}
+                        source={{ uri: venueImagePublicUrl(img.storage_path) }}
+                        style={styles.galleryImage}
+                        accessibilityLabel={img.alt_text ?? `Venue photo ${i + 1}`}
+                        resizeMode="cover"
+                      />
+                    ))}
+                </ScrollView>
+              ) : null}
               {fullVenueAddress(venue) ? (
                 <View style={styles.ticketAddressBlock}>
                   <Text style={styles.ticketAddressText}>{fullVenueAddress(venue)}</Text>

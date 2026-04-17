@@ -20,7 +20,7 @@ import {
 
 const ICON = 22;
 
-function HeartToggleButton({
+const HeartToggleButton = React.memo(function HeartToggleButton({
   isSaved,
   onToggleSaved,
   semantic,
@@ -60,7 +60,7 @@ function HeartToggleButton({
       </Animated.View>
     </Pressable>
   );
-}
+});
 
 const stylesStatic = StyleSheet.create({
   heartWrap: { padding: spacing.xs },
@@ -291,7 +291,7 @@ type QuizCardProps = {
   squareTopEdge?: boolean;
 };
 
-export function QuizCard({
+const QuizCard = React.memo(function QuizCard({
   quiz,
   distanceLabel,
   isSaved,
@@ -401,4 +401,6 @@ export function QuizCard({
       </View>
     </Pressable>
   );
-}
+});
+
+export { QuizCard };

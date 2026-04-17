@@ -227,16 +227,28 @@ export function SavedQuizzesProvider({ children }: { children: React.ReactNode }
     void AsyncStorage.removeItem(STORAGE_KEY);
   }, [session?.user?.id, skipRemote]);
 
-  const value: SavedQuizzesContextValue = {
-    savedIds,
-    isSaved,
-    addSaved,
-    removeSaved,
-    toggleSaved,
-    clearSaved,
-    interestSignInSheetVisible,
-    dismissInterestSignInSheet,
-  };
+  const value = useMemo<SavedQuizzesContextValue>(
+    () => ({
+      savedIds,
+      isSaved,
+      addSaved,
+      removeSaved,
+      toggleSaved,
+      clearSaved,
+      interestSignInSheetVisible,
+      dismissInterestSignInSheet,
+    }),
+    [
+      savedIds,
+      isSaved,
+      addSaved,
+      removeSaved,
+      toggleSaved,
+      clearSaved,
+      interestSignInSheetVisible,
+      dismissInterestSignInSheet,
+    ]
+  );
 
   return <SavedQuizzesContext.Provider value={value}>{children}</SavedQuizzesContext.Provider>;
 }

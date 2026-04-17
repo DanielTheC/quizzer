@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import type { SortMode } from "../../../lib/sortStorage";
 import { startTimeToMinutes } from "./nearbyConstants";
 import type { DistanceFilter, PrizeFilter, QuizEvent, Venue } from "./nearbyTypes";
@@ -21,6 +21,11 @@ export type NearbyFilteredInput = {
 
 export function useNearbyFilteredQuizzes(p: NearbyFilteredInput) {
   const searchLower = p.debouncedSearchQuery.trim().toLowerCase();
+
+  const isSavedRef = useRef(p.isSaved);
+  useEffect(() => {
+    isSavedRef.current = p.isSaved;
+  }, [p.isSaved]);
 
   const filteredQuizzes = useMemo(() => {
     const matchesSearch = (q: QuizEvent) => {
@@ -46,7 +51,7 @@ export function useNearbyFilteredQuizzes(p: NearbyFilteredInput) {
           const miles = p.getMiles(q.venues);
           if (miles == null || miles > p.distanceFilterMiles) return false;
         }
-        if (p.savedOnly && !p.isSaved(q.id)) return false;
+        if (p.savedOnly && !isSavedRef.current(q.id)) return false;
         return true;
       });
 
@@ -73,7 +78,7 @@ export function useNearbyFilteredQuizzes(p: NearbyFilteredInput) {
         const miles = p.getMiles(q.venues);
         if (miles == null || miles > p.distanceFilterMiles) return false;
       }
-      if (p.savedOnly && !p.isSaved(q.id)) return false;
+      if (p.savedOnly && !isSavedRef.current(q.id)) return false;
       return true;
     });
 
@@ -101,7 +106,6 @@ export function useNearbyFilteredQuizzes(p: NearbyFilteredInput) {
     p.referenceLocation,
     p.getMiles,
     p.savedOnly,
-    p.isSaved,
     p.sortBy,
     searchLower,
   ]);
