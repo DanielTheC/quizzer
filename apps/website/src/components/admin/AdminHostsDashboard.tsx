@@ -3,9 +3,25 @@
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
 import { captureSupabaseError } from "@/lib/observability/supabaseErrors";
 import type { CSSProperties } from "react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
-type Tab = "roster" | "allowlist" | "claims";
+type Tab = "roster" | "allowlist" | "claims" | "payroll";
+
+type PayrollHostRosterRow = {
+  host_user_id: string;
+  email: string;
+  payout_this_month_pence: number;
+  sessions_this_month: number;
+};
+
+type PayrollSessionRow = {
+  id: string;
+  host_user_id: string;
+  session_date: string;
+  venue_id: string;
+  fee_pence: number | null;
+  venue_name: string;
+};
 
 type AllowlistRow = {
   email: string;
@@ -91,6 +107,51 @@ function BtnSpinner() {
   );
 }
 
+function normalizeHostRosterRpc(raw: unknown): PayrollHostRosterRow[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .map((row) => {
+      const o = row as Record<string, unknown>;
+      const uid = o.host_user_id ?? o.user_id;
+      const email = o.email ?? o.host_email;
+      return {
+        host_user_id: uid != null ? String(uid) : "",
+        email: email != null ? String(email) : "",
+        payout_this_month_pence: Number(o.payout_this_month_pence ?? 0),
+        sessions_this_month: Number(o.sessions_this_month ?? 0),
+      };
+    })
+    .filter((r) => r.host_user_id.length > 0);
+}
+
+function venueNameFromSessionEmbed(venues: unknown): string {
+  if (!venues) return "—";
+  if (Array.isArray(venues)) {
+    const n = (venues[0] as { name?: string } | undefined)?.name;
+    return n?.trim() || "—";
+  }
+  if (typeof venues === "object" && venues !== null && "name" in venues) {
+    const n = (venues as { name: string | null }).name;
+    return n?.trim() || "—";
+  }
+  return "—";
+}
+
+function normalizePayrollSessions(raw: unknown): PayrollSessionRow[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.map((row) => {
+    const o = row as Record<string, unknown>;
+    return {
+      id: String(o.id ?? ""),
+      host_user_id: String(o.host_user_id ?? ""),
+      session_date: String(o.session_date ?? ""),
+      venue_id: String(o.venue_id ?? ""),
+      fee_pence: o.fee_pence == null ? null : Number(o.fee_pence),
+      venue_name: venueNameFromSessionEmbed(o.venues),
+    };
+  });
+}
+
 export function AdminHostsDashboard() {
   const [tab, setTab] = useState<Tab>("roster");
 
@@ -115,6 +176,13 @@ export function AdminHostsDashboard() {
   const [claimNotesDraft, setClaimNotesDraft] = useState<Record<string, string>>({});
   const [busyMutation, setBusyMutation] = useState<{ id: string; action: "confirm" | "reject" } | null>(null);
   const [showClaimHistory, setShowClaimHistory] = useState(false);
+
+  const [payrollLoaded, setPayrollLoaded] = useState(false);
+  const [payrollLoading, setPayrollLoading] = useState(false);
+  const [payrollError, setPayrollError] = useState<string | null>(null);
+  const [payrollRows, setPayrollRows] = useState<PayrollHostRosterRow[]>([]);
+  const [sessionRows, setSessionRows] = useState<PayrollSessionRow[]>([]);
+  const [showPayrollSessions, setShowPayrollSessions] = useState(false);
 
   useEffect(() => {
     if (!toast) return;
@@ -321,6 +389,63 @@ export function AdminHostsDashboard() {
     };
   }, [tab, loadClaims]);
 
+  const loadPayroll = useCallback(async () => {
+    await Promise.resolve();
+    const supabase = createBrowserSupabaseClient();
+    setPayrollError(null);
+    setPayrollLoading(true);
+    try {
+      const now = new Date();
+      const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);
+
+      const [rosterRes, sessRes] = await Promise.all([
+        supabase.rpc("operator_host_roster"),
+        supabase
+          .from("host_quiz_sessions")
+          .select("id, host_user_id, session_date, venue_id, fee_pence, venues(name)")
+          .gte("session_date", firstDayOfMonth)
+          .order("session_date", { ascending: false }),
+      ]);
+
+      if (rosterRes.error) {
+        captureSupabaseError("operator_host_roster", rosterRes.error);
+        setPayrollError(rosterRes.error.message);
+        setPayrollRows([]);
+        setSessionRows([]);
+        return;
+      }
+      if (sessRes.error) {
+        captureSupabaseError("host_quiz_sessions payroll", sessRes.error);
+        setPayrollError(sessRes.error.message);
+        setPayrollRows([]);
+        setSessionRows([]);
+        return;
+      }
+
+      setPayrollRows(normalizeHostRosterRpc(rosterRes.data));
+      setSessionRows(normalizePayrollSessions(sessRes.data));
+    } finally {
+      setPayrollLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (tab !== "payroll" || payrollLoaded) return;
+    let cancelled = false;
+    void (async () => {
+      await Promise.resolve();
+      if (cancelled) return;
+      try {
+        await loadPayroll();
+      } finally {
+        if (!cancelled) setPayrollLoaded(true);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [tab, payrollLoaded, loadPayroll]);
+
   const saveDefaultFee = useCallback(
     async (email: string, pounds: string) => {
       const pence = poundsStringToPence(pounds);
@@ -430,12 +555,89 @@ export function AdminHostsDashboard() {
 
   const selectedRosterRow = allowlist.find((r) => r.email === selectedRosterEmail) ?? null;
 
+  const rosterByUserId = useMemo(
+    () => new Map(payrollRows.map((r) => [r.host_user_id, r])),
+    [payrollRows],
+  );
+
+  const sessionsByHost = useMemo(() => {
+    const m = new Map<string, PayrollSessionRow[]>();
+    for (const s of sessionRows) {
+      if (!s.host_user_id) continue;
+      const list = m.get(s.host_user_id) ?? [];
+      list.push(s);
+      m.set(s.host_user_id, list);
+    }
+    return m;
+  }, [sessionRows]);
+
+  const payrollTableRows = useMemo(() => {
+    const rows: {
+      host_user_id: string;
+      email: string;
+      sessionCount: number;
+      payout_this_month_pence: number;
+      missingRates: boolean;
+    }[] = [];
+    for (const [uid, sessions] of sessionsByHost) {
+      if (sessions.length === 0) continue;
+      const roster = rosterByUserId.get(uid);
+      const email = roster?.email?.trim() || uid;
+      const payout = roster?.payout_this_month_pence ?? 0;
+      const missingRates = sessions.some((s) => s.fee_pence === 0);
+      rows.push({
+        host_user_id: uid,
+        email,
+        sessionCount: sessions.length,
+        payout_this_month_pence: payout,
+        missingRates,
+      });
+    }
+    rows.sort((a, b) => a.email.localeCompare(b.email));
+    return rows;
+  }, [sessionsByHost, rosterByUserId]);
+
+  const totalOwedThisMonth = useMemo(
+    () =>
+      payrollRows.reduce(
+        (sum, r) => sum + (Number.isFinite(r.payout_this_month_pence) ? r.payout_this_month_pence : 0),
+        0,
+      ),
+    [payrollRows],
+  );
+
+  const hostsWithSessionsCount = useMemo(() => {
+    const fromSessions = sessionsByHost.size;
+    const fromRoster = payrollRows.filter((r) => r.sessions_this_month > 0).length;
+    return Math.max(fromSessions, fromRoster);
+  }, [payrollRows, sessionsByHost]);
+
+  const allowlistNoSessionsCount = useMemo(() => {
+    let n = 0;
+    for (const a of allowlist) {
+      const roster = payrollRows.find((r) => r.email.toLowerCase() === a.email.toLowerCase());
+      const uid = roster?.host_user_id;
+      const count = uid ? (sessionsByHost.get(uid)?.length ?? 0) : 0;
+      if (count === 0) n++;
+    }
+    return n;
+  }, [allowlist, payrollRows, sessionsByHost]);
+
+  const sessionRowsSorted = useMemo(() => {
+    return [...sessionRows].sort((a, b) => String(b.session_date).localeCompare(String(a.session_date)));
+  }, [sessionRows]);
+
+  const markPaidStub = useCallback((email: string) => {
+    if (!window.confirm(`Mark payroll as paid for ${email}?`)) return;
+    setToast("Marked as paid (manual record — no automatic payment processed).");
+  }, []);
+
   return (
     <div className="space-y-6">
       <h1 className="font-heading text-2xl uppercase tracking-wide text-quizzer-black">Hosts</h1>
 
       <div className="flex gap-1 border-b-2 border-quizzer-black/10">
-        {(["roster", "allowlist", "claims"] as Tab[]).map((t) => (
+        {(["roster", "allowlist", "claims", "payroll"] as Tab[]).map((t) => (
           <button
             key={t}
             type="button"
@@ -446,14 +648,18 @@ export function AdminHostsDashboard() {
                 : "border-transparent text-quizzer-black/50 hover:text-quizzer-black"
             }`}
           >
-            {t === "claims" && pendingClaimsCount > 0
-              ? `Claims (${pendingClaimsCount})`
-              : t.charAt(0).toUpperCase() + t.slice(1)}
+            {t === "payroll"
+              ? "Payroll"
+              : t === "claims" && pendingClaimsCount > 0
+                ? `Claims (${pendingClaimsCount})`
+                : t.charAt(0).toUpperCase() + t.slice(1)}
           </button>
         ))}
       </div>
 
-      <p className="text-sm text-quizzer-black/80">Manage the host roster, allowlist and fees, and quiz claims.</p>
+      <p className="text-sm text-quizzer-black/80">
+        Manage the host roster, allowlist and fees, quiz claims, and monthly payroll.
+      </p>
 
       {toast ? (
         <p
@@ -776,6 +982,154 @@ export function AdminHostsDashboard() {
               <p className="mt-4 text-sm text-quizzer-black/60">No history yet.</p>
             ) : null}
           </section>
+        </div>
+      )}
+
+      {tab === "payroll" && (
+        <div className="space-y-4">
+          {payrollError ? (
+            <p className="rounded-[var(--radius-button)] border-2 border-quizzer-red bg-quizzer-white px-3 py-2 text-sm text-quizzer-red">
+              {payrollError}
+            </p>
+          ) : null}
+
+          {payrollLoading && !payrollLoaded ? (
+            <p className="text-sm text-quizzer-black/70">Loading payroll…</p>
+          ) : null}
+
+          {payrollLoaded ? (
+            <>
+              <div className="flex flex-wrap gap-2">
+                <div className="rounded-[var(--radius-button)] border-2 border-quizzer-black bg-quizzer-cream px-3 py-2 text-sm shadow-[var(--shadow-card)]">
+                  <span className="text-xs font-semibold uppercase tracking-wide text-quizzer-black/80">
+                    Total owed this month
+                  </span>
+                  <p className="font-heading text-xl text-quizzer-black">{formatPence(totalOwedThisMonth)}</p>
+                </div>
+                <div className="rounded-[var(--radius-button)] border-2 border-quizzer-black bg-quizzer-cream px-3 py-2 text-sm shadow-[var(--shadow-card)]">
+                  <span className="text-xs font-semibold uppercase tracking-wide text-quizzer-black/80">
+                    Hosts with sessions
+                  </span>
+                  <p className="font-heading text-xl text-quizzer-black">{hostsWithSessionsCount}</p>
+                </div>
+                <div className="rounded-[var(--radius-button)] border-2 border-quizzer-black bg-quizzer-cream px-3 py-2 text-sm shadow-[var(--shadow-card)]">
+                  <span className="text-xs font-semibold uppercase tracking-wide text-quizzer-black/80">
+                    Sessions recorded
+                  </span>
+                  <p className="font-heading text-xl text-quizzer-black">{sessionRows.length}</p>
+                </div>
+              </div>
+
+              <section
+                className="rounded-[var(--radius-button)] border-[var(--border-thick)] border-quizzer-black bg-quizzer-white p-4 shadow-[var(--shadow-card)]"
+                style={{ "--admin-stagger": "0ms" } as CSSProperties}
+              >
+                <h2 className="font-heading text-sm uppercase tracking-wide text-quizzer-black">Payroll by host</h2>
+                {payrollTableRows.length === 0 ? (
+                  <p className="mt-3 text-sm text-quizzer-black/70">No hosts with sessions recorded this month.</p>
+                ) : (
+                  <div className="mt-4 overflow-x-auto">
+                    <table className="w-full border-collapse text-left text-sm text-quizzer-black">
+                      <thead>
+                        <tr className={tableHeadClass}>
+                          <th className={thClass}>Host</th>
+                          <th className={thClass}>Sessions</th>
+                          <th className={thClass}>Amount owed</th>
+                          <th className={thClass}>Missing rates</th>
+                          <th className={thClass}>Mark as paid</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {payrollTableRows.map((row, rowIdx) => (
+                          <tr
+                            key={row.host_user_id}
+                            className="animate-admin-row border-b border-quizzer-black/10"
+                            style={
+                              { "--admin-row-delay": `${Math.min(rowIdx, 20) * 24}ms` } as CSSProperties
+                            }
+                          >
+                            <td className={`${tdClass} font-medium`}>{row.email}</td>
+                            <td className={tdClass}>{row.sessionCount}</td>
+                            <td className={tdClass}>{formatPence(row.payout_this_month_pence)}</td>
+                            <td className={tdClass}>
+                              {row.missingRates ? (
+                                <span className="rounded-full border border-amber-600 bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-900">
+                                  Some sessions have £0 fee
+                                </span>
+                              ) : (
+                                <span className="text-quizzer-black/40">—</span>
+                              )}
+                            </td>
+                            <td className={tdClass}>
+                              <button
+                                type="button"
+                                onClick={() => markPaidStub(row.email)}
+                                className="rounded-[var(--radius-button)] border-2 border-quizzer-black bg-quizzer-yellow px-2 py-1 text-xs font-semibold text-quizzer-black shadow-[var(--shadow-button)] hover:translate-x-[1px] hover:translate-y-[1px]"
+                              >
+                                Mark as paid
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+                <p className="mt-4 text-xs text-quizzer-black/70">
+                  {allowlistNoSessionsCount} host{allowlistNoSessionsCount === 1 ? "" : "s"} on allowlist with no
+                  sessions this month.
+                </p>
+              </section>
+
+              <section
+                className="rounded-[var(--radius-button)] border-[var(--border-thick)] border-quizzer-black bg-quizzer-white p-4 shadow-[var(--shadow-card)]"
+                style={{ "--admin-stagger": "40ms" } as CSSProperties}
+              >
+                <button
+                  type="button"
+                  onClick={() => setShowPayrollSessions((v) => !v)}
+                  className="rounded-[var(--radius-button)] border-2 border-quizzer-black bg-quizzer-white px-3 py-2 text-sm font-semibold text-quizzer-black shadow-[var(--shadow-button)] hover:translate-x-[1px] hover:translate-y-[1px]"
+                >
+                  {showPayrollSessions ? "Hide sessions" : `Show all sessions (${sessionRows.length})`}
+                </button>
+                {showPayrollSessions && sessionRowsSorted.length > 0 ? (
+                  <div className="mt-4 overflow-x-auto">
+                    <table className="w-full border-collapse text-left text-sm text-quizzer-black">
+                      <thead>
+                        <tr className={tableHeadClass}>
+                          <th className={thClass}>Date</th>
+                          <th className={thClass}>Host</th>
+                          <th className={thClass}>Venue</th>
+                          <th className={thClass}>Fee</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {sessionRowsSorted.map((s, rowIdx) => {
+                          const hostEmail = rosterByUserId.get(s.host_user_id)?.email ?? s.host_user_id;
+                          return (
+                            <tr
+                              key={s.id}
+                              className="animate-admin-row border-b border-quizzer-black/10"
+                              style={
+                                { "--admin-row-delay": `${Math.min(rowIdx, 20) * 24}ms` } as CSSProperties
+                              }
+                            >
+                              <td className={tdClass}>{formatDateShort(s.session_date)}</td>
+                              <td className={tdClass}>{hostEmail}</td>
+                              <td className={tdClass}>{s.venue_name}</td>
+                              <td className={tdClass}>{formatPence(s.fee_pence)}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : showPayrollSessions && sessionRowsSorted.length === 0 ? (
+                  <p className="mt-4 text-sm text-quizzer-black/60">No sessions this month.</p>
+                ) : null}
+              </section>
+            </>
+          ) : null}
         </div>
       )}
     </div>

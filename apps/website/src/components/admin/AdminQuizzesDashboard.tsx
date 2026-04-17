@@ -101,6 +101,18 @@ function truncateEmail(email: string, maxLen: number) {
   return `${t.slice(0, maxLen)}…`;
 }
 
+/** Monday 00:00:00 local of the week containing `d`. */
+function startOfWeekMonday(d: Date): Date {
+  const day = d.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  const mon = new Date(d.getFullYear(), d.getMonth(), d.getDate() + diff);
+  mon.setHours(0, 0, 0, 0);
+  return mon;
+}
+
+/** Column order Mon–Sun maps to DB day_of_week (Sun=0 … Sat=6). */
+const SCHEDULE_COLUMN_DOW = [1, 2, 3, 4, 5, 6, 0] as const;
+
 type QuizClaimSummary = { status: string; host_email: string };
 
 export function AdminQuizzesDashboard() {
@@ -144,6 +156,7 @@ export function AdminQuizzesDashboard() {
   const [quizSaveBusy, setQuizSaveBusy] = useState(false);
   const [quizToggleBusy, setQuizToggleBusy] = useState<string | null>(null);
   const [quizDeleteBusy, setQuizDeleteBusy] = useState<string | null>(null);
+  const [viewTab, setViewTab] = useState<"list" | "schedule">("list");
 
   const initialLoad = useRef(true);
   const loadGenerationRef = useRef(0);
@@ -632,6 +645,18 @@ export function AdminQuizzesDashboard() {
   const venueFormVisible = addVenueOpen || editingVenue !== null;
   const quizFormVisible = addQuizOpen || editingQuiz !== null;
 
+  const mondayThisWeek = startOfWeekMonday(new Date());
+  const scheduleWeekColumns = SCHEDULE_COLUMN_DOW.map((dow, i) => {
+    const d = new Date(mondayThisWeek);
+    d.setDate(mondayThisWeek.getDate() + i);
+    const header = d.toLocaleDateString("en-GB", {
+      weekday: "short",
+      day: "numeric",
+      month: "short",
+    });
+    return { dow, header: header.replace(",", "") };
+  });
+
   return (
     <div className="relative space-y-6">
       {toast ? (
@@ -671,6 +696,23 @@ export function AdminQuizzesDashboard() {
           >
             {quizFormVisible ? "Cancel" : "+ Add quiz event"}
           </button>
+        </div>
+
+        <div className="mt-3 flex gap-1 border-b-2 border-quizzer-black/10">
+          {(["list", "schedule"] as const).map((t) => (
+            <button
+              key={t}
+              type="button"
+              onClick={() => setViewTab(t)}
+              className={`-mb-[2px] border-b-2 px-4 py-2 text-sm font-semibold capitalize transition-colors ${
+                viewTab === t
+                  ? "border-quizzer-black text-quizzer-black"
+                  : "border-transparent text-quizzer-black/50 hover:text-quizzer-black"
+              }`}
+            >
+              {t === "list" ? "List" : "Schedule"}
+            </button>
+          ))}
         </div>
 
         {quizFormVisible ? (
@@ -826,6 +868,7 @@ export function AdminQuizzesDashboard() {
           </div>
         ) : null}
 
+        {viewTab === "list" ? (
         <div className="mt-4 overflow-x-auto">
           <table className="w-full border-collapse text-left text-sm text-quizzer-black">
             <thead>
@@ -938,6 +981,64 @@ export function AdminQuizzesDashboard() {
             </tbody>
           </table>
         </div>
+        ) : null}
+
+        {viewTab === "schedule" ? (
+          <div className="mt-4">
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">
+              {scheduleWeekColumns.map(({ dow, header }) => {
+                const dayQuizzes = quizzes
+                  .filter((q) => q.day_of_week === dow)
+                  .slice()
+                  .sort((a, b) => formatTimeDisplay(a.start_time).localeCompare(formatTimeDisplay(b.start_time)));
+                return (
+                  <div key={dow} className="flex min-h-[120px] flex-col border border-quizzer-black/15 bg-quizzer-cream/30 p-2">
+                    <div className="border-b border-quizzer-black/15 pb-2 text-center text-xs font-semibold text-quizzer-black">
+                      {header}
+                    </div>
+                    <div className="mt-2 flex flex-1 flex-col gap-2">
+                      {dayQuizzes.length === 0 ? (
+                        <p className="flex flex-1 items-center justify-center text-center text-xs text-quizzer-black/40">
+                          —
+                        </p>
+                      ) : (
+                        dayQuizzes.map((quiz) => {
+                          const claim = quizClaimByEventId.get(quiz.id);
+                          return (
+                            <button
+                              key={quiz.id}
+                              type="button"
+                              onClick={() => openEditQuiz(quiz)}
+                              className="w-full rounded-lg border-2 border-quizzer-black bg-white p-2 text-left text-xs shadow-[2px_2px_0_#000] outline-none ring-quizzer-yellow transition hover:bg-quizzer-cream/50 focus-visible:ring-2"
+                            >
+                              <p className="font-bold text-quizzer-black">{venueNameById(venues, quiz.venue_id)}</p>
+                              <p className="mt-0.5 text-quizzer-black/90">{formatTimeDisplay(quiz.start_time)}</p>
+                              <div className="mt-1.5">
+                                {claim?.status === "confirmed" ? (
+                                  <span className="inline-block rounded-full border border-green-600 bg-green-100 px-1.5 py-0.5 text-[10px] font-semibold leading-tight text-green-800">
+                                    {truncateEmail(claim.host_email, 18)}
+                                  </span>
+                                ) : claim?.status === "pending" ? (
+                                  <span className="inline-block rounded-full border border-amber-500 bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold leading-tight text-amber-800">
+                                    Pending claim
+                                  </span>
+                                ) : (
+                                  <span className="inline-block rounded-full border border-red-400 bg-red-50 px-1.5 py-0.5 text-[10px] font-semibold leading-tight text-red-700">
+                                    No host
+                                  </span>
+                                )}
+                              </div>
+                            </button>
+                          );
+                        })
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ) : null}
       </section>
 
       <section
