@@ -70,7 +70,7 @@ export function HostQuizForm() {
 
   if (sent) {
     return (
-      <div className="rounded-[12px] border-[3px] border-quizzer-black border-solid bg-quizzer-green p-6 text-quizzer-black">
+      <div className="rounded-[var(--radius-card)] border-[3px] border-quizzer-black border-solid bg-quizzer-green p-6 text-quizzer-black">
         <p className="font-semibold">Thanks! We’ll be in touch soon.</p>
       </div>
     );
@@ -91,7 +91,7 @@ export function HostQuizForm() {
       </Button>
       {submitError ? (
         <p
-          className="rounded-[12px] border-[3px] border-solid border-quizzer-red bg-quizzer-white px-4 py-3 text-sm font-semibold text-quizzer-red"
+          className="rounded-[var(--radius-card)] border-[3px] border-solid border-quizzer-red bg-quizzer-cream px-4 py-3 text-sm font-semibold text-quizzer-red"
           role="alert"
         >
           {submitError}

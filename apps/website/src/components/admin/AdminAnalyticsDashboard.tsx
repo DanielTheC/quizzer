@@ -276,7 +276,7 @@ export function AdminAnalyticsDashboard() {
           type="button"
           disabled={loading}
           onClick={() => void load()}
-          className="rounded-[var(--radius-button)] border-2 border-quizzer-black bg-quizzer-white px-3 py-2 text-sm font-semibold shadow-[var(--shadow-button)] hover:translate-x-[1px] hover:translate-y-[1px] disabled:opacity-50"
+          className="rounded-[var(--radius-button)] border-[3px] border-quizzer-black bg-quizzer-white px-3 py-2 text-sm font-semibold shadow-[var(--shadow-button)] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[var(--shadow-button-hover)] disabled:opacity-50"
           aria-label="Refresh analytics"
         >
           {"\u21bb"} Refresh
@@ -284,7 +284,7 @@ export function AdminAnalyticsDashboard() {
       </div>
 
       {error ? (
-        <p className="animate-admin-fade-in-up rounded-[var(--radius-button)] border-2 border-quizzer-red bg-quizzer-white px-3 py-2 text-sm text-quizzer-red">
+        <p className="animate-admin-fade-in-up rounded-[var(--radius-button)] border-[3px] border-quizzer-red bg-quizzer-cream px-3 py-2 text-sm text-quizzer-red">
           {error}
         </p>
       ) : null}
@@ -302,32 +302,32 @@ export function AdminAnalyticsDashboard() {
           className="animate-admin-fade-in-up grid gap-4 sm:grid-cols-2 lg:grid-cols-4"
           style={{ "--admin-stagger": "0ms" } as CSSProperties}
         >
-          <div className="rounded-[var(--radius-button)] border-[var(--border-thick)] border-quizzer-black bg-quizzer-white p-4 text-center shadow-[var(--shadow-card)]">
-            <p className="font-heading text-3xl font-bold tabular-nums text-quizzer-black">
+          <div className="rounded-[var(--radius-button)] border-[3px] border-quizzer-black bg-quizzer-white p-4 text-center shadow-[var(--shadow-card)]">
+            <p className="font-heading text-3xl tabular-nums text-quizzer-black">
               {summary.active_quiz_count}
             </p>
             <p className="mt-2 text-xs font-semibold uppercase tracking-wide text-quizzer-black/70">
               Active quiz events
             </p>
           </div>
-          <div className="rounded-[var(--radius-button)] border-[var(--border-thick)] border-quizzer-black bg-quizzer-white p-4 text-center shadow-[var(--shadow-card)]">
-            <p className="font-heading text-3xl font-bold tabular-nums text-quizzer-black">
+          <div className="rounded-[var(--radius-button)] border-[3px] border-quizzer-black bg-quizzer-white p-4 text-center shadow-[var(--shadow-card)]">
+            <p className="font-heading text-3xl tabular-nums text-quizzer-black">
               {summary.total_interests}
             </p>
             <p className="mt-2 text-xs font-semibold uppercase tracking-wide text-quizzer-black/70">
               Total interests
             </p>
           </div>
-          <div className="rounded-[var(--radius-button)] border-[var(--border-thick)] border-quizzer-black bg-quizzer-white p-4 text-center shadow-[var(--shadow-card)]">
-            <p className="font-heading text-3xl font-bold tabular-nums text-quizzer-black">
+          <div className="rounded-[var(--radius-button)] border-[3px] border-quizzer-black bg-quizzer-white p-4 text-center shadow-[var(--shadow-card)]">
+            <p className="font-heading text-3xl tabular-nums text-quizzer-black">
               {summary.teams_last_7d}
             </p>
             <p className="mt-2 text-xs font-semibold uppercase tracking-wide text-quizzer-black/70">
               Teams (7 days)
             </p>
           </div>
-          <div className="rounded-[var(--radius-button)] border-[var(--border-thick)] border-quizzer-black bg-quizzer-white p-4 text-center shadow-[var(--shadow-card)]">
-            <p className="font-heading text-3xl font-bold tabular-nums text-quizzer-black">
+          <div className="rounded-[var(--radius-button)] border-[3px] border-quizzer-black bg-quizzer-white p-4 text-center shadow-[var(--shadow-card)]">
+            <p className="font-heading text-3xl tabular-nums text-quizzer-black">
               {formatGbpPence(summary.gross_last_7d_pence)}
             </p>
             <p className="mt-2 text-xs font-semibold uppercase tracking-wide text-quizzer-black/70">
@@ -338,7 +338,7 @@ export function AdminAnalyticsDashboard() {
       ) : null}
 
       <section
-        className="animate-admin-fade-in-up rounded-[var(--radius-button)] border-[var(--border-thick)] border-quizzer-black bg-quizzer-white p-4 shadow-[var(--shadow-card)]"
+        className="animate-admin-fade-in-up rounded-[var(--radius-button)] border-[3px] border-quizzer-black bg-quizzer-white p-4 shadow-[var(--shadow-card)]"
         style={{ "--admin-stagger": "50ms" } as CSSProperties}
       >
         <h2 className="font-heading text-sm uppercase tracking-wide text-quizzer-black">
@@ -347,7 +347,7 @@ export function AdminAnalyticsDashboard() {
         <div className="mt-4 overflow-x-auto">
           <table className="w-full border-collapse text-left text-sm text-quizzer-black">
             <thead>
-              <tr className="border-b border-quizzer-black/20 bg-quizzer-cream">
+              <tr className="border-b-[3px] border-quizzer-black bg-quizzer-cream">
                 <th className="w-8 px-2 py-2" aria-hidden />
                 <th className="px-3 py-2 font-semibold">Venue</th>
                 <th className="px-3 py-2 font-semibold">Postcode</th>
@@ -390,7 +390,7 @@ export function AdminAnalyticsDashboard() {
                     <Fragment key={row.venue_id}>
                       <tr
                         className={`animate-admin-row border-b border-quizzer-black/10 ${
-                          warnNoSubmission ? "border-l-4 border-l-amber-400" : ""
+                          warnNoSubmission ? "border-l-[3px] border-l-quizzer-orange" : ""
                         }`}
                         style={
                           {
@@ -402,7 +402,7 @@ export function AdminAnalyticsDashboard() {
                           <button
                             type="button"
                             onClick={() => toggleVenueRow(row.venue_id)}
-                            className="rounded border border-quizzer-black/30 bg-quizzer-cream/50 px-1.5 py-0.5 text-xs font-semibold text-quizzer-black hover:bg-quizzer-cream"
+                            className="rounded-[var(--radius-badge)] border-[3px] border-quizzer-black bg-quizzer-cream/50 px-1.5 py-0.5 text-xs font-semibold text-quizzer-black shadow-[var(--shadow-button)] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[var(--shadow-button-hover)]"
                             aria-expanded={expanded}
                             aria-label={expanded ? "Collapse venue" : "Expand venue"}
                           >
@@ -434,7 +434,7 @@ export function AdminAnalyticsDashboard() {
                               <div className="overflow-x-auto">
                                 <table className="w-full border-collapse text-left text-xs text-quizzer-black">
                                   <thead>
-                                    <tr className="border-b border-quizzer-black/15">
+                                    <tr className="border-b-[3px] border-quizzer-black bg-quizzer-cream/50">
                                       <th className="py-2 pr-3 font-semibold">Quiz</th>
                                       <th className="py-2 pr-3 font-semibold">Day / time</th>
                                       <th className="py-2 pr-3 font-semibold">Interests</th>
@@ -485,7 +485,7 @@ export function AdminAnalyticsDashboard() {
       </section>
 
       <section
-        className="animate-admin-fade-in-up rounded-[var(--radius-button)] border-[var(--border-thick)] border-quizzer-black bg-quizzer-white p-4 shadow-[var(--shadow-card)]"
+        className="animate-admin-fade-in-up rounded-[var(--radius-button)] border-[3px] border-quizzer-black bg-quizzer-white p-4 shadow-[var(--shadow-card)]"
         style={{ "--admin-stagger": "100ms" } as CSSProperties}
       >
         <h2 className="font-heading text-sm uppercase tracking-wide text-quizzer-black">
@@ -494,7 +494,7 @@ export function AdminAnalyticsDashboard() {
         <div className="mt-4 overflow-x-auto">
           <table className="w-full border-collapse text-left text-sm text-quizzer-black">
             <thead>
-              <tr className="border-b border-quizzer-black/20 bg-quizzer-cream">
+              <tr className="border-b-[3px] border-quizzer-black bg-quizzer-cream">
                 <th className="px-3 py-2 font-semibold">Date</th>
                 <th className="px-3 py-2 font-semibold">Venue</th>
                 <th className="px-3 py-2 font-semibold">Day / time</th>

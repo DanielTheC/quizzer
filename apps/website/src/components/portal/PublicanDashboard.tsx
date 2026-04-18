@@ -64,14 +64,14 @@ function formatWhen(iso: string): string {
 function hostStatusPill(claim: { status: string; host_email: string } | null) {
   if (claim?.status === "confirmed") {
     return (
-      <span className="inline-block rounded-full border border-green-700 bg-green-50 px-2 py-0.5 text-xs font-semibold text-green-800">
+      <span className="inline-block rounded-full border-[3px] border-quizzer-green bg-quizzer-green/10 px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-quizzer-green">
         ✓ {truncateEmail(claim.host_email, 22)}
       </span>
     );
   }
   if (claim?.status === "pending") {
     return (
-      <span className="inline-block rounded-full border border-amber-600 bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-800">
+      <span className="inline-block rounded-full border-[3px] border-quizzer-orange bg-quizzer-yellow/20 px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-quizzer-orange">
         ⏳ Pending
       </span>
     );
@@ -79,7 +79,7 @@ function hostStatusPill(claim: { status: string; host_email: string } | null) {
   return (
     <div className="space-y-1">
       <span className="text-xs text-quizzer-black/40">Unclaimed</span>
-      <p className="text-xs font-medium text-amber-800">No host assigned yet</p>
+      <p className="text-xs font-medium text-quizzer-orange">No host assigned yet</p>
     </div>
   );
 }
@@ -134,7 +134,7 @@ export function PublicanDashboard({ venue, profile, quizEvents, recentMessages }
 
   return (
     <div className="px-6 py-8 text-quizzer-black md:px-10">
-      <header className="mb-10 flex flex-col gap-4 border-b-[var(--border-thick)] border-quizzer-black pb-6 sm:flex-row sm:items-start sm:justify-between">
+      <header className="mb-10 flex flex-col gap-4 border-b-[3px] border-quizzer-black pb-6 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="font-heading text-3xl uppercase tracking-wide md:text-4xl">Welcome, {welcomeName}</h1>
           <p className="mt-2 text-sm font-medium text-quizzer-black/80 md:text-base">{venue.name}</p>
@@ -143,7 +143,7 @@ export function PublicanDashboard({ venue, profile, quizEvents, recentMessages }
         <PortalSignOutButton className="w-full shrink-0 sm:w-auto sm:min-w-[9rem]" />
       </header>
 
-      <section className="mb-10 max-w-3xl rounded-[var(--radius-card)] border-[var(--border-thick)] border-quizzer-black bg-quizzer-white p-6 shadow-[var(--shadow-card)]">
+      <section className="mb-10 max-w-3xl rounded-[var(--radius-card)] border-[3px] border-quizzer-black bg-quizzer-white p-6 shadow-[var(--shadow-card)]">
         <h2 className="font-heading text-lg uppercase tracking-wide">Your venue</h2>
         <p className="mt-3 text-base font-semibold text-quizzer-black">{venue.name}</p>
         {addressLine ? <p className="mt-2 text-sm text-quizzer-black/75">{addressLine}</p> : null}
@@ -154,10 +154,10 @@ export function PublicanDashboard({ venue, profile, quizEvents, recentMessages }
 
       <section className="mb-10">
         <h2 className="font-heading text-lg uppercase tracking-wide">Your quizzes</h2>
-        <div className="mt-4 overflow-x-auto rounded-[var(--radius-card)] border-[var(--border-thick)] border-quizzer-black bg-quizzer-white shadow-[var(--shadow-card)]">
+        <div className="mt-4 overflow-x-auto rounded-[var(--radius-card)] border-[3px] border-quizzer-black bg-quizzer-white shadow-[var(--shadow-card)]">
           <table className="min-w-[640px] w-full border-collapse text-left text-sm">
             <thead>
-              <tr className="border-b-2 border-quizzer-black bg-quizzer-cream/50">
+              <tr className="border-b-[3px] border-quizzer-black bg-quizzer-cream/50">
                 <th className="px-3 py-3 font-heading text-xs uppercase tracking-wide">When</th>
                 <th className="px-3 py-3 font-heading text-xs uppercase tracking-wide">Entry</th>
                 <th className="px-3 py-3 font-heading text-xs uppercase tracking-wide">Interest</th>
@@ -207,7 +207,7 @@ export function PublicanDashboard({ venue, profile, quizEvents, recentMessages }
         </p>
 
         {sendOk ? (
-          <p className="mt-4 text-sm font-medium text-green-800" aria-live="polite">
+          <p className="mt-4 text-sm font-medium text-quizzer-green" aria-live="polite">
             Message sent — we’ll get back to you as soon as we can.
           </p>
         ) : null}
@@ -218,13 +218,13 @@ export function PublicanDashboard({ venue, profile, quizEvents, recentMessages }
             setComposeOpen((o) => !o);
             setSendError(null);
           }}
-          className="mt-6 rounded-[var(--radius-button)] border-2 border-quizzer-black bg-quizzer-yellow px-4 py-2.5 text-sm font-semibold text-quizzer-black shadow-[var(--shadow-button)] transition hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[var(--shadow-button-hover)]"
+          className="mt-6 rounded-[var(--radius-button)] border-[3px] border-quizzer-black bg-quizzer-yellow px-4 py-2.5 text-sm font-semibold text-quizzer-black shadow-[var(--shadow-button)] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[var(--shadow-button-hover)]"
         >
           {composeOpen ? "Close form" : "Send a message"}
         </button>
 
         {composeOpen ? (
-          <div className="mt-4 space-y-4 rounded-[var(--radius-card)] border-[var(--border-thick)] border-quizzer-black bg-quizzer-white p-5 shadow-[var(--shadow-card)]">
+          <div className="mt-4 space-y-4 rounded-[var(--radius-card)] border-[3px] border-quizzer-black bg-quizzer-white p-5 shadow-[var(--shadow-card)]">
             <div>
               <label htmlFor="pub-msg-type" className="block text-xs font-medium uppercase tracking-wide text-quizzer-black/70">
                 Message type
@@ -233,7 +233,7 @@ export function PublicanDashboard({ venue, profile, quizEvents, recentMessages }
                 id="pub-msg-type"
                 value={messageType}
                 onChange={(e) => setMessageType(e.target.value as MessageTypeValue)}
-                className="mt-2 w-full max-w-md rounded-[var(--radius-button)] border-2 border-quizzer-black bg-quizzer-white px-3 py-2 text-sm text-quizzer-black outline-none focus:ring-2 focus:ring-quizzer-yellow"
+                className="mt-2 w-full max-w-md rounded-[var(--radius-button)] border-[3px] border-quizzer-black bg-quizzer-white px-3 py-2 text-sm text-quizzer-black outline-none focus:ring-2 focus:ring-quizzer-yellow"
               >
                 {MESSAGE_TYPE_OPTIONS.map((o) => (
                   <option key={o.value} value={o.value}>
@@ -251,7 +251,7 @@ export function PublicanDashboard({ venue, profile, quizEvents, recentMessages }
                 value={body}
                 onChange={(e) => setBody(e.target.value)}
                 rows={5}
-                className="mt-2 w-full rounded-[var(--radius-button)] border-2 border-quizzer-black bg-quizzer-white px-3 py-2 text-sm text-quizzer-black outline-none focus:ring-2 focus:ring-quizzer-yellow"
+                className="mt-2 w-full rounded-[var(--radius-button)] border-[3px] border-quizzer-black bg-quizzer-white px-3 py-2 text-sm text-quizzer-black outline-none focus:ring-2 focus:ring-quizzer-yellow"
                 placeholder="How can we help?"
               />
             </div>
@@ -260,7 +260,7 @@ export function PublicanDashboard({ venue, profile, quizEvents, recentMessages }
               type="button"
               disabled={sendBusy}
               onClick={() => void submitMessage()}
-              className="rounded-[var(--radius-button)] border-2 border-quizzer-black bg-quizzer-yellow px-4 py-2 text-sm font-semibold text-quizzer-black shadow-[var(--shadow-button)] transition hover:translate-x-[2px] hover:translate-y-[2px] disabled:opacity-50"
+              className="rounded-[var(--radius-button)] border-[3px] border-quizzer-black bg-quizzer-yellow px-4 py-2 text-sm font-semibold text-quizzer-black shadow-[var(--shadow-button)] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[var(--shadow-button-hover)] disabled:opacity-50"
             >
               {sendBusy ? "Sending…" : "Submit"}
             </button>
@@ -269,14 +269,14 @@ export function PublicanDashboard({ venue, profile, quizEvents, recentMessages }
 
         <ul className="mt-8 space-y-4">
           {recentMessages.length === 0 ? (
-            <li className="rounded-[var(--radius-card)] border-2 border-dashed border-quizzer-black/25 bg-quizzer-cream/30 px-4 py-6 text-sm text-quizzer-black/65">
+            <li className="rounded-[var(--radius-card)] border-[3px] border-dashed border-quizzer-black/25 bg-quizzer-cream/30 px-4 py-6 text-sm text-quizzer-black/65">
               No messages yet. Use “Send a message” to reach the team.
             </li>
           ) : (
             recentMessages.map((m) => (
               <li
                 key={m.id}
-                className="rounded-[var(--radius-card)] border-[var(--border-thick)] border-quizzer-black bg-quizzer-white p-4 shadow-[var(--shadow-card)]"
+                className="rounded-[var(--radius-card)] border-[3px] border-quizzer-black bg-quizzer-white p-4 shadow-[var(--shadow-card)]"
               >
                 <div className="flex flex-wrap items-center gap-2 text-xs text-quizzer-black/60">
                   <span className="font-medium capitalize text-quizzer-black/80">

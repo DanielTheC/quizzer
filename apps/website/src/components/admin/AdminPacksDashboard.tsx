@@ -177,13 +177,13 @@ function renumberQuestions(questions: QuestionRow[]): QuestionRow[] {
 }
 
 const btnPrimary =
-  "rounded-[12px] border-[3px] border-quizzer-black bg-quizzer-yellow px-3 py-1.5 text-xs font-semibold text-quizzer-black shadow-[4px_4px_0_#000] hover:shadow-[2px_2px_0_#000] hover:translate-x-[2px] hover:translate-y-[2px] disabled:opacity-50 disabled:pointer-events-none";
+  "rounded-[var(--radius-button)] border-[3px] border-quizzer-black bg-quizzer-yellow px-3 py-1.5 text-xs font-semibold text-quizzer-black shadow-[var(--shadow-button)] hover:shadow-[var(--shadow-button-hover)] hover:translate-x-[1px] hover:translate-y-[1px] disabled:opacity-50 disabled:pointer-events-none";
 const btnSecondary =
-  "rounded-[12px] border-[3px] border-quizzer-black bg-quizzer-white px-3 py-1.5 text-xs font-semibold text-quizzer-black shadow-[4px_4px_0_#000] hover:shadow-[2px_2px_0_#000] hover:translate-x-[2px] hover:translate-y-[2px] disabled:opacity-50";
+  "rounded-[var(--radius-button)] border-[3px] border-quizzer-black bg-quizzer-white px-3 py-1.5 text-xs font-semibold text-quizzer-black shadow-[var(--shadow-button)] hover:shadow-[var(--shadow-button-hover)] hover:translate-x-[1px] hover:translate-y-[1px] disabled:opacity-50";
 const btnDanger =
-  "rounded-[12px] border-[3px] border-quizzer-black bg-red-600 px-2 py-1 text-xs font-semibold text-white shadow-[4px_4px_0_#000] hover:translate-x-[2px] hover:translate-y-[2px] disabled:opacity-50";
+  "rounded-[var(--radius-button)] border-[3px] border-quizzer-black bg-quizzer-red px-2 py-1 text-xs font-semibold text-quizzer-white shadow-[var(--shadow-button)] hover:shadow-[var(--shadow-button-hover)] hover:translate-x-[1px] hover:translate-y-[1px] disabled:opacity-50";
 const inputClass =
-  "w-full rounded-[12px] border-[3px] border-quizzer-black border-solid bg-quizzer-white px-2 py-1.5 text-sm text-quizzer-black outline-none focus:ring-2 focus:ring-quizzer-yellow";
+  "w-full rounded-[var(--radius-button)] border-[3px] border-quizzer-black border-solid bg-quizzer-white px-2 py-1.5 text-sm text-quizzer-black outline-none focus:ring-2 focus:ring-quizzer-yellow";
 
 export function AdminPacksDashboard() {
   const [packs, setPacks] = useState<QuizPackRow[]>([]);
@@ -650,7 +650,7 @@ export function AdminPacksDashboard() {
       <div className="relative space-y-6 pb-24">
         {toast ? (
           <p
-            className="fixed bottom-6 right-6 z-50 max-w-sm rounded-[12px] border-[3px] border-quizzer-black bg-quizzer-yellow px-4 py-2 text-sm font-semibold text-quizzer-black shadow-[5px_5px_0_#000]"
+            className="fixed bottom-6 right-6 z-50 max-w-sm rounded-[var(--radius-button)] border-[3px] border-quizzer-black bg-quizzer-yellow px-4 py-2 text-sm font-semibold text-quizzer-black shadow-[var(--shadow-card)]"
             role="status"
           >
             {toast}
@@ -666,7 +666,7 @@ export function AdminPacksDashboard() {
         ) : (
           <>
             {editorError ? (
-              <p className="rounded-[12px] border-[3px] border-red-600 bg-quizzer-white px-3 py-2 text-sm text-red-700">
+              <p className="rounded-[var(--radius-button)] border-[3px] border-quizzer-red bg-quizzer-cream px-3 py-2 text-sm text-quizzer-red">
                 {editorError}
               </p>
             ) : null}
@@ -702,7 +702,7 @@ export function AdminPacksDashboard() {
               ) : null}
             </div>
 
-            <div className="rounded-[12px] border-[3px] border-quizzer-black bg-quizzer-white p-4 shadow-[5px_5px_0_#000]">
+            <div className="rounded-[var(--radius-card)] border-[3px] border-quizzer-black bg-quizzer-white p-4 shadow-[var(--shadow-card)]">
               <button
                 type="button"
                 onClick={() => setImportOpen((o) => !o)}
@@ -725,7 +725,7 @@ export function AdminPacksDashboard() {
                     Example: 1,Science & Nature,1,What is the chemical symbol for gold?,Also written Au,Au
                   </p>
                   {csvError ? (
-                    <p className="text-sm font-semibold text-red-600">{csvError}</p>
+                    <p className="text-sm font-semibold text-quizzer-red">{csvError}</p>
                   ) : null}
                   <button type="button" onClick={() => applyCsvImport()} className={btnPrimary}>
                     Import (preview)
@@ -743,7 +743,7 @@ export function AdminPacksDashboard() {
                 {rounds.map((round) => (
                   <div
                     key={round.clientKey}
-                    className="rounded-[12px] border-[3px] border-quizzer-black bg-quizzer-white shadow-[5px_5px_0_#000] overflow-hidden"
+                    className="rounded-[var(--radius-card)] border-[3px] border-quizzer-black bg-quizzer-white shadow-[var(--shadow-card)] overflow-hidden"
                   >
                     <button
                       type="button"
@@ -776,7 +776,7 @@ export function AdminPacksDashboard() {
                       <div className="overflow-x-auto p-4">
                         <table className="w-full border-collapse text-left text-sm">
                           <thead>
-                            <tr className="border-b-2 border-quizzer-black/20">
+                            <tr className="border-b-[3px] border-quizzer-black bg-quizzer-cream">
                               <th className="px-2 py-2 font-semibold">Q#</th>
                               <th className="px-2 py-2 font-semibold">Question</th>
                               <th className="px-2 py-2 font-semibold">Host notes</th>
@@ -787,7 +787,7 @@ export function AdminPacksDashboard() {
                           <tbody>
                             {round.questions.map((q) => (
                               <tr key={q.clientKey} className="border-b border-quizzer-black/10 align-top">
-                                <td className="px-2 py-2 w-10 font-bold">{q.questionNumber}</td>
+                                <td className="px-2 py-2 w-10 font-semibold tabular-nums">{q.questionNumber}</td>
                                 <td className="px-2 py-2 min-w-[180px]">
                                   <textarea
                                     value={q.questionText}
@@ -853,12 +853,12 @@ export function AdminPacksDashboard() {
             )}
 
             {saveAllError ? (
-              <p className="rounded-[12px] border-[3px] border-red-600 bg-quizzer-white px-3 py-2 text-sm font-semibold text-red-700">
+              <p className="rounded-[var(--radius-button)] border-[3px] border-quizzer-red bg-quizzer-cream px-3 py-2 text-sm font-semibold text-quizzer-red">
                 {saveAllError}
               </p>
             ) : null}
 
-            <div className="fixed bottom-0 left-0 right-0 z-40 border-t-[3px] border-quizzer-black bg-quizzer-yellow px-4 py-3 shadow-[0_-4px_0_#000]">
+            <div className="fixed bottom-0 left-0 right-0 z-40 border-t-[3px] border-quizzer-black bg-quizzer-yellow px-4 py-3 shadow-[0_-4px_0_var(--color-quizzer-black)]">
               <div className="mx-auto flex max-w-7xl justify-end">
                 <button
                   type="button"
@@ -880,7 +880,7 @@ export function AdminPacksDashboard() {
     <div className="relative space-y-6">
       {toast ? (
         <p
-          className="fixed bottom-6 right-6 z-50 max-w-sm rounded-[12px] border-[3px] border-quizzer-black bg-quizzer-yellow px-4 py-2 text-sm font-semibold text-quizzer-black shadow-[5px_5px_0_#000]"
+          className="fixed bottom-6 right-6 z-50 max-w-sm rounded-[var(--radius-button)] border-[3px] border-quizzer-black bg-quizzer-yellow px-4 py-2 text-sm font-semibold text-quizzer-black shadow-[var(--shadow-card)]"
           role="status"
         >
           {toast}
@@ -902,13 +902,13 @@ export function AdminPacksDashboard() {
       </div>
 
       {listError ? (
-        <p className="rounded-[12px] border-[3px] border-red-600 bg-quizzer-white px-3 py-2 text-sm text-red-700">
+        <p className="rounded-[var(--radius-button)] border-[3px] border-quizzer-red bg-quizzer-cream px-3 py-2 text-sm text-quizzer-red">
           {listError}
         </p>
       ) : null}
 
       {newPackOpen ? (
-        <div className="rounded-[12px] border-[3px] border-quizzer-black bg-quizzer-white p-4 shadow-[5px_5px_0_#000] space-y-3 max-w-md">
+        <div className="rounded-[var(--radius-card)] border-[3px] border-quizzer-black bg-quizzer-white p-4 shadow-[var(--shadow-card)] space-y-3 max-w-md">
           <label className="block text-xs font-semibold text-quizzer-black">
             Pack name
             <input
@@ -930,10 +930,10 @@ export function AdminPacksDashboard() {
         </div>
       ) : null}
 
-      <div className="overflow-x-auto rounded-[12px] border-[3px] border-quizzer-black bg-quizzer-white shadow-[5px_5px_0_#000]">
+      <div className="overflow-x-auto rounded-[var(--radius-card)] border-[3px] border-quizzer-black bg-quizzer-white shadow-[var(--shadow-card)]">
         <table className="w-full border-collapse text-left text-sm text-quizzer-black">
           <thead>
-            <tr className="border-b-2 border-quizzer-black/20 bg-quizzer-cream">
+            <tr className="border-b-[3px] border-quizzer-black bg-quizzer-cream">
               <th className="px-3 py-2 font-semibold">Name</th>
               <th className="px-3 py-2 font-semibold">Created</th>
               <th className="px-3 py-2 font-semibold">Rounds</th>

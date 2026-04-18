@@ -495,7 +495,7 @@ export function AdminHomeDashboard() {
       {toast ? (
         <p
           key={toast}
-          className="animate-admin-toast fixed bottom-6 right-6 z-50 max-w-sm rounded-[var(--radius-button)] border-2 border-quizzer-black bg-quizzer-yellow px-4 py-2 text-sm font-semibold text-quizzer-black shadow-[var(--shadow-card)]"
+          className="animate-admin-toast fixed bottom-6 right-6 z-50 max-w-sm rounded-[var(--radius-button)] border-[3px] border-quizzer-black bg-quizzer-yellow px-4 py-2 text-sm font-semibold text-quizzer-black shadow-[var(--shadow-card)]"
           role="status"
         >
           {toast}
@@ -503,7 +503,7 @@ export function AdminHomeDashboard() {
       ) : null}
       <h1 className="font-heading animate-admin-fade-in-up text-2xl uppercase text-quizzer-black">Home</h1>
       {error ? (
-        <p className="animate-admin-fade-in-up rounded-[var(--radius-button)] border-2 border-quizzer-red bg-quizzer-white px-3 py-2 text-sm text-quizzer-red">
+        <p className="animate-admin-fade-in-up rounded-[var(--radius-button)] border-[3px] border-quizzer-red bg-quizzer-cream px-3 py-2 text-sm text-quizzer-red">
           {error}
         </p>
       ) : null}
@@ -538,7 +538,7 @@ export function AdminHomeDashboard() {
 
       {/* Zone 2 — Action inbox */}
       <section
-        className="animate-admin-fade-in-up rounded-[var(--radius-button)] border-[var(--border-thick)] border-quizzer-black bg-quizzer-white p-4 shadow-[var(--shadow-card)]"
+        className="animate-admin-fade-in-up rounded-[var(--radius-button)] border-[3px] border-quizzer-black bg-quizzer-white p-4 shadow-[var(--shadow-card)]"
         style={{ "--admin-stagger": "0ms" } as CSSProperties}
       >
         <h2 className="font-heading text-sm uppercase tracking-wide text-quizzer-black">Needs action</h2>
@@ -555,11 +555,11 @@ export function AdminHomeDashboard() {
                 return (
                   <div
                     key={`app-${app.id}`}
-                    className="animate-admin-row rounded-[var(--radius-button)] border-2 border-quizzer-black/15 bg-quizzer-cream/40 p-4"
+                    className="animate-admin-row rounded-[var(--radius-button)] border-[3px] border-quizzer-black/15 bg-quizzer-cream/40 p-4"
                     style={{ "--admin-row-delay": `${Math.min(rowIdx, 20) * 32}ms` } as CSSProperties}
                   >
                     <div className="flex flex-wrap items-start justify-between gap-2">
-                      <span className="rounded-full border-2 border-quizzer-black bg-quizzer-yellow px-2 py-0.5 text-xs font-semibold text-quizzer-black">
+                      <span className="rounded-full border-[3px] border-quizzer-black bg-quizzer-yellow px-2 py-0.5 text-xs font-semibold text-quizzer-black">
                         Application
                       </span>
                     </div>
@@ -576,7 +576,7 @@ export function AdminHomeDashboard() {
                             type="text"
                             value={rejectReason}
                             onChange={(e) => setRejectReason(e.target.value)}
-                            className="mt-1 w-full rounded-[var(--radius-button)] border-2 border-quizzer-black bg-quizzer-white px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-quizzer-yellow"
+                            className="mt-1 w-full rounded-[var(--radius-button)] border-[3px] border-quizzer-black bg-quizzer-white px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-quizzer-yellow"
                           />
                         </label>
                         <div className="flex flex-wrap gap-2">
@@ -584,7 +584,7 @@ export function AdminHomeDashboard() {
                             type="button"
                             disabled={rejectBusy === app.id}
                             onClick={() => void reject(app.id)}
-                            className="rounded-[var(--radius-button)] border-2 border-quizzer-black bg-quizzer-red px-2 py-1 text-xs font-semibold text-quizzer-white shadow-[var(--shadow-button)] hover:translate-x-[1px] hover:translate-y-[1px] disabled:opacity-50"
+                            className="rounded-[var(--radius-button)] border-[3px] border-quizzer-black bg-quizzer-red px-2 py-1 text-xs font-semibold text-quizzer-white shadow-[var(--shadow-button)] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[var(--shadow-button-hover)] disabled:opacity-50"
                           >
                             {rejectBusy === app.id ? "Saving…" : "Confirm reject"}
                           </button>
@@ -594,7 +594,7 @@ export function AdminHomeDashboard() {
                               setRejectExpanded(null);
                               setRejectReason("");
                             }}
-                            className="rounded-[var(--radius-button)] border-2 border-quizzer-black/25 bg-quizzer-white px-2 py-1 text-xs font-semibold text-quizzer-black"
+                            className="rounded-[var(--radius-button)] border-[3px] border-quizzer-black/25 bg-quizzer-white px-2 py-1 text-xs font-semibold text-quizzer-black"
                           >
                             Cancel
                           </button>
@@ -606,7 +606,7 @@ export function AdminHomeDashboard() {
                           type="button"
                           disabled={approveBusy === app.id}
                           onClick={() => void approve(app.id)}
-                          className="rounded-[var(--radius-button)] border-2 border-quizzer-black bg-quizzer-yellow px-2 py-1 text-xs font-semibold text-quizzer-black shadow-[var(--shadow-button)] hover:translate-x-[1px] hover:translate-y-[1px] disabled:opacity-50"
+                          className="rounded-[var(--radius-button)] border-[3px] border-quizzer-black bg-quizzer-yellow px-2 py-1 text-xs font-semibold text-quizzer-black shadow-[var(--shadow-button)] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[var(--shadow-button-hover)] disabled:opacity-50"
                         >
                           {approveBusy === app.id ? "Approving…" : "Approve"}
                         </button>
@@ -616,7 +616,7 @@ export function AdminHomeDashboard() {
                             setRejectExpanded(app.id);
                             setRejectReason("");
                           }}
-                          className="rounded-[var(--radius-button)] border-2 border-quizzer-black bg-quizzer-white px-2 py-1 text-xs font-semibold text-quizzer-black shadow-[var(--shadow-button)] hover:translate-x-[1px] hover:translate-y-[1px]"
+                          className="rounded-[var(--radius-button)] border-[3px] border-quizzer-black bg-quizzer-white px-2 py-1 text-xs font-semibold text-quizzer-black shadow-[var(--shadow-button)] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[var(--shadow-button-hover)]"
                         >
                           Reject
                         </button>
@@ -631,10 +631,10 @@ export function AdminHomeDashboard() {
                 return (
                   <div
                     key={`claim-${c.id}`}
-                    className="animate-admin-row rounded-[var(--radius-button)] border-2 border-quizzer-black/15 bg-quizzer-cream/40 p-4"
+                    className="animate-admin-row rounded-[var(--radius-button)] border-[3px] border-quizzer-black/15 bg-quizzer-cream/40 p-4"
                     style={{ "--admin-row-delay": `${Math.min(rowIdx, 20) * 32}ms` } as CSSProperties}
                   >
-                    <span className="inline-block rounded-full border-2 border-amber-700 bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-900">
+                    <span className="inline-block rounded-full border-[3px] border-quizzer-orange bg-quizzer-yellow/20 px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-quizzer-orange">
                       Claim
                     </span>
                     <p className="mt-2 font-semibold text-quizzer-black">{claimVenueTitle(c)}</p>
@@ -647,7 +647,7 @@ export function AdminHomeDashboard() {
                         type="text"
                         value={claimNotesDraft[c.id] ?? ""}
                         onChange={(e) => setClaimNotesDraft((d) => ({ ...d, [c.id]: e.target.value }))}
-                        className="mt-1 w-full max-w-md rounded-[var(--radius-button)] border-2 border-quizzer-black bg-quizzer-white px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-quizzer-yellow"
+                        className="mt-1 w-full max-w-md rounded-[var(--radius-button)] border-[3px] border-quizzer-black bg-quizzer-white px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-quizzer-yellow"
                         placeholder="Operator notes"
                       />
                     </label>
@@ -656,7 +656,7 @@ export function AdminHomeDashboard() {
                         type="button"
                         disabled={claimBusy?.id === c.id}
                         onClick={() => void updateClaim(c.id, "confirmed")}
-                        className="inline-flex items-center justify-center gap-2 rounded-[var(--radius-button)] border-2 border-quizzer-black bg-quizzer-yellow px-2 py-1 text-xs font-semibold text-quizzer-black shadow-[var(--shadow-button)] hover:translate-x-[1px] hover:translate-y-[1px] disabled:opacity-50"
+                        className="inline-flex items-center justify-center gap-2 rounded-[var(--radius-button)] border-[3px] border-quizzer-black bg-quizzer-yellow px-2 py-1 text-xs font-semibold text-quizzer-black shadow-[var(--shadow-button)] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[var(--shadow-button-hover)] disabled:opacity-50"
                       >
                         {claimBusy?.id === c.id && claimBusy.action === "confirm" ? <BtnSpinner /> : null}
                         Confirm
@@ -665,7 +665,7 @@ export function AdminHomeDashboard() {
                         type="button"
                         disabled={claimBusy?.id === c.id}
                         onClick={() => void updateClaim(c.id, "rejected")}
-                        className="inline-flex items-center justify-center gap-2 rounded-[var(--radius-button)] border-2 border-quizzer-black bg-red-600 px-2 py-1 text-xs font-semibold text-white shadow-[var(--shadow-button)] hover:translate-x-[1px] hover:translate-y-[1px] hover:bg-red-700 disabled:opacity-50"
+                        className="inline-flex items-center justify-center gap-2 rounded-[var(--radius-button)] border-[3px] border-quizzer-black bg-quizzer-red px-2 py-1 text-xs font-semibold text-quizzer-white shadow-[var(--shadow-button)] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[var(--shadow-button-hover)] disabled:opacity-50"
                       >
                         {claimBusy?.id === c.id && claimBusy.action === "reject" ? <BtnSpinner /> : null}
                         Reject
@@ -681,11 +681,11 @@ export function AdminHomeDashboard() {
               return (
                 <div
                   key={`msg-${row.id}`}
-                  className="animate-admin-row rounded-[var(--radius-button)] border-2 border-quizzer-black/15 bg-quizzer-cream/40"
+                  className="animate-admin-row rounded-[var(--radius-button)] border-[3px] border-quizzer-black/15 bg-quizzer-cream/40"
                   style={{ "--admin-row-delay": `${Math.min(rowIdx, 20) * 32}ms` } as CSSProperties}
                 >
                   <div className="flex flex-wrap items-center gap-2 p-4 pb-2">
-                    <span className="rounded-full border-2 border-blue-700 bg-blue-50 px-2 py-0.5 text-xs font-semibold text-blue-900">
+                    <span className="rounded-full border-[3px] border-quizzer-blue bg-quizzer-blue/10 px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-quizzer-blue">
                       Message
                     </span>
                   </div>
@@ -709,7 +709,7 @@ export function AdminHomeDashboard() {
                           value={replyDraft[row.id] ?? ""}
                           onChange={(e) => setReplyDraft((d) => ({ ...d, [row.id]: e.target.value }))}
                           rows={4}
-                          className="mt-1 w-full rounded-[var(--radius-button)] border-2 border-quizzer-black bg-quizzer-white px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-quizzer-yellow"
+                          className="mt-1 w-full rounded-[var(--radius-button)] border-[3px] border-quizzer-black bg-quizzer-white px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-quizzer-yellow"
                         />
                       </label>
                       <div className="mt-2 flex flex-wrap items-center gap-3">
@@ -723,7 +723,7 @@ export function AdminHomeDashboard() {
                                 [row.id]: e.target.value as "open" | "in_progress" | "resolved",
                               }))
                             }
-                            className="rounded-[var(--radius-button)] border-2 border-quizzer-black bg-quizzer-white px-2 py-1 text-xs"
+                            className="rounded-[var(--radius-button)] border-[3px] border-quizzer-black bg-quizzer-white px-2 py-1 text-xs"
                           >
                             <option value="open">Open</option>
                             <option value="in_progress">In progress</option>
@@ -734,7 +734,7 @@ export function AdminHomeDashboard() {
                           type="button"
                           disabled={replyBusy === row.id}
                           onClick={() => void submitReply(row.id)}
-                          className="rounded-[var(--radius-button)] border-2 border-quizzer-black bg-quizzer-yellow px-3 py-1 text-xs font-semibold text-quizzer-black shadow-[var(--shadow-button)] hover:translate-x-[1px] hover:translate-y-[1px] disabled:opacity-50"
+                          className="rounded-[var(--radius-button)] border-[3px] border-quizzer-black bg-quizzer-yellow px-3 py-1 text-xs font-semibold text-quizzer-black shadow-[var(--shadow-button)] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[var(--shadow-button-hover)] disabled:opacity-50"
                         >
                           {replyBusy === row.id ? "Saving…" : "Save"}
                         </button>
@@ -749,10 +749,10 @@ export function AdminHomeDashboard() {
       </section>
 
       {/* Zone 3 — Unhosted quizzes */}
-      <section className="rounded-[var(--radius-button)] border-[var(--border-thick)] border-quizzer-black bg-quizzer-white p-4 shadow-[var(--shadow-card)]">
+      <section className="rounded-[var(--radius-button)] border-[3px] border-quizzer-black bg-quizzer-white p-4 shadow-[var(--shadow-card)]">
         <h2 className="flex flex-wrap items-center gap-2 font-heading text-sm uppercase tracking-wide text-quizzer-black">
           Quizzes needing a host
-          <span className="rounded-full border-2 border-quizzer-black bg-quizzer-yellow px-2 py-0.5 text-xs font-semibold normal-case tracking-normal">
+          <span className="rounded-full border-[3px] border-quizzer-black bg-quizzer-yellow px-2 py-0.5 text-xs font-semibold normal-case tracking-normal">
             {unhosted.length}
           </span>
         </h2>
@@ -772,7 +772,7 @@ export function AdminHomeDashboard() {
               return (
                 <div
                   key={q.quiz_event_id}
-                  className="animate-admin-row rounded-[var(--radius-button)] border-2 border-quizzer-black/15 bg-quizzer-cream/40 p-3"
+                  className="animate-admin-row rounded-[var(--radius-button)] border-[3px] border-quizzer-black/15 bg-quizzer-cream/40 p-3"
                   style={{ "--admin-row-delay": `${Math.min(rowIdx, 12) * 42}ms` } as CSSProperties}
                 >
                   <p className="font-semibold text-quizzer-black">{q.venue_name}</p>

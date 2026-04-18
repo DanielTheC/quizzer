@@ -13,7 +13,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { AuthStackParamList } from "../../navigation/AuthNavigator";
 import { useAuth } from "../../context/AuthContext";
-import { borderWidth, colors, radius, semantic, shadow, spacing, typography } from "../../theme";
+import { borderWidth, colors, fonts, radius, semantic, shadow, spacing, typography } from "../../theme";
 
 type Props = NativeStackScreenProps<AuthStackParamList, "Login">;
 
@@ -93,6 +93,7 @@ export default function LoginScreen({ navigation, route }: Props) {
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
         <View style={styles.inner}>
+          <Text style={styles.screenTitle}>Sign in</Text>
           <Text style={styles.lead}>
             Welcome back — sign in with email, Google, Apple, or phone to sync your saved quizzes.
           </Text>
@@ -216,6 +217,12 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: semantic.bgSecondary },
   flex: { flex: 1 },
   inner: { flex: 1, padding: spacing.xxl, paddingTop: spacing.lg },
+  screenTitle: {
+    ...typography.displayMedium,
+    fontFamily: fonts.display,
+    color: semantic.textPrimary,
+    marginBottom: spacing.md,
+  },
   lead: {
     ...typography.body,
     color: semantic.textSecondary,
@@ -243,20 +250,20 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
     padding: spacing.md,
     borderRadius: radius.medium,
-    backgroundColor: "rgba(0, 210, 106, 0.12)",
+    backgroundColor: colors.cream,
     borderWidth: borderWidth.default,
     borderColor: semantic.success,
   },
-  successText: { ...typography.body, color: semantic.success, fontSize: 14 },
+  successText: { ...typography.caption, color: semantic.success },
   errorBanner: {
     marginBottom: spacing.md,
     padding: spacing.md,
     borderRadius: radius.medium,
-    backgroundColor: "rgba(220, 38, 38, 0.1)",
+    backgroundColor: colors.cream,
     borderWidth: borderWidth.default,
     borderColor: semantic.danger,
   },
-  errorText: { ...typography.body, color: semantic.danger, fontSize: 14 },
+  errorText: { ...typography.caption, color: semantic.danger },
   primaryBtn: {
     backgroundColor: semantic.accentYellow,
     borderWidth: borderWidth.default,

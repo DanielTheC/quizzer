@@ -13,7 +13,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { AuthStackParamList } from "../../navigation/AuthNavigator";
 import { useAuth } from "../../context/AuthContext";
-import { borderWidth, colors, radius, semantic, shadow, spacing, typography } from "../../theme";
+import { borderWidth, colors, fonts, radius, semantic, shadow, spacing, typography } from "../../theme";
 
 type Props = NativeStackScreenProps<AuthStackParamList, "PhoneSignIn">;
 
@@ -182,6 +182,7 @@ export default function PhoneSignInScreen({ navigation }: Props) {
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
         <View style={styles.inner}>
+          <Text style={styles.screenTitle}>Phone sign in</Text>
           <Text style={styles.lead}>
             {step === "phone"
               ? "We'll text you a one-time code. UK numbers can start with 0; we'll add +44."
@@ -279,6 +280,12 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: semantic.bgSecondary },
   flex: { flex: 1 },
   inner: { flex: 1, padding: spacing.xxl, paddingTop: spacing.lg },
+  screenTitle: {
+    ...typography.displayMedium,
+    fontFamily: fonts.display,
+    color: semantic.textPrimary,
+    marginBottom: spacing.md,
+  },
   lead: {
     ...typography.body,
     color: semantic.textSecondary,
@@ -306,11 +313,11 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
     padding: spacing.md,
     borderRadius: radius.medium,
-    backgroundColor: "rgba(220, 38, 38, 0.1)",
+    backgroundColor: colors.cream,
     borderWidth: borderWidth.default,
     borderColor: semantic.danger,
   },
-  errorText: { ...typography.body, color: semantic.danger, fontSize: 14 },
+  errorText: { ...typography.caption, color: semantic.danger },
   primaryBtn: {
     backgroundColor: semantic.accentYellow,
     borderWidth: borderWidth.default,

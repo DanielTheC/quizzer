@@ -17,8 +17,11 @@
   --border-thick: 3px solid var(--color-quizzer-black);
   --shadow-card: 5px 5px 0 var(--color-quizzer-black);
   --shadow-card-hover: 3px 3px 0 var(--color-quizzer-black);
+  --shadow-button: 4px 4px 0 var(--color-quizzer-black);
+  --shadow-button-hover: 2px 2px 0 var(--color-quizzer-black);
   --radius-card: 12px;
   --radius-button: 12px;
+  --radius-badge: 10px;
 
   --font-heading: var(--font-anton), sans-serif;
   --font-body: var(--font-inter), sans-serif;
@@ -57,9 +60,9 @@
   --border-thin: 1px solid var(--color-quizzer-black);
 
   /* Extended shadow scale */
-  --shadow-sm: 3px 3px 0 #000;
-  --shadow-md: 5px 5px 0 #000;
-  --shadow-lg: 8px 8px 0 #000;
+  --shadow-sm: 3px 3px 0 var(--color-quizzer-black);
+  --shadow-md: 5px 5px 0 var(--color-quizzer-black);
+  --shadow-lg: 8px 8px 0 var(--color-quizzer-black);
 
   /* Extended radius scale */
   --radius-sm: 6px;
@@ -103,10 +106,10 @@
   --color-quizzer-cream: #fff8d6;
 
   /* Shadows */
-  --shadow-card: 5px 5px 0 #000000;
-  --shadow-card-hover: 3px 3px 0 #000000;
-  --shadow-button: 4px 4px 0 #000000;
-  --shadow-button-hover: 2px 2px 0 #000000;
+  --shadow-card: 5px 5px 0 var(--color-quizzer-black);
+  --shadow-card-hover: 3px 3px 0 var(--color-quizzer-black);
+  --shadow-button: 4px 4px 0 var(--color-quizzer-black);
+  --shadow-button-hover: 2px 2px 0 var(--color-quizzer-black);
 
   /* Radius */
   --radius-card: 12px;
@@ -118,9 +121,9 @@
   --font-heading: var(--font-anton), ui-sans-serif, system-ui, sans-serif;
 
   /* Extended shadows */
-  --shadow-sm: 3px 3px 0 #000000;
-  --shadow-md: 5px 5px 0 #000000;
-  --shadow-lg: 8px 8px 0 #000000;
+  --shadow-sm: 3px 3px 0 var(--color-quizzer-black);
+  --shadow-md: 5px 5px 0 var(--color-quizzer-black);
+  --shadow-lg: 8px 8px 0 var(--color-quizzer-black);
 
   /* Extended radius */
   --radius-sm: 6px;
@@ -162,7 +165,7 @@ body {
   transition: transform 150ms, box-shadow 150ms;
 }
 .hover-press:hover {
-  transform: translate(2px, 2px);
+  transform: translate(1px, 1px);
   box-shadow: var(--shadow-card-hover);
 }
 

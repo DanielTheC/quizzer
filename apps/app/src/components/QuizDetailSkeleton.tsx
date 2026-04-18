@@ -10,13 +10,13 @@ import {
   type SemanticTheme,
 } from "../theme";
 
-function buildStyles(semantic: SemanticTheme) {
-  const block = "rgba(0,0,0,0.08)";
-  const blockBorder = "rgba(0,0,0,0.12)";
+function buildStyles(semantic: SemanticTheme, isDark: boolean) {
+  const block = isDark ? "rgba(168,162,158,0.32)" : colors.grey200;
+  const blockBorder = isDark ? "rgba(231,223,208,0.35)" : colors.grey400;
 
   return StyleSheet.create({
     ticketCard: {
-      backgroundColor: colors.white,
+      backgroundColor: semantic.bgPrimary,
       borderRadius: radius.brutal,
       borderWidth: borderWidth.default,
       borderColor: semantic.borderPrimary,
@@ -26,9 +26,9 @@ function buildStyles(semantic: SemanticTheme) {
     },
     ticketStripe: {
       height: 10,
-      backgroundColor: colors.white,
+      backgroundColor: semantic.bgPrimary,
       borderBottomWidth: borderWidth.thin,
-      borderBottomColor: "rgba(0,0,0,0.12)",
+      borderBottomColor: blockBorder,
     },
     ticketBody: { padding: spacing.lg },
     headerRow: {
@@ -111,7 +111,7 @@ function buildStyles(semantic: SemanticTheme) {
       marginTop: spacing.md,
       paddingTop: spacing.md,
       borderTopWidth: borderWidth.thin,
-      borderTopColor: "rgba(0,0,0,0.12)",
+      borderTopColor: blockBorder,
     },
     addressLine: {
       height: 14,
@@ -130,7 +130,7 @@ function buildStyles(semantic: SemanticTheme) {
       marginTop: spacing.lg,
       paddingTop: spacing.lg,
       borderTopWidth: borderWidth.thin,
-      borderTopColor: "rgba(0,0,0,0.12)",
+      borderTopColor: blockBorder,
     },
     eyebrow: {
       height: 12,
@@ -170,7 +170,7 @@ function buildStyles(semantic: SemanticTheme) {
       marginTop: spacing.lg,
       paddingTop: spacing.lg,
       borderTopWidth: borderWidth.thin,
-      borderTopColor: "rgba(0,0,0,0.12)",
+      borderTopColor: blockBorder,
     },
     actionsRow: {
       flexDirection: "row",
@@ -191,8 +191,8 @@ function buildStyles(semantic: SemanticTheme) {
 
 /** Single white ticket: header, hairline, combined “What to expect” bullets, actions. */
 export function QuizDetailSkeleton() {
-  const { semantic } = useAppTheme();
-  const styles = useMemo(() => buildStyles(semantic), [semantic]);
+  const { semantic, isDark } = useAppTheme();
+  const styles = useMemo(() => buildStyles(semantic, isDark), [semantic, isDark]);
 
   return (
     <View accessible={false}>

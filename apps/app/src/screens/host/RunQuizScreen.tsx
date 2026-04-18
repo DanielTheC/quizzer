@@ -38,8 +38,8 @@ import { ScreenTitle } from "../../components/ScreenTitle";
 import { colors, semantic, spacing, radius, borderWidth, shadow, typography } from "../../theme";
 
 const PODIUM_GOLD = colors.yellow;
-const PODIUM_SILVER = "#E2E8F0";
-const PODIUM_BRONZE = "#E8A87C";
+const PODIUM_SILVER = colors.podiumSilver;
+const PODIUM_BRONZE = colors.podiumBronze;
 
 function generateId(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
@@ -234,13 +234,14 @@ export default function RunQuizScreen() {
               venueId: state.venueId,
               packId: state.packId,
             }).catch(() => {});
-            void supabase
-              .rpc("record_host_quiz_session", {
+            void Promise.resolve(
+              supabase.rpc("record_host_quiz_session", {
                 p_venue_id: state.venueId,
                 p_pack_id: state.packId,
                 p_team_count: teamCount,
                 p_total_player_count: totalPlayerCount,
               })
+            )
               .then(() => {})
               .catch(() => {});
           }
@@ -307,14 +308,17 @@ export default function RunQuizScreen() {
     <SafeAreaView style={styles.container}>
       <View style={styles.topBar}>
         {packId ? (
-          <Pressable style={styles.viewQuestionsBtn} onPress={openPackQuestions}>
+          <Pressable
+            style={({ pressed }) => [styles.viewQuestionsBtn, pressed && styles.btnPressed]}
+            onPress={openPackQuestions}
+          >
             <Text style={styles.viewQuestionsBtnText}>View questions</Text>
           </Pressable>
         ) : (
           <View style={styles.topBarSpacer} />
         )}
         <Pressable
-          style={styles.overflowMenuBtn}
+          style={({ pressed }) => [styles.overflowMenuBtn, pressed && styles.btnPressed]}
           onPress={openRunQuizOverflowMenu}
           accessibilityLabel="More options"
           accessibilityRole="button"
@@ -534,7 +538,7 @@ function TeamsPhase({
             }}
           />
           <Pressable
-            style={styles.removeBtn}
+            style={({ pressed }) => [styles.removeBtn, pressed && styles.btnPressed]}
             onPress={() =>
               Alert.alert("Remove team", "Remove this team?", [
                 { text: "Cancel", style: "cancel" },
@@ -546,11 +550,15 @@ function TeamsPhase({
           </Pressable>
         </View>
       ))}
-      <Pressable style={styles.addTeamBtn} onPress={onAddTeam}>
+      <Pressable style={({ pressed }) => [styles.addTeamBtn, pressed && styles.btnPressed]} onPress={onAddTeam}>
         <Text style={styles.addTeamBtnText}>+ Add team</Text>
       </Pressable>
       <Pressable
-        style={[styles.primaryButton, teams.length === 0 && styles.primaryButtonDisabled]}
+        style={({ pressed }) => [
+          styles.primaryButton,
+          teams.length === 0 && styles.primaryButtonDisabled,
+          pressed && teams.length > 0 && styles.btnPressed,
+        ]}
         onPress={onStartQuiz}
         disabled={teams.length === 0}
       >
@@ -640,10 +648,20 @@ function HalftimePhase({
           onSetScore={onSetScore}
         />
       ))}
-      <Pressable style={styles.secondaryButton} onPress={onViewLeaderboard}>
+      <Pressable
+        style={({ pressed }) => [styles.secondaryButton, pressed && styles.btnPressed]}
+        onPress={onViewLeaderboard}
+      >
         <Text style={styles.secondaryButtonText}>View halftime leaderboard</Text>
       </Pressable>
-      <Pressable style={[styles.primaryButton, styles.primaryButtonAfterSecondary]} onPress={onContinue}>
+      <Pressable
+        style={({ pressed }) => [
+          styles.primaryButton,
+          styles.primaryButtonAfterSecondary,
+          pressed && styles.btnPressed,
+        ]}
+        onPress={onContinue}
+      >
         <Text style={styles.primaryButtonText}>Continue → Second half</Text>
       </Pressable>
     </View>
@@ -753,13 +771,20 @@ function LeaderboardPhase({
       {mode === "halftime" ? (
         <View style={styles.leaderboardActions}>
           {onBackToScores ? (
-            <Pressable style={styles.secondaryButton} onPress={onBackToScores}>
+            <Pressable
+              style={({ pressed }) => [styles.secondaryButton, pressed && styles.btnPressed]}
+              onPress={onBackToScores}
+            >
               <Text style={styles.secondaryButtonText}>← Back to scores</Text>
             </Pressable>
           ) : null}
           {onContinue ? (
             <Pressable
-              style={[styles.primaryButton, onBackToScores ? styles.primaryButtonAfterSecondary : null]}
+              style={({ pressed }) => [
+                styles.primaryButton,
+                onBackToScores ? styles.primaryButtonAfterSecondary : null,
+                pressed && styles.btnPressed,
+              ]}
               onPress={onContinue}
             >
               <Text style={styles.primaryButtonText}>Continue → Second half</Text>
@@ -767,7 +792,7 @@ function LeaderboardPhase({
           ) : null}
         </View>
       ) : onFinish ? (
-        <Pressable style={styles.endButton} onPress={onFinish}>
+        <Pressable style={({ pressed }) => [styles.endButton, pressed && styles.btnPressed]} onPress={onFinish}>
           <Text style={styles.endButtonText}>End quiz</Text>
         </Pressable>
       ) : null}
@@ -815,10 +840,11 @@ function BonusPhase({
               return (
                 <Pressable
                   key={r}
-                  style={[
+                  style={({ pressed }) => [
                     styles.bonusChipNamed,
                     t.bonusRound === r && styles.bonusChipSelected,
                     bonusLocked && styles.bonusChipLocked,
+                    pressed && !bonusLocked && styles.btnPressed,
                   ]}
                   onPress={bonusLocked ? undefined : () => onUpdateTeam(t.id, { bonusRound: r })}
                   disabled={bonusLocked}
@@ -847,7 +873,11 @@ function BonusPhase({
         </View>
       ))}
       <Pressable
-        style={[styles.primaryButton, !allSet && styles.primaryButtonDisabled]}
+        style={({ pressed }) => [
+          styles.primaryButton,
+          !allSet && styles.primaryButtonDisabled,
+          pressed && allSet && styles.btnPressed,
+        ]}
         onPress={onContinue}
         disabled={!allSet}
       >
@@ -952,7 +982,10 @@ function SecondHalfPhase({
           isLastTeam={teamIndex === teams.length - 1}
         />
       ))}
-      <Pressable style={styles.primaryButton} onPress={onShowResults}>
+      <Pressable
+        style={({ pressed }) => [styles.primaryButton, pressed && styles.btnPressed]}
+        onPress={onShowResults}
+      >
         <Text style={styles.primaryButtonText}>Show results</Text>
       </Pressable>
     </View>
@@ -1042,6 +1075,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
     alignItems: "center",
     backgroundColor: semantic.bgPrimary,
+    ...shadow.small,
   },
   addTeamBtnText: { color: semantic.textSecondary, ...typography.bodyStrong },
   primaryButton: {
@@ -1086,7 +1120,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs + 2,
     borderRadius: radius.small,
-    borderWidth: borderWidth.thin,
+    borderWidth: borderWidth.default,
     borderColor: semantic.borderPrimary,
   },
   teamBonusBadgeCol: {
@@ -1094,7 +1128,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs + 2,
     borderRadius: radius.small,
-    borderWidth: borderWidth.thin,
+    borderWidth: borderWidth.default,
     borderColor: semantic.borderPrimary,
     maxWidth: "55%",
   },
@@ -1160,17 +1194,17 @@ const styles = StyleSheet.create({
   },
   podiumRow1: {
     backgroundColor: PODIUM_GOLD,
-    borderLeftWidth: 6,
+    borderLeftWidth: borderWidth.default,
     borderLeftColor: colors.black,
   },
   podiumRow2: {
     backgroundColor: PODIUM_SILVER,
-    borderLeftWidth: 6,
+    borderLeftWidth: borderWidth.default,
     borderLeftColor: colors.grey400,
   },
   podiumRow3: {
     backgroundColor: PODIUM_BRONZE,
-    borderLeftWidth: 6,
+    borderLeftWidth: borderWidth.default,
     borderLeftColor: colors.grey700,
   },
   leaderCardTop: {
@@ -1202,11 +1236,11 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
     padding: spacing.sm,
     borderRadius: radius.small,
-    borderWidth: borderWidth.thin,
+    borderWidth: borderWidth.default,
     borderColor: semantic.borderPrimary,
   },
-  bonusStatusApplied: { backgroundColor: "rgba(59, 130, 246, 0.12)" },
-  bonusStatusPending: { backgroundColor: "rgba(255, 138, 0, 0.15)" },
+  bonusStatusApplied: { backgroundColor: colors.grey100 },
+  bonusStatusPending: { backgroundColor: colors.cream },
   bonusStatusHeadline: { fontSize: 12, fontWeight: "800", color: semantic.textPrimary, textTransform: "uppercase" },
   bonusStatusDetail: { fontSize: 12, color: semantic.textSecondary, marginTop: 4, lineHeight: 17 },
   prizeBox: {
@@ -1238,4 +1272,5 @@ const styles = StyleSheet.create({
     ...shadow.small,
   },
   endButtonText: { color: semantic.textPrimary, ...typography.bodyStrong, fontSize: 18 },
+  btnPressed: { transform: [{ translateY: 2 }], shadowOffset: { width: 1, height: 1 } },
 });

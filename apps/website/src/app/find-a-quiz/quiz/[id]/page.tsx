@@ -151,15 +151,15 @@ export default async function QuizDetailPage({ params }: Props) {
           </nav>
 
           {isCancelled && (
-            <div className="mb-6 flex items-start gap-3 rounded-[10px] border-[3px] border-red-500 bg-red-50 p-4">
-              <span className="text-red-600 text-xl mt-0.5">⚠</span>
-              <p className="text-sm font-semibold text-red-700">
+            <div className="mb-6 flex items-start gap-3 rounded-[var(--radius-card)] border-[3px] border-quizzer-red bg-quizzer-cream p-4">
+              <span className="text-quizzer-red text-xl mt-0.5">⚠</span>
+              <p className="text-sm font-semibold text-quizzer-red">
                 This week&apos;s quiz is cancelled. Check with the venue before you travel.
               </p>
             </div>
           )}
 
-          <div className="rounded-[12px] border-[3px] border-quizzer-black bg-quizzer-white shadow-[5px_5px_0_#000] overflow-hidden mb-8">
+          <div className="rounded-[var(--radius-card)] border-[3px] border-quizzer-black bg-quizzer-white shadow-[var(--shadow-card)] overflow-hidden mb-8">
             <div className="h-2 bg-quizzer-yellow border-b-[3px] border-quizzer-black" />
             <div className="p-6">
               <div className="flex items-start justify-between gap-4 mb-4">
@@ -172,10 +172,10 @@ export default async function QuizDetailPage({ params }: Props) {
                   )}
                 </div>
                 <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
-                  <span className="px-3 py-1 text-xs font-black bg-quizzer-yellow border-2 border-quizzer-black rounded-full">
+                  <span className="px-3 py-1 text-xs font-black bg-quizzer-yellow border-[3px] border-quizzer-black rounded-full">
                     {quiz.time}
                   </span>
-                  <span className="px-3 py-1 text-xs font-black bg-quizzer-black text-quizzer-yellow border-2 border-quizzer-black rounded-full text-center min-w-[52px]">
+                  <span className="px-3 py-1 text-xs font-black bg-quizzer-black text-quizzer-yellow border-[3px] border-quizzer-black rounded-full text-center min-w-[52px]">
                     {quiz.day.slice(0, 3).toUpperCase()}
                   </span>
                 </div>
@@ -220,7 +220,7 @@ export default async function QuizDetailPage({ params }: Props) {
                     href={mapsUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex-1 inline-flex items-center justify-center gap-2 font-bold text-sm border-[3px] border-solid border-quizzer-black rounded-[12px] px-4 py-3 bg-quizzer-pink text-quizzer-white shadow-[3px_3px_0_#000] hover:shadow-[1px_1px_0_#000] hover:translate-x-[2px] hover:translate-y-[2px] transition-all duration-150 no-underline"
+                    className="flex-1 inline-flex items-center justify-center gap-2 font-semibold text-sm border-[3px] border-solid border-quizzer-black rounded-[var(--radius-button)] px-4 py-3 bg-quizzer-pink text-quizzer-white shadow-[var(--shadow-button)] hover:shadow-[var(--shadow-button-hover)] hover:translate-x-[1px] hover:translate-y-[1px] transition-all duration-150 no-underline"
                   >
                     Maps
                   </a>
@@ -238,7 +238,7 @@ export default async function QuizDetailPage({ params }: Props) {
                 {venueImages.map((img) => (
                   <div
                     key={img.id}
-                    className="relative aspect-[4/3] rounded-[10px] border-[3px] border-quizzer-black overflow-hidden bg-quizzer-cream"
+                    className="relative aspect-[4/3] rounded-[var(--radius-badge)] border-[3px] border-quizzer-black overflow-hidden bg-quizzer-cream"
                   >
                     <Image
                       src={venueImageUrl(img.storagePath)}

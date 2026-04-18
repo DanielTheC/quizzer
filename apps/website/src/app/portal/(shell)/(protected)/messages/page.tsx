@@ -76,7 +76,7 @@ export default async function PublicanMessagesPage() {
           Threads with the Quizzer team, grouped by venue. Replies appear under each message.
         </p>
         {venuePicker.length > 0 ? (
-          <div className="mt-6 max-w-2xl rounded-[var(--radius-card)] border-[var(--border-thick)] border-quizzer-black bg-quizzer-white p-4 shadow-[var(--shadow-card)]">
+          <div className="mt-6 max-w-2xl rounded-[var(--radius-card)] border-[3px] border-quizzer-black bg-quizzer-white p-4 shadow-[var(--shadow-card)]">
             <PublicanNewMessageForm
               venueId={null}
               venuePicker={venuePicker}

@@ -446,6 +446,7 @@ export default function HostProfileScreen() {
                       onPress={() => navigation.navigate("RunQuiz", { mode: "new", venueId: ev.venue_id })}
                       accessibilityRole="link"
                       accessibilityLabel="Run quiz"
+                      style={({ pressed }) => [pressed && styles.btnPressed]}
                     >
                       <Text style={styles.runQuizLink}>Run Quiz</Text>
                     </Pressable>
@@ -497,7 +498,7 @@ const styles = StyleSheet.create({
   },
   saveNameBtnText: { ...typography.bodyStrong, fontSize: 15, color: semantic.textPrimary },
   savedText: { ...typography.caption, color: semantic.accentGreen, marginTop: spacing.sm, fontWeight: "600" },
-  btnPressed: { opacity: 0.92 },
+  btnPressed: { transform: [{ translateY: 2 }], shadowOffset: { width: 1, height: 1 } },
   btnDisabled: { opacity: 0.55 },
   statsRow: {
     flexDirection: "row",

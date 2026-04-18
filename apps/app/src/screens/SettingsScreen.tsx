@@ -125,7 +125,10 @@ export default function SettingsScreen() {
         ) : (
           <Text style={styles.currentRole}>Signed in</Text>
         )}
-        <Pressable style={styles.signOutButton} onPress={onSignOut}>
+        <Pressable
+          style={({ pressed }) => [styles.signOutButton, pressed && styles.btnPressed]}
+          onPress={onSignOut}
+        >
           <Text style={styles.signOutButtonText}>Sign out</Text>
         </Pressable>
       </View>
@@ -134,7 +137,7 @@ export default function SettingsScreen() {
         <Text style={styles.sectionTitle}>Role</Text>
         <Text style={styles.currentRole}>Current: {role === "player" ? "Player" : "Host"}</Text>
         <Pressable
-          style={styles.switchButton}
+          style={({ pressed }) => [styles.switchButton, pressed && styles.btnPressed]}
           onPress={() => switchRole(role === "player" ? "host" : "player")}
         >
           <Text style={styles.switchButtonText}>
@@ -148,9 +151,9 @@ export default function SettingsScreen() {
           <Text style={styles.sectionTitle}>Host</Text>
           <Text style={styles.sectionDesc}>Replay the short introduction any time.</Text>
           <Pressable
-            style={styles.guideLink}
+            style={({ pressed }) => [styles.guideLink, pressed && styles.btnPressed]}
             onPress={() =>
-              (navigation as NativeStackNavigationProp<HostStackParamList>).navigate("HostOnboarding", {
+              (navigation as unknown as NativeStackNavigationProp<HostStackParamList>).navigate("HostOnboarding", {
                 allowBack: true,
               })
             }
@@ -181,7 +184,11 @@ export default function SettingsScreen() {
               {TIME_PRESETS.map((t) => (
                 <Pressable
                   key={t}
-                  style={[styles.presetChip, prefs.notifyTime === t && styles.presetChipActive]}
+                  style={({ pressed }) => [
+                    styles.presetChip,
+                    prefs.notifyTime === t && styles.presetChipActive,
+                    pressed && styles.btnPressed,
+                  ]}
                   onPress={() => updatePrefs({ notifyTime: t })}
                 >
                   <Text style={[styles.presetChipText, prefs.notifyTime === t && styles.presetChipTextActive]}>{t}</Text>
@@ -204,7 +211,11 @@ export default function SettingsScreen() {
                 {MILES_OPTIONS.map((m) => (
                   <Pressable
                     key={m}
-                    style={[styles.presetChip, prefs.onlyWithinMiles === m && styles.presetChipActive]}
+                    style={({ pressed }) => [
+                      styles.presetChip,
+                      prefs.onlyWithinMiles === m && styles.presetChipActive,
+                      pressed && styles.btnPressed,
+                    ]}
                     onPress={() => updatePrefs({ onlyWithinMiles: m })}
                   >
                     <Text style={[styles.presetChipText, prefs.onlyWithinMiles === m && styles.presetChipTextActive]}>{m} mi</Text>
@@ -219,7 +230,10 @@ export default function SettingsScreen() {
       {__DEV__ && (
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Developer</Text>
-          <Pressable style={styles.resetButton} onPress={resetApp}>
+          <Pressable
+            style={({ pressed }) => [styles.resetButton, pressed && styles.btnPressed]}
+            onPress={resetApp}
+          >
             <Text style={styles.resetButtonText}>Reset app</Text>
           </Pressable>
           <Text style={styles.devNote}>Clears saved quizzes + role. Dev only.</Text>
@@ -300,7 +314,9 @@ const styles = StyleSheet.create({
     borderWidth: borderWidth.default,
     borderColor: semantic.danger,
     alignSelf: "flex-start",
+    ...shadow.small,
   },
+  btnPressed: { transform: [{ translateY: 2 }], shadowOffset: { width: 1, height: 1 } },
   resetButtonText: { color: semantic.danger, ...typography.bodyStrong },
   devNote: { ...typography.label, color: semantic.textSecondary, marginTop: spacing.sm },
 });

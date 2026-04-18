@@ -662,7 +662,7 @@ export function AdminQuizzesDashboard() {
       {toast ? (
         <p
           key={toast}
-          className="animate-admin-toast fixed bottom-6 right-6 z-50 max-w-sm rounded-[var(--radius-button)] border-2 border-quizzer-black bg-quizzer-yellow px-4 py-2 text-sm font-semibold text-quizzer-black shadow-[var(--shadow-card)]"
+          className="animate-admin-toast fixed bottom-6 right-6 z-50 max-w-sm rounded-[var(--radius-button)] border-[3px] border-quizzer-black bg-quizzer-yellow px-4 py-2 text-sm font-semibold text-quizzer-black shadow-[var(--shadow-card)]"
           role="status"
         >
           {toast}
@@ -672,13 +672,13 @@ export function AdminQuizzesDashboard() {
         Quizzes
       </h1>
       {error ? (
-        <p className="animate-admin-fade-in-up rounded-[var(--radius-button)] border-2 border-quizzer-red bg-quizzer-white px-3 py-2 text-sm text-quizzer-red">
+        <p className="animate-admin-fade-in-up rounded-[var(--radius-button)] border-[3px] border-quizzer-red bg-quizzer-cream px-3 py-2 text-sm text-quizzer-red">
           {error}
         </p>
       ) : null}
 
       <section
-        className="animate-admin-fade-in-up rounded-[var(--radius-button)] border-[var(--border-thick)] border-quizzer-black bg-quizzer-white p-4 shadow-[var(--shadow-card)]"
+        className="animate-admin-fade-in-up rounded-[var(--radius-button)] border-[3px] border-quizzer-black bg-quizzer-white p-4 shadow-[var(--shadow-card)]"
         style={{ "--admin-stagger": "0ms" } as CSSProperties}
       >
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -692,7 +692,7 @@ export function AdminQuizzesDashboard() {
                 resetQuizForm();
               } else openAddQuiz();
             }}
-            className="rounded-[var(--radius-button)] border-2 border-quizzer-black bg-quizzer-yellow px-3 py-1.5 text-xs font-semibold text-quizzer-black shadow-[var(--shadow-button)] hover:translate-x-[1px] hover:translate-y-[1px]"
+            className="rounded-[var(--radius-button)] border-[3px] border-quizzer-black bg-quizzer-yellow px-3 py-1.5 text-xs font-semibold text-quizzer-black shadow-[var(--shadow-button)] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[var(--shadow-button-hover)]"
           >
             {quizFormVisible ? "Cancel" : "+ Add quiz event"}
           </button>
@@ -723,7 +723,7 @@ export function AdminQuizzesDashboard() {
                 <select
                   value={qVenueId}
                   onChange={(e) => setQVenueId(e.target.value)}
-                  className="mt-1 w-full rounded-[var(--radius-button)] border-2 border-quizzer-black bg-quizzer-white px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-quizzer-yellow"
+                  className="mt-1 w-full rounded-[var(--radius-button)] border-[3px] border-quizzer-black bg-quizzer-white px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-quizzer-yellow"
                 >
                   <option value="">Select venue</option>
                   {venues.map((v) => (
@@ -738,7 +738,7 @@ export function AdminQuizzesDashboard() {
                 <select
                   value={qDay}
                   onChange={(e) => setQDay(Number(e.target.value))}
-                  className="mt-1 w-full rounded-[var(--radius-button)] border-2 border-quizzer-black bg-quizzer-white px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-quizzer-yellow"
+                  className="mt-1 w-full rounded-[var(--radius-button)] border-[3px] border-quizzer-black bg-quizzer-white px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-quizzer-yellow"
                 >
                   {DAY_OPTIONS.map((d) => (
                     <option key={d.v} value={d.v}>
@@ -753,7 +753,7 @@ export function AdminQuizzesDashboard() {
                   type="time"
                   value={qStart}
                   onChange={(e) => setQStart(e.target.value)}
-                  className="mt-1 w-full rounded-[var(--radius-button)] border-2 border-quizzer-black bg-quizzer-white px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-quizzer-yellow"
+                  className="mt-1 w-full rounded-[var(--radius-button)] border-[3px] border-quizzer-black bg-quizzer-white px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-quizzer-yellow"
                 />
               </label>
               <label className="block text-xs font-medium text-quizzer-black">
@@ -764,7 +764,7 @@ export function AdminQuizzesDashboard() {
                   min={0}
                   value={qFeePence}
                   onChange={(e) => setQFeePence(e.target.value)}
-                  className="mt-1 w-full rounded-[var(--radius-button)] border-2 border-quizzer-black bg-quizzer-white px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-quizzer-yellow"
+                  className="mt-1 w-full rounded-[var(--radius-button)] border-[3px] border-quizzer-black bg-quizzer-white px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-quizzer-yellow"
                 />
               </label>
               <label className="block text-xs font-medium text-quizzer-black">
@@ -772,7 +772,7 @@ export function AdminQuizzesDashboard() {
                 <select
                   value={qFeeBasis}
                   onChange={(e) => setQFeeBasis(e.target.value as "per_person" | "per_team")}
-                  className="mt-1 w-full rounded-[var(--radius-button)] border-2 border-quizzer-black bg-quizzer-white px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-quizzer-yellow"
+                  className="mt-1 w-full rounded-[var(--radius-button)] border-[3px] border-quizzer-black bg-quizzer-white px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-quizzer-yellow"
                 >
                   <option value="per_person">Per person</option>
                   <option value="per_team">Per team</option>
@@ -783,7 +783,7 @@ export function AdminQuizzesDashboard() {
                 <select
                   value={qPrize}
                   onChange={(e) => setQPrize(e.target.value)}
-                  className="mt-1 w-full rounded-[var(--radius-button)] border-2 border-quizzer-black bg-quizzer-white px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-quizzer-yellow"
+                  className="mt-1 w-full rounded-[var(--radius-button)] border-[3px] border-quizzer-black bg-quizzer-white px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-quizzer-yellow"
                 >
                   {PRIZE_OPTIONS.map((p) => (
                     <option key={p} value={p}>
@@ -801,7 +801,7 @@ export function AdminQuizzesDashboard() {
                     value={qPrize1st}
                     onChange={(e) => setQPrize1st(e.target.value)}
                     placeholder="e.g. £50 bar tab"
-                    className="mt-1 w-full rounded-[var(--radius-button)] border-2 border-quizzer-black bg-quizzer-white px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-quizzer-yellow"
+                    className="mt-1 w-full rounded-[var(--radius-button)] border-[3px] border-quizzer-black bg-quizzer-white px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-quizzer-yellow"
                   />
                 </label>
                 <label className="block text-xs font-medium text-quizzer-black">
@@ -811,7 +811,7 @@ export function AdminQuizzesDashboard() {
                     value={qPrize2nd}
                     onChange={(e) => setQPrize2nd(e.target.value)}
                     placeholder="e.g. £25 bar tab"
-                    className="mt-1 w-full rounded-[var(--radius-button)] border-2 border-quizzer-black bg-quizzer-white px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-quizzer-yellow"
+                    className="mt-1 w-full rounded-[var(--radius-button)] border-[3px] border-quizzer-black bg-quizzer-white px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-quizzer-yellow"
                   />
                 </label>
                 <label className="block text-xs font-medium text-quizzer-black">
@@ -821,7 +821,7 @@ export function AdminQuizzesDashboard() {
                     value={qPrize3rd}
                     onChange={(e) => setQPrize3rd(e.target.value)}
                     placeholder="e.g. £10 bar tab"
-                    className="mt-1 w-full rounded-[var(--radius-button)] border-2 border-quizzer-black bg-quizzer-white px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-quizzer-yellow"
+                    className="mt-1 w-full rounded-[var(--radius-button)] border-[3px] border-quizzer-black bg-quizzer-white px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-quizzer-yellow"
                   />
                 </label>
               </div>
@@ -832,7 +832,7 @@ export function AdminQuizzesDashboard() {
                 value={qTurnUp}
                 onChange={(e) => setQTurnUp(e.target.value)}
                 rows={3}
-                className="mt-1 w-full rounded-[var(--radius-button)] border-2 border-quizzer-black bg-quizzer-white px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-quizzer-yellow"
+                className="mt-1 w-full rounded-[var(--radius-button)] border-[3px] border-quizzer-black bg-quizzer-white px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-quizzer-yellow"
               />
             </label>
             <label className="flex items-center gap-2 text-xs font-medium text-quizzer-black">
@@ -850,7 +850,7 @@ export function AdminQuizzesDashboard() {
                 type="button"
                 disabled={quizSaveBusy}
                 onClick={() => void saveQuiz()}
-                className="rounded-[var(--radius-button)] border-2 border-quizzer-black bg-quizzer-yellow px-3 py-1.5 text-xs font-semibold text-quizzer-black shadow-[var(--shadow-button)] hover:translate-x-[1px] hover:translate-y-[1px] disabled:opacity-50"
+                className="rounded-[var(--radius-button)] border-[3px] border-quizzer-black bg-quizzer-yellow px-3 py-1.5 text-xs font-semibold text-quizzer-black shadow-[var(--shadow-button)] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[var(--shadow-button-hover)] disabled:opacity-50"
               >
                 {quizSaveBusy ? "Saving…" : editingQuiz ? "Save changes" : "Save"}
               </button>
@@ -861,7 +861,7 @@ export function AdminQuizzesDashboard() {
                   setEditingQuiz(null);
                   resetQuizForm();
                 }}
-                className="rounded-[var(--radius-button)] border-2 border-quizzer-black/25 bg-quizzer-white px-3 py-1.5 text-xs font-semibold text-quizzer-black"
+                className="rounded-[var(--radius-button)] border-[3px] border-quizzer-black/25 bg-quizzer-white px-3 py-1.5 text-xs font-semibold text-quizzer-black"
               >
                 Cancel
               </button>
@@ -873,7 +873,7 @@ export function AdminQuizzesDashboard() {
         <div className="mt-4 overflow-x-auto">
           <table className="w-full border-collapse text-left text-sm text-quizzer-black">
             <thead>
-              <tr className="border-b border-quizzer-black/20 bg-quizzer-cream">
+              <tr className="border-b-[3px] border-quizzer-black bg-quizzer-cream">
                 <th className="px-3 py-2 font-semibold">Venue</th>
                 <th className="px-3 py-2 font-semibold">Day</th>
                 <th className="px-3 py-2 font-semibold">Time</th>
@@ -923,13 +923,13 @@ export function AdminQuizzesDashboard() {
                       <td className="px-3 py-2">
                         {claim?.status === "confirmed" ? (
                           <span
-                            className="inline-block rounded-full border border-green-700 bg-green-50 px-2 py-0.5 text-xs font-semibold text-green-800"
+                            className="inline-block rounded-full border-[3px] border-quizzer-green bg-quizzer-green/10 px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-quizzer-green"
                             title={claim.host_email}
                           >
                             ✓ {truncateEmail(claim.host_email, 20)}
                           </span>
                         ) : claim?.status === "pending" ? (
-                          <span className="inline-block rounded-full border border-amber-600 bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-800">
+                          <span className="inline-block rounded-full border-[3px] border-quizzer-orange bg-quizzer-yellow/20 px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-quizzer-orange">
                             ⏳ Pending
                           </span>
                         ) : (
@@ -942,14 +942,14 @@ export function AdminQuizzesDashboard() {
                             href={`/find-a-quiz/quiz/${row.id}`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="rounded-[var(--radius-button)] border-2 border-quizzer-black/30 bg-quizzer-white px-2 py-1 text-xs font-semibold text-quizzer-black shadow-[var(--shadow-button)] hover:translate-x-[1px] hover:translate-y-[1px]"
+                            className="rounded-[var(--radius-button)] border-[3px] border-quizzer-black bg-quizzer-white px-2 py-1 text-xs font-semibold text-quizzer-black shadow-[var(--shadow-button)] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[var(--shadow-button-hover)]"
                           >
                             Preview ↗
                           </a>
                           <button
                             type="button"
                             onClick={() => openEditQuiz(row)}
-                            className="rounded-[var(--radius-button)] border-2 border-quizzer-black bg-quizzer-yellow px-2 py-1 text-xs font-semibold text-quizzer-black shadow-[var(--shadow-button)] hover:translate-x-[1px] hover:translate-y-[1px]"
+                            className="rounded-[var(--radius-button)] border-[3px] border-quizzer-black bg-quizzer-yellow px-2 py-1 text-xs font-semibold text-quizzer-black shadow-[var(--shadow-button)] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[var(--shadow-button-hover)]"
                           >
                             Edit
                           </button>
@@ -957,7 +957,7 @@ export function AdminQuizzesDashboard() {
                             type="button"
                             disabled={quizToggleBusy === row.id || quizDeleteBusy === row.id}
                             onClick={() => void toggleQuizActive(row)}
-                            className="rounded-[var(--radius-button)] border-2 border-quizzer-black bg-quizzer-white px-2 py-1 text-xs font-semibold text-quizzer-black shadow-[var(--shadow-button)] hover:translate-x-[1px] hover:translate-y-[1px] disabled:opacity-50"
+                            className="rounded-[var(--radius-button)] border-[3px] border-quizzer-black bg-quizzer-white px-2 py-1 text-xs font-semibold text-quizzer-black shadow-[var(--shadow-button)] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[var(--shadow-button-hover)] disabled:opacity-50"
                           >
                             {quizToggleBusy === row.id
                               ? "…"
@@ -969,7 +969,7 @@ export function AdminQuizzesDashboard() {
                             type="button"
                             disabled={quizDeleteBusy === row.id || quizToggleBusy === row.id}
                             onClick={() => void deleteQuiz(row)}
-                            className="rounded-[var(--radius-button)] border-2 border-quizzer-black bg-red-600 px-2 py-1 text-xs font-semibold text-white shadow-[var(--shadow-button)] hover:translate-x-[1px] hover:translate-y-[1px] hover:bg-red-700 disabled:opacity-50"
+                            className="rounded-[var(--radius-button)] border-[3px] border-quizzer-black bg-quizzer-red px-2 py-1 text-xs font-semibold text-quizzer-white shadow-[var(--shadow-button)] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[var(--shadow-button-hover)] disabled:opacity-50"
                           >
                             {quizDeleteBusy === row.id ? "…" : "Delete"}
                           </button>
@@ -1010,21 +1010,21 @@ export function AdminQuizzesDashboard() {
                               key={quiz.id}
                               type="button"
                               onClick={() => openEditQuiz(quiz)}
-                              className="w-full rounded-lg border-2 border-quizzer-black bg-white p-2 text-left text-xs shadow-[2px_2px_0_#000] outline-none ring-quizzer-yellow transition hover:bg-quizzer-cream/50 focus-visible:ring-2"
+                              className="w-full rounded-[var(--radius-button)] border-[3px] border-quizzer-black bg-quizzer-white p-2 text-left text-xs shadow-[var(--shadow-button)] outline-none ring-quizzer-yellow transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[var(--shadow-button-hover)] focus-visible:ring-2"
                             >
                               <p className="font-bold text-quizzer-black">{venueNameById(venues, quiz.venue_id)}</p>
                               <p className="mt-0.5 text-quizzer-black/90">{formatTimeDisplay(quiz.start_time)}</p>
                               <div className="mt-1.5">
                                 {claim?.status === "confirmed" ? (
-                                  <span className="inline-block rounded-full border border-green-600 bg-green-100 px-1.5 py-0.5 text-[10px] font-semibold leading-tight text-green-800">
+                                  <span className="inline-block rounded-full border-[3px] border-quizzer-green bg-quizzer-green/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase leading-tight text-quizzer-green">
                                     {truncateEmail(claim.host_email, 18)}
                                   </span>
                                 ) : claim?.status === "pending" ? (
-                                  <span className="inline-block rounded-full border border-amber-500 bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold leading-tight text-amber-800">
+                                  <span className="inline-block rounded-full border-[3px] border-quizzer-orange bg-quizzer-yellow/20 px-1.5 py-0.5 text-[10px] font-semibold uppercase leading-tight text-quizzer-orange">
                                     Pending claim
                                   </span>
                                 ) : (
-                                  <span className="inline-block rounded-full border border-red-400 bg-red-50 px-1.5 py-0.5 text-[10px] font-semibold leading-tight text-red-700">
+                                  <span className="inline-block rounded-full border-[3px] border-quizzer-red bg-quizzer-cream px-1.5 py-0.5 text-[10px] font-semibold uppercase leading-tight text-quizzer-red">
                                     No host
                                   </span>
                                 )}
@@ -1043,7 +1043,7 @@ export function AdminQuizzesDashboard() {
       </section>
 
       <section
-        className="animate-admin-fade-in-up rounded-[var(--radius-button)] border-[var(--border-thick)] border-quizzer-black bg-quizzer-white p-4 shadow-[var(--shadow-card)]"
+        className="animate-admin-fade-in-up rounded-[var(--radius-button)] border-[3px] border-quizzer-black bg-quizzer-white p-4 shadow-[var(--shadow-card)]"
         style={{ "--admin-stagger": "70ms" } as CSSProperties}
       >
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -1057,7 +1057,7 @@ export function AdminQuizzesDashboard() {
                 resetVenueForm();
               } else openAddVenue();
             }}
-            className="rounded-[var(--radius-button)] border-2 border-quizzer-black bg-quizzer-yellow px-3 py-1.5 text-xs font-semibold text-quizzer-black shadow-[var(--shadow-button)] hover:translate-x-[1px] hover:translate-y-[1px]"
+            className="rounded-[var(--radius-button)] border-[3px] border-quizzer-black bg-quizzer-yellow px-3 py-1.5 text-xs font-semibold text-quizzer-black shadow-[var(--shadow-button)] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[var(--shadow-button-hover)]"
           >
             {venueFormVisible ? "Cancel" : "+ Add venue"}
           </button>
@@ -1071,7 +1071,7 @@ export function AdminQuizzesDashboard() {
                 type="text"
                 value={venueName}
                 onChange={(e) => setVenueName(e.target.value)}
-                className="mt-1 w-full rounded-[var(--radius-button)] border-2 border-quizzer-black bg-quizzer-white px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-quizzer-yellow"
+                className="mt-1 w-full rounded-[var(--radius-button)] border-[3px] border-quizzer-black bg-quizzer-white px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-quizzer-yellow"
               />
             </label>
             <label className="block text-xs font-medium text-quizzer-black">
@@ -1080,7 +1080,7 @@ export function AdminQuizzesDashboard() {
                 type="text"
                 value={venueAddress}
                 onChange={(e) => setVenueAddress(e.target.value)}
-                className="mt-1 w-full rounded-[var(--radius-button)] border-2 border-quizzer-black bg-quizzer-white px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-quizzer-yellow"
+                className="mt-1 w-full rounded-[var(--radius-button)] border-[3px] border-quizzer-black bg-quizzer-white px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-quizzer-yellow"
               />
             </label>
             <label className="block text-xs font-medium text-quizzer-black">
@@ -1089,7 +1089,7 @@ export function AdminQuizzesDashboard() {
                 type="text"
                 value={venueCity}
                 onChange={(e) => setVenueCity(e.target.value)}
-                className="mt-1 w-full rounded-[var(--radius-button)] border-2 border-quizzer-black bg-quizzer-white px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-quizzer-yellow"
+                className="mt-1 w-full rounded-[var(--radius-button)] border-[3px] border-quizzer-black bg-quizzer-white px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-quizzer-yellow"
               />
             </label>
             <label className="block text-xs font-medium text-quizzer-black">
@@ -1098,7 +1098,7 @@ export function AdminQuizzesDashboard() {
                 type="text"
                 value={venuePostcode}
                 onChange={(e) => setVenuePostcode(e.target.value)}
-                className="mt-1 w-full rounded-[var(--radius-button)] border-2 border-quizzer-black bg-quizzer-white px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-quizzer-yellow"
+                className="mt-1 w-full rounded-[var(--radius-button)] border-[3px] border-quizzer-black bg-quizzer-white px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-quizzer-yellow"
               />
             </label>
             <div className="grid gap-3 sm:grid-cols-2">
@@ -1110,7 +1110,7 @@ export function AdminQuizzesDashboard() {
                   value={venueLat}
                   onChange={(e) => setVenueLat(e.target.value)}
                   placeholder="e.g. 51.5234"
-                  className="mt-1 w-full rounded-[var(--radius-button)] border-2 border-quizzer-black bg-quizzer-white px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-quizzer-yellow"
+                  className="mt-1 w-full rounded-[var(--radius-button)] border-[3px] border-quizzer-black bg-quizzer-white px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-quizzer-yellow"
                 />
               </label>
               <label className="block text-xs font-medium text-quizzer-black">
@@ -1121,7 +1121,7 @@ export function AdminQuizzesDashboard() {
                   value={venueLng}
                   onChange={(e) => setVenueLng(e.target.value)}
                   placeholder="e.g. -0.0755"
-                  className="mt-1 w-full rounded-[var(--radius-button)] border-2 border-quizzer-black bg-quizzer-white px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-quizzer-yellow"
+                  className="mt-1 w-full rounded-[var(--radius-button)] border-[3px] border-quizzer-black bg-quizzer-white px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-quizzer-yellow"
                 />
               </label>
             </div>
@@ -1130,7 +1130,7 @@ export function AdminQuizzesDashboard() {
                 href={`https://www.google.com/maps?q=${venueLat.trim()},${venueLng.trim()}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-block text-xs font-semibold text-quizzer-black underline hover:opacity-70"
+                className="inline-block text-xs font-semibold text-quizzer-black underline"
               >
                 Verify on Google Maps ↗
               </a>
@@ -1146,7 +1146,7 @@ export function AdminQuizzesDashboard() {
                 value={venueBoroughState}
                 onChange={(e) => setVenueBoroughState(e.target.value)}
                 placeholder="e.g. Hackney"
-                className="mt-1 w-full rounded-[var(--radius-button)] border-2 border-quizzer-black bg-quizzer-white px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-quizzer-yellow"
+                className="mt-1 w-full rounded-[var(--radius-button)] border-[3px] border-quizzer-black bg-quizzer-white px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-quizzer-yellow"
               />
             </label>
 
@@ -1162,7 +1162,7 @@ export function AdminQuizzesDashboard() {
                 placeholder={
                   "8 rounds, 5 questions each, plus a picture round.\nAnswers on paper — host enters totals at the end.\nPrizes awarded immediately after the final round."
                 }
-                className="mt-1 w-full rounded-[var(--radius-button)] border-2 border-quizzer-black bg-quizzer-white px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-quizzer-yellow"
+                className="mt-1 w-full rounded-[var(--radius-button)] border-[3px] border-quizzer-black bg-quizzer-white px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-quizzer-yellow"
               />
             </label>
 
@@ -1171,7 +1171,7 @@ export function AdminQuizzesDashboard() {
                 <p className="text-xs font-semibold uppercase tracking-wide text-quizzer-black">
                   Photos
                 </p>
-                {imageError ? <p className="text-xs text-red-600">{imageError}</p> : null}
+                {imageError ? <p className="text-xs text-quizzer-red">{imageError}</p> : null}
                 {imagesLoading ? (
                   <p className="text-xs text-quizzer-black/50">Loading photos…</p>
                 ) : venueImages.length > 0 ? (
@@ -1196,7 +1196,7 @@ export function AdminQuizzesDashboard() {
                           <button
                             type="button"
                             onClick={() => void deleteVenueImage(editingVenue.id, img)}
-                            className="absolute top-1 right-1 rounded bg-red-600 px-1.5 py-0.5 text-[10px] font-bold text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                            className="absolute top-1 right-1 rounded-[var(--radius-badge)] border-[3px] border-quizzer-black bg-quizzer-red px-1.5 py-0.5 text-[10px] font-bold text-quizzer-white invisible group-hover:visible"
                           >
                             ✕
                           </button>
@@ -1231,7 +1231,7 @@ export function AdminQuizzesDashboard() {
                 type="button"
                 disabled={venueSaveBusy}
                 onClick={() => void saveVenue()}
-                className="rounded-[var(--radius-button)] border-2 border-quizzer-black bg-quizzer-yellow px-3 py-1.5 text-xs font-semibold text-quizzer-black shadow-[var(--shadow-button)] hover:translate-x-[1px] hover:translate-y-[1px] disabled:opacity-50"
+                className="rounded-[var(--radius-button)] border-[3px] border-quizzer-black bg-quizzer-yellow px-3 py-1.5 text-xs font-semibold text-quizzer-black shadow-[var(--shadow-button)] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[var(--shadow-button-hover)] disabled:opacity-50"
               >
                 {venueSaveBusy ? "Saving…" : editingVenue ? "Save changes" : "Save"}
               </button>
@@ -1242,7 +1242,7 @@ export function AdminQuizzesDashboard() {
                   setEditingVenue(null);
                   resetVenueForm();
                 }}
-                className="rounded-[var(--radius-button)] border-2 border-quizzer-black/25 bg-quizzer-white px-3 py-1.5 text-xs font-semibold text-quizzer-black"
+                className="rounded-[var(--radius-button)] border-[3px] border-quizzer-black/25 bg-quizzer-white px-3 py-1.5 text-xs font-semibold text-quizzer-black"
               >
                 Cancel
               </button>
@@ -1253,7 +1253,7 @@ export function AdminQuizzesDashboard() {
         <div className="mt-4 overflow-x-auto">
           <table className="w-full border-collapse text-left text-sm text-quizzer-black">
             <thead>
-              <tr className="border-b border-quizzer-black/20 bg-quizzer-cream">
+              <tr className="border-b-[3px] border-quizzer-black bg-quizzer-cream">
                 <th className="px-3 py-2 font-semibold">Name</th>
                 <th className="px-3 py-2 font-semibold">City</th>
                 <th className="px-3 py-2 font-semibold">Address</th>
@@ -1293,7 +1293,7 @@ export function AdminQuizzesDashboard() {
                           type="button"
                           disabled={venueDeleteBusy === row.id}
                           onClick={() => openEditVenue(row)}
-                          className="rounded-[var(--radius-button)] border-2 border-quizzer-black bg-quizzer-yellow px-2 py-1 text-xs font-semibold text-quizzer-black shadow-[var(--shadow-button)] hover:translate-x-[1px] hover:translate-y-[1px] disabled:opacity-50"
+                          className="rounded-[var(--radius-button)] border-[3px] border-quizzer-black bg-quizzer-yellow px-2 py-1 text-xs font-semibold text-quizzer-black shadow-[var(--shadow-button)] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[var(--shadow-button-hover)] disabled:opacity-50"
                         >
                           Edit
                         </button>
@@ -1301,7 +1301,7 @@ export function AdminQuizzesDashboard() {
                           type="button"
                           disabled={venueDeleteBusy === row.id || venueSaveBusy}
                           onClick={() => void deleteVenue(row)}
-                          className="rounded-[var(--radius-button)] border-2 border-quizzer-black bg-red-600 px-2 py-1 text-xs font-semibold text-white shadow-[var(--shadow-button)] hover:translate-x-[1px] hover:translate-y-[1px] hover:bg-red-700 disabled:opacity-50"
+                          className="rounded-[var(--radius-button)] border-[3px] border-quizzer-black bg-quizzer-red px-2 py-1 text-xs font-semibold text-quizzer-white shadow-[var(--shadow-button)] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[var(--shadow-button-hover)] disabled:opacity-50"
                         >
                           {venueDeleteBusy === row.id ? "…" : "Delete"}
                         </button>

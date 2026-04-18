@@ -61,8 +61,8 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <div className="flex min-h-screen flex-col bg-[var(--color-quizzer-cream)] text-[var(--color-quizzer-black)]">
-      <header className="border-b-[var(--border-thick)] border-quizzer-black bg-quizzer-white">
+    <div className="flex min-h-screen flex-col bg-quizzer-cream text-quizzer-black">
+      <header className="border-b-[3px] border-quizzer-black bg-quizzer-white">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-3">
           <Link href="/admin" className="font-heading text-lg uppercase tracking-wide text-quizzer-black">
             Quizzer admin
@@ -87,16 +87,16 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`relative rounded-[var(--radius-button)] border-2 px-3 py-2 text-sm font-medium transition ${
+                  className={`relative rounded-[var(--radius-button)] border-[3px] px-3 py-2 text-sm font-medium transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[var(--shadow-button-hover)] ${
                     active
-                      ? "border-quizzer-black bg-quizzer-yellow text-quizzer-black"
-                      : "border-transparent text-quizzer-black hover:border-quizzer-black/25 hover:bg-quizzer-cream"
+                      ? "border-quizzer-black bg-quizzer-yellow text-quizzer-black shadow-[var(--shadow-button)]"
+                      : "border-quizzer-black bg-quizzer-white text-quizzer-black shadow-[var(--shadow-button)]"
                   }`}
                   aria-current={active ? "page" : undefined}
                 >
                   {item.label}
                   {badge ? (
-                    <span className="ml-1.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-bold leading-none text-white">
+                    <span className="ml-1.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-quizzer-red px-1 text-[10px] font-bold leading-none text-quizzer-white">
                       {badge > 99 ? "99+" : badge}
                     </span>
                   ) : null}
@@ -116,7 +116,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
                 router.refresh();
               })();
             }}
-            className="rounded-[var(--radius-button)] border-2 border-quizzer-black bg-quizzer-white px-3 py-2 text-xs font-semibold shadow-[var(--shadow-button)] hover:translate-x-[1px] hover:translate-y-[1px] disabled:opacity-50"
+            className="rounded-[var(--radius-button)] border-[3px] border-quizzer-black bg-quizzer-white px-3 py-2 text-xs font-semibold shadow-[var(--shadow-button)] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[var(--shadow-button-hover)] disabled:opacity-50"
           >
             {signingOut ? "Signing out…" : "Sign out"}
           </button>

@@ -599,7 +599,7 @@ export function AdminHostsDashboard() {
     (r) => r.status === "confirmed" || r.status === "rejected" || r.status === "cancelled"
   );
 
-  const tableHeadClass = "border-b border-quizzer-black/20 bg-quizzer-cream";
+  const tableHeadClass = "border-b-[3px] border-quizzer-black bg-quizzer-cream";
   const thClass = "px-3 py-2 font-semibold";
   const tdClass = "px-3 py-2";
 
@@ -714,7 +714,7 @@ export function AdminHostsDashboard() {
       {toast ? (
         <p
           key={toast}
-          className="animate-admin-fade-in-up rounded-[var(--radius-button)] border-2 border-quizzer-black bg-quizzer-yellow px-3 py-2 text-sm font-semibold text-quizzer-black shadow-[var(--shadow-card)]"
+          className="animate-admin-fade-in-up rounded-[var(--radius-button)] border-[3px] border-quizzer-black bg-quizzer-yellow px-3 py-2 text-sm font-semibold text-quizzer-black shadow-[var(--shadow-card)]"
           role="status"
         >
           {toast}
@@ -724,7 +724,7 @@ export function AdminHostsDashboard() {
       {toastError ? (
         <p
           key={toastError}
-          className="animate-admin-fade-in-up rounded-[var(--radius-button)] border-2 border-quizzer-red bg-quizzer-white px-3 py-2 text-sm font-semibold text-quizzer-red shadow-[var(--shadow-card)]"
+          className="animate-admin-fade-in-up rounded-[var(--radius-button)] border-[3px] border-quizzer-red bg-quizzer-cream px-3 py-2 text-sm font-semibold text-quizzer-red shadow-[var(--shadow-card)]"
           role="alert"
         >
           {toastError}
@@ -732,14 +732,14 @@ export function AdminHostsDashboard() {
       ) : null}
 
       {rosterError ? (
-        <p className="rounded-[var(--radius-button)] border-2 border-quizzer-red bg-quizzer-white px-3 py-2 text-sm text-quizzer-red">
+        <p className="rounded-[var(--radius-button)] border-[3px] border-quizzer-red bg-quizzer-cream px-3 py-2 text-sm text-quizzer-red">
           {rosterError}
         </p>
       ) : null}
 
       {tab === "roster" && (
         <div
-          className="rounded-[var(--radius-button)] border-[var(--border-thick)] border-quizzer-black bg-quizzer-white p-4 shadow-[var(--shadow-card)]"
+          className="rounded-[var(--radius-button)] border-[3px] border-quizzer-black bg-quizzer-white p-4 shadow-[var(--shadow-card)]"
           style={{ "--admin-stagger": "0ms" } as CSSProperties}
         >
           {rosterLoading ? (
@@ -792,7 +792,7 @@ export function AdminHostsDashboard() {
               </div>
               <div className="lg:w-80 lg:shrink-0">
                 {selectedRosterRow ? (
-                  <div className="rounded-[var(--radius-button)] border-2 border-quizzer-black bg-quizzer-cream/50 p-4">
+                  <div className="rounded-[var(--radius-button)] border-[3px] border-quizzer-black bg-quizzer-cream/50 p-4">
                     <h3 className="font-heading text-xs uppercase tracking-wide text-quizzer-black">Host detail</h3>
                     <p className="mt-2 font-semibold text-quizzer-black">
                       {allowlistDisplayName(selectedRosterRow) ? (
@@ -834,7 +834,7 @@ export function AdminHostsDashboard() {
               {allowlist.map((row) => (
                 <li
                   key={row.email}
-                  className="rounded-[var(--radius-button)] border-[var(--border-thick)] border-quizzer-black bg-quizzer-white p-4 shadow-[var(--shadow-card)]"
+                  className="rounded-[var(--radius-button)] border-[3px] border-quizzer-black bg-quizzer-white p-4 shadow-[var(--shadow-card)]"
                 >
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <p className="font-semibold text-quizzer-black">{row.email}</p>
@@ -842,7 +842,7 @@ export function AdminHostsDashboard() {
                       type="button"
                       disabled={removeBusy === row.email}
                       onClick={() => void removeAllowlisted(row.email)}
-                      className="rounded-[var(--radius-button)] border-2 border-quizzer-black bg-red-600 px-3 py-1.5 text-xs font-semibold text-white shadow-[var(--shadow-button)] hover:translate-x-[1px] hover:translate-y-[1px] hover:bg-red-700 disabled:opacity-50"
+                      className="rounded-[var(--radius-button)] border-[3px] border-quizzer-black bg-quizzer-red px-3 py-1.5 text-xs font-semibold text-quizzer-white shadow-[var(--shadow-button)] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[var(--shadow-button-hover)] disabled:opacity-50"
                     >
                       {removeBusy === row.email ? "Removing…" : "Remove"}
                     </button>
@@ -864,7 +864,7 @@ export function AdminHostsDashboard() {
                           onBlur={() => void saveHostNames(row.email, firstNameDraft, lastNameDraft)}
                           autoFocus
                           placeholder="First"
-                          className="min-w-[6rem] rounded-[var(--radius-button)] border-2 border-quizzer-black bg-quizzer-white px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-quizzer-yellow"
+                          className="min-w-[6rem] rounded-[var(--radius-button)] border-[3px] border-quizzer-black bg-quizzer-white px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-quizzer-yellow"
                           aria-label={`First name for ${row.email}`}
                         />
                         <input
@@ -879,7 +879,7 @@ export function AdminHostsDashboard() {
                           }}
                           onBlur={() => void saveHostNames(row.email, firstNameDraft, lastNameDraft)}
                           placeholder="Last"
-                          className="min-w-[6rem] rounded-[var(--radius-button)] border-2 border-quizzer-black bg-quizzer-white px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-quizzer-yellow"
+                          className="min-w-[6rem] rounded-[var(--radius-button)] border-[3px] border-quizzer-black bg-quizzer-white px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-quizzer-yellow"
                           aria-label={`Last name for ${row.email}`}
                         />
                         <span className="text-xs text-quizzer-black/60">{nameSaveBusy === row.email ? "Saving…" : ""}</span>
@@ -921,7 +921,7 @@ export function AdminHostsDashboard() {
                           void saveDefaultFee(row.email, defaultFeeDraft);
                         }}
                         autoFocus
-                        className="w-[5.5rem] rounded-[var(--radius-button)] border-2 border-quizzer-black bg-quizzer-white px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-quizzer-yellow"
+                        className="w-[5.5rem] rounded-[var(--radius-button)] border-[3px] border-quizzer-black bg-quizzer-white px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-quizzer-yellow"
                         aria-label={`Default fee in pounds for ${row.email}`}
                       />
                     ) : (
@@ -948,13 +948,13 @@ export function AdminHostsDashboard() {
       {tab === "claims" && (
         <div className="space-y-6">
           {claimsError ? (
-            <p className="rounded-[var(--radius-button)] border-2 border-quizzer-red bg-quizzer-white px-3 py-2 text-sm text-quizzer-red">
+            <p className="rounded-[var(--radius-button)] border-[3px] border-quizzer-red bg-quizzer-cream px-3 py-2 text-sm text-quizzer-red">
               {claimsError}
             </p>
           ) : null}
 
           <section
-            className="rounded-[var(--radius-button)] border-[var(--border-thick)] border-quizzer-black bg-quizzer-white p-4 shadow-[var(--shadow-card)]"
+            className="rounded-[var(--radius-button)] border-[3px] border-quizzer-black bg-quizzer-white p-4 shadow-[var(--shadow-card)]"
             style={{ "--admin-stagger": "0ms" } as CSSProperties}
           >
             <div className="mb-3 flex flex-wrap items-center gap-2">
@@ -1003,7 +1003,7 @@ export function AdminHostsDashboard() {
                             type="text"
                             value={claimNotesDraft[row.id] ?? ""}
                             onChange={(e) => setClaimNotesDraft((d) => ({ ...d, [row.id]: e.target.value }))}
-                            className="w-full min-w-[8rem] rounded-[var(--radius-button)] border-2 border-quizzer-black bg-quizzer-white px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-quizzer-yellow"
+                            className="w-full min-w-[8rem] rounded-[var(--radius-button)] border-[3px] border-quizzer-black bg-quizzer-white px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-quizzer-yellow"
                             placeholder="Operator notes"
                             aria-label={`Notes for claim ${row.id}`}
                           />
@@ -1014,7 +1014,7 @@ export function AdminHostsDashboard() {
                               type="button"
                               disabled={busyMutation?.id === row.id}
                               onClick={() => void updateClaim(row, "confirmed")}
-                              className="inline-flex items-center justify-center gap-2 rounded-[var(--radius-button)] border-2 border-quizzer-black bg-quizzer-yellow px-2 py-1 text-xs font-semibold text-quizzer-black shadow-[var(--shadow-button)] hover:translate-x-[1px] hover:translate-y-[1px] disabled:opacity-50"
+                              className="inline-flex items-center justify-center gap-2 rounded-[var(--radius-button)] border-[3px] border-quizzer-black bg-quizzer-yellow px-2 py-1 text-xs font-semibold text-quizzer-black shadow-[var(--shadow-button)] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[var(--shadow-button-hover)] disabled:opacity-50"
                             >
                               {busyMutation?.id === row.id && busyMutation.action === "confirm" ? <BtnSpinner /> : null}
                               Confirm
@@ -1023,7 +1023,7 @@ export function AdminHostsDashboard() {
                               type="button"
                               disabled={busyMutation?.id === row.id}
                               onClick={() => void updateClaim(row, "rejected")}
-                              className="inline-flex items-center justify-center gap-2 rounded-[var(--radius-button)] border-2 border-quizzer-black bg-red-600 px-2 py-1 text-xs font-semibold text-white shadow-[var(--shadow-button)] hover:translate-x-[1px] hover:translate-y-[1px] hover:bg-red-700 disabled:opacity-50"
+                              className="inline-flex items-center justify-center gap-2 rounded-[var(--radius-button)] border-[3px] border-quizzer-black bg-quizzer-red px-2 py-1 text-xs font-semibold text-quizzer-white shadow-[var(--shadow-button)] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[var(--shadow-button-hover)] disabled:opacity-50"
                             >
                               {busyMutation?.id === row.id && busyMutation.action === "reject" ? <BtnSpinner /> : null}
                               Reject
@@ -1039,13 +1039,13 @@ export function AdminHostsDashboard() {
           </section>
 
           <section
-            className="rounded-[var(--radius-button)] border-[var(--border-thick)] border-quizzer-black bg-quizzer-white p-4 shadow-[var(--shadow-card)]"
+            className="rounded-[var(--radius-button)] border-[3px] border-quizzer-black bg-quizzer-white p-4 shadow-[var(--shadow-card)]"
             style={{ "--admin-stagger": "40ms" } as CSSProperties}
           >
             <button
               type="button"
               onClick={() => setShowClaimHistory((v) => !v)}
-              className="rounded-[var(--radius-button)] border-2 border-quizzer-black bg-quizzer-white px-3 py-2 text-sm font-semibold text-quizzer-black shadow-[var(--shadow-button)] hover:translate-x-[1px] hover:translate-y-[1px]"
+              className="rounded-[var(--radius-button)] border-[3px] border-quizzer-black bg-quizzer-white px-3 py-2 text-sm font-semibold text-quizzer-black shadow-[var(--shadow-button)] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[var(--shadow-button-hover)]"
             >
               {showClaimHistory ? "Hide history" : `Show history (${historyClaims.length})`}
             </button>
@@ -1079,11 +1079,11 @@ export function AdminHostsDashboard() {
                         <td className={tdClass}>{row.host_email}</td>
                         <td className={tdClass}>
                           {row.status === "confirmed" ? (
-                            <span className="inline-block rounded-full border-2 border-quizzer-black bg-green-600 px-2 py-0.5 text-xs font-bold text-white">
+                            <span className="inline-block rounded-full border-[3px] border-quizzer-black bg-quizzer-green px-2 py-0.5 text-xs font-bold text-quizzer-white">
                               Confirmed
                             </span>
                           ) : row.status === "rejected" ? (
-                            <span className="inline-block rounded-full border-2 border-quizzer-black bg-red-600 px-2 py-0.5 text-xs font-bold text-white">
+                            <span className="inline-block rounded-full border-[3px] border-quizzer-black bg-quizzer-red px-2 py-0.5 text-xs font-bold text-quizzer-white">
                               Rejected
                             </span>
                           ) : (
@@ -1111,7 +1111,7 @@ export function AdminHostsDashboard() {
       {tab === "payroll" && (
         <div className="space-y-4">
           {payrollError ? (
-            <p className="rounded-[var(--radius-button)] border-2 border-quizzer-red bg-quizzer-white px-3 py-2 text-sm text-quizzer-red">
+            <p className="rounded-[var(--radius-button)] border-[3px] border-quizzer-red bg-quizzer-cream px-3 py-2 text-sm text-quizzer-red">
               {payrollError}
             </p>
           ) : null}
@@ -1123,19 +1123,19 @@ export function AdminHostsDashboard() {
           {payrollLoaded ? (
             <>
               <div className="flex flex-wrap gap-2">
-                <div className="rounded-[var(--radius-button)] border-2 border-quizzer-black bg-quizzer-cream px-3 py-2 text-sm shadow-[var(--shadow-card)]">
+                <div className="rounded-[var(--radius-button)] border-[3px] border-quizzer-black bg-quizzer-cream px-3 py-2 text-sm shadow-[var(--shadow-card)]">
                   <span className="text-xs font-semibold uppercase tracking-wide text-quizzer-black/80">
                     Total owed this month
                   </span>
                   <p className="font-heading text-xl text-quizzer-black">{formatPence(totalOwedThisMonth)}</p>
                 </div>
-                <div className="rounded-[var(--radius-button)] border-2 border-quizzer-black bg-quizzer-cream px-3 py-2 text-sm shadow-[var(--shadow-card)]">
+                <div className="rounded-[var(--radius-button)] border-[3px] border-quizzer-black bg-quizzer-cream px-3 py-2 text-sm shadow-[var(--shadow-card)]">
                   <span className="text-xs font-semibold uppercase tracking-wide text-quizzer-black/80">
                     Hosts with sessions
                   </span>
                   <p className="font-heading text-xl text-quizzer-black">{hostsWithSessionsCount}</p>
                 </div>
-                <div className="rounded-[var(--radius-button)] border-2 border-quizzer-black bg-quizzer-cream px-3 py-2 text-sm shadow-[var(--shadow-card)]">
+                <div className="rounded-[var(--radius-button)] border-[3px] border-quizzer-black bg-quizzer-cream px-3 py-2 text-sm shadow-[var(--shadow-card)]">
                   <span className="text-xs font-semibold uppercase tracking-wide text-quizzer-black/80">
                     Sessions recorded
                   </span>
@@ -1144,7 +1144,7 @@ export function AdminHostsDashboard() {
               </div>
 
               <section
-                className="rounded-[var(--radius-button)] border-[var(--border-thick)] border-quizzer-black bg-quizzer-white p-4 shadow-[var(--shadow-card)]"
+                className="rounded-[var(--radius-button)] border-[3px] border-quizzer-black bg-quizzer-white p-4 shadow-[var(--shadow-card)]"
                 style={{ "--admin-stagger": "0ms" } as CSSProperties}
               >
                 <h2 className="font-heading text-sm uppercase tracking-wide text-quizzer-black">Payroll by host</h2>
@@ -1176,7 +1176,7 @@ export function AdminHostsDashboard() {
                             <td className={tdClass}>{formatPence(row.payout_this_month_pence)}</td>
                             <td className={tdClass}>
                               {row.missingRates ? (
-                                <span className="rounded-full border border-amber-600 bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-900">
+                                <span className="rounded-full border-[3px] border-quizzer-orange bg-quizzer-yellow/20 px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-quizzer-orange">
                                   Some sessions have £0 fee
                                 </span>
                               ) : (
@@ -1187,7 +1187,7 @@ export function AdminHostsDashboard() {
                               <button
                                 type="button"
                                 onClick={() => markPaidStub(row.email)}
-                                className="rounded-[var(--radius-button)] border-2 border-quizzer-black bg-quizzer-yellow px-2 py-1 text-xs font-semibold text-quizzer-black shadow-[var(--shadow-button)] hover:translate-x-[1px] hover:translate-y-[1px]"
+                                className="rounded-[var(--radius-button)] border-[3px] border-quizzer-black bg-quizzer-yellow px-2 py-1 text-xs font-semibold text-quizzer-black shadow-[var(--shadow-button)] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[var(--shadow-button-hover)]"
                               >
                                 Mark as paid
                               </button>
@@ -1205,13 +1205,13 @@ export function AdminHostsDashboard() {
               </section>
 
               <section
-                className="rounded-[var(--radius-button)] border-[var(--border-thick)] border-quizzer-black bg-quizzer-white p-4 shadow-[var(--shadow-card)]"
+                className="rounded-[var(--radius-button)] border-[3px] border-quizzer-black bg-quizzer-white p-4 shadow-[var(--shadow-card)]"
                 style={{ "--admin-stagger": "40ms" } as CSSProperties}
               >
                 <button
                   type="button"
                   onClick={() => setShowPayrollSessions((v) => !v)}
-                  className="rounded-[var(--radius-button)] border-2 border-quizzer-black bg-quizzer-white px-3 py-2 text-sm font-semibold text-quizzer-black shadow-[var(--shadow-button)] hover:translate-x-[1px] hover:translate-y-[1px]"
+                  className="rounded-[var(--radius-button)] border-[3px] border-quizzer-black bg-quizzer-white px-3 py-2 text-sm font-semibold text-quizzer-black shadow-[var(--shadow-button)] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[var(--shadow-button-hover)]"
                 >
                   {showPayrollSessions ? "Hide sessions" : `Show all sessions (${sessionRows.length})`}
                 </button>

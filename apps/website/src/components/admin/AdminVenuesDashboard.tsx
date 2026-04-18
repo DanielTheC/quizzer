@@ -200,7 +200,7 @@ export function AdminVenuesDashboard() {
       {toast ? (
         <p
           key={toast}
-          className="animate-admin-toast fixed bottom-6 right-6 z-50 max-w-sm rounded-[var(--radius-button)] border-[3px] border-quizzer-black bg-quizzer-yellow px-4 py-2 text-sm font-semibold text-quizzer-black shadow-[5px_5px_0_#000]"
+          className="animate-admin-toast fixed bottom-6 right-6 z-50 max-w-sm rounded-[var(--radius-button)] border-[3px] border-quizzer-black bg-quizzer-yellow px-4 py-2 text-sm font-semibold text-quizzer-black shadow-[var(--shadow-card)]"
           role="status"
         >
           {toast}
@@ -213,20 +213,20 @@ export function AdminVenuesDashboard() {
       </p>
 
       {error ? (
-        <p className="animate-admin-fade-in-up rounded-[var(--radius-button)] border-2 border-quizzer-red bg-quizzer-white px-3 py-2 text-sm text-quizzer-red">
+        <p className="animate-admin-fade-in-up rounded-[var(--radius-button)] border-[3px] border-quizzer-red bg-quizzer-cream px-3 py-2 text-sm text-quizzer-red">
           {error}
         </p>
       ) : null}
 
       <section
-        className="animate-admin-fade-in-up rounded-[var(--radius-button)] border-[3px] border-quizzer-black bg-quizzer-white p-4 shadow-[5px_5px_0_#000]"
+        className="animate-admin-fade-in-up rounded-[var(--radius-button)] border-[3px] border-quizzer-black bg-quizzer-white p-4 shadow-[var(--shadow-card)]"
         style={{ "--admin-stagger": "0ms" } as CSSProperties}
       >
         <h2 className="font-heading text-sm uppercase tracking-wide text-quizzer-black">All venues</h2>
         <div className="mt-4 overflow-x-auto">
           <table className="w-full min-w-[720px] border-collapse text-left text-sm text-quizzer-black">
             <thead>
-              <tr className="border-b-2 border-quizzer-black bg-quizzer-cream">
+              <tr className="border-b-[3px] border-quizzer-black bg-quizzer-cream">
                 <th className="px-3 py-2 font-heading text-xs uppercase tracking-wide">Venue</th>
                 <th className="px-3 py-2 font-heading text-xs uppercase tracking-wide">Address</th>
                 <th className="px-3 py-2 font-heading text-xs uppercase tracking-wide">Publican</th>
@@ -272,7 +272,7 @@ export function AdminVenuesDashboard() {
                       {expanded ? (
                         <tr className="border-b border-quizzer-black/15 bg-quizzer-cream/25">
                           <td colSpan={3} className="px-3 py-4">
-                            <div className="rounded-[var(--radius-button)] border-[3px] border-quizzer-black bg-quizzer-white p-4 shadow-[5px_5px_0_#000]">
+                            <div className="rounded-[var(--radius-button)] border-[3px] border-quizzer-black bg-quizzer-white p-4 shadow-[var(--shadow-card)]">
                               <p className="font-heading text-xs uppercase tracking-wide text-quizzer-black">
                                 Publican · {v.name}
                               </p>
@@ -290,7 +290,7 @@ export function AdminVenuesDashboard() {
                                       e.stopPropagation();
                                       void removeLinkedPublican(v.id);
                                     }}
-                                    className="rounded-[var(--radius-button)] border-2 border-quizzer-black bg-red-600 px-3 py-1.5 text-xs font-semibold text-white shadow-[var(--shadow-button)] hover:translate-x-[1px] hover:translate-y-[1px] hover:bg-red-700 disabled:opacity-50"
+                                    className="rounded-[var(--radius-button)] border-[3px] border-quizzer-black bg-quizzer-red px-3 py-1.5 text-xs font-semibold text-quizzer-white shadow-[var(--shadow-button)] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[var(--shadow-button-hover)] disabled:opacity-50"
                                   >
                                     {removeBusyVenueId === v.id ? "Removing…" : "Remove"}
                                   </button>
@@ -307,7 +307,7 @@ export function AdminVenuesDashboard() {
                                       value={inviteEmail}
                                       onChange={(e) => setInviteEmail(e.target.value)}
                                       autoComplete="off"
-                                      className="mt-1 w-full max-w-md rounded-[var(--radius-button)] border-2 border-quizzer-black bg-quizzer-white px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-quizzer-yellow"
+                                      className="mt-1 w-full max-w-md rounded-[var(--radius-button)] border-[3px] border-quizzer-black bg-quizzer-white px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-quizzer-yellow"
                                     />
                                   </label>
                                   <div className="grid gap-2 sm:grid-cols-2 sm:gap-3">
@@ -317,7 +317,7 @@ export function AdminVenuesDashboard() {
                                         type="text"
                                         value={inviteFirst}
                                         onChange={(e) => setInviteFirst(e.target.value)}
-                                        className="mt-1 w-full rounded-[var(--radius-button)] border-2 border-quizzer-black bg-quizzer-white px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-quizzer-yellow"
+                                        className="mt-1 w-full rounded-[var(--radius-button)] border-[3px] border-quizzer-black bg-quizzer-white px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-quizzer-yellow"
                                       />
                                     </label>
                                     <label className="block text-xs font-medium text-quizzer-black">
@@ -326,7 +326,7 @@ export function AdminVenuesDashboard() {
                                         type="text"
                                         value={inviteLast}
                                         onChange={(e) => setInviteLast(e.target.value)}
-                                        className="mt-1 w-full rounded-[var(--radius-button)] border-2 border-quizzer-black bg-quizzer-white px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-quizzer-yellow"
+                                        className="mt-1 w-full rounded-[var(--radius-button)] border-[3px] border-quizzer-black bg-quizzer-white px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-quizzer-yellow"
                                       />
                                     </label>
                                   </div>
@@ -334,7 +334,7 @@ export function AdminVenuesDashboard() {
                                     type="button"
                                     disabled={inviteBusyVenueId === v.id || !inviteEmail.trim()}
                                     onClick={() => void invitePublican(v.id)}
-                                    className="rounded-[var(--radius-button)] border-2 border-quizzer-black bg-quizzer-yellow px-3 py-1.5 text-xs font-semibold text-quizzer-black shadow-[var(--shadow-button)] hover:translate-x-[1px] hover:translate-y-[1px] disabled:opacity-50"
+                                    className="rounded-[var(--radius-button)] border-[3px] border-quizzer-black bg-quizzer-yellow px-3 py-1.5 text-xs font-semibold text-quizzer-black shadow-[var(--shadow-button)] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[var(--shadow-button-hover)] disabled:opacity-50"
                                   >
                                     {inviteBusyVenueId === v.id ? "Sending…" : "Send invite"}
                                   </button>

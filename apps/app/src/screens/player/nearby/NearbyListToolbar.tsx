@@ -167,7 +167,7 @@ export function NearbyListToolbar({
               hapticLight();
               onHideFiltersRow();
             }}
-            style={({ pressed }) => [styles.toolbarRevealRow, pressed && { opacity: 0.75 }]}
+            style={({ pressed }) => [styles.toolbarRevealRow, pressed && styles.toolbarRevealRowPressed]}
             accessibilityRole="button"
             accessibilityLabel="Hide filters and map options"
           >
@@ -213,7 +213,7 @@ export function NearbyListToolbar({
               hapticLight();
               revealListToolbarFromCollapsed();
             }}
-            style={({ pressed }) => [styles.toolbarRevealRow, pressed && { opacity: 0.75 }]}
+            style={({ pressed }) => [styles.toolbarRevealRow, pressed && styles.toolbarRevealRowPressed]}
             accessibilityRole="button"
             accessibilityLabel="Show filters, list and map options"
           >

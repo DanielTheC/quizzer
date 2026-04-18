@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useLayoutEffect, useState } from "react";
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useState } from "react";
 import {
   SafeAreaView,
   Text,
@@ -12,28 +12,88 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { HostStackParamList } from "../../navigation/RootNavigator";
 import { loadRunQuizState } from "../../lib/runQuizStorage";
 import { getLatestPack } from "../../lib/quizPack";
+import { useAppTheme } from "../../context/ThemeContext";
+import {
+  colors,
+  spacing,
+  radius,
+  borderWidth,
+  shadow,
+  typography,
+  fonts,
+  type SemanticTheme,
+} from "../../theme";
+
+function createStyles(semantic: SemanticTheme) {
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: semantic.bgPrimary },
+    content: { flex: 1, padding: spacing.xxl, justifyContent: "center" },
+    headerRight: { padding: spacing.sm, marginRight: spacing.sm },
+    headerRightText: { ...typography.bodyStrong, color: colors.blue },
+    title: {
+      ...typography.displayLarge,
+      fontFamily: fonts.display,
+      marginBottom: spacing.sm,
+      color: semantic.textPrimary,
+    },
+    subtitle: { ...typography.body, color: semantic.textSecondary, marginBottom: spacing.xxl + spacing.sm },
+    spinner: { marginTop: spacing.xxl },
+    actions: { marginTop: spacing.lg },
+    primaryButton: {
+      backgroundColor: colors.yellow,
+      paddingVertical: spacing.lg,
+      paddingHorizontal: spacing.xxl,
+      borderRadius: radius.large,
+      marginBottom: spacing.md,
+      borderWidth: borderWidth.default,
+      borderColor: semantic.borderPrimary,
+      alignItems: "center",
+      ...shadow.small,
+    },
+    primaryButtonText: { ...typography.bodyStrong, fontSize: 18, color: semantic.textPrimary, textAlign: "center" },
+    secondaryButton: {
+      backgroundColor: colors.grey100,
+      paddingVertical: spacing.lg,
+      paddingHorizontal: spacing.xxl,
+      borderRadius: radius.large,
+      borderWidth: borderWidth.default,
+      borderColor: semantic.borderPrimary,
+      alignItems: "center",
+      ...shadow.small,
+    },
+    secondaryButtonText: { ...typography.bodyStrong, fontSize: 18, color: semantic.textPrimary, textAlign: "center" },
+    btnPressed: { transform: [{ translateY: 2 }], shadowOffset: { width: 1, height: 1 } },
+  });
+}
 
 export default function HostHomeScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<HostStackParamList>>();
+  const { semantic } = useAppTheme();
+  const styles = useMemo(() => createStyles(semantic), [semantic]);
   const [hasResumable, setHasResumable] = useState<boolean | null>(null);
   const [latestPackId, setLatestPackId] = useState<string | null>(null);
 
   useLayoutEffect(() => {
     navigation.setOptions({
       headerRight: () => (
-        <Pressable onPress={() => navigation.navigate("Settings")} style={styles.headerRight}>
+        <Pressable
+          onPress={() => navigation.navigate("Settings")}
+          style={({ pressed }) => [styles.headerRight, pressed && styles.btnPressed]}
+        >
           <Text style={styles.headerRightText}>Settings</Text>
         </Pressable>
       ),
     });
-  }, [navigation]);
+  }, [navigation, styles.headerRight, styles.headerRightText, styles.btnPressed]);
 
   useEffect(() => {
     let cancelled = false;
     loadRunQuizState().then((state) => {
       if (!cancelled) setHasResumable(state != null && state.teams.length > 0);
     });
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
@@ -41,7 +101,9 @@ export default function HostHomeScreen() {
     getLatestPack().then((pack) => {
       if (!cancelled && pack) setLatestPackId(pack.id);
     });
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const startNew = useCallback(() => {
@@ -62,11 +124,17 @@ export default function HostHomeScreen() {
           <ActivityIndicator size="large" style={styles.spinner} />
         ) : (
           <View style={styles.actions}>
-            <Pressable style={styles.primaryButton} onPress={startNew}>
+            <Pressable
+              style={({ pressed }) => [styles.primaryButton, pressed && styles.btnPressed]}
+              onPress={startNew}
+            >
               <Text style={styles.primaryButtonText}>Start new quiz</Text>
             </Pressable>
             {hasResumable && (
-              <Pressable style={styles.secondaryButton} onPress={resume}>
+              <Pressable
+                style={({ pressed }) => [styles.secondaryButton, pressed && styles.btnPressed]}
+                onPress={resume}
+              >
                 <Text style={styles.secondaryButtonText}>Resume quiz</Text>
               </Pressable>
             )}
@@ -76,29 +144,3 @@ export default function HostHomeScreen() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#fff" },
-  content: { flex: 1, padding: 24, justifyContent: "center" },
-  headerRight: { padding: 8, marginRight: 8 },
-  headerRightText: { fontSize: 16, color: "#2563eb", fontWeight: "500" },
-  title: { fontSize: 28, fontWeight: "700", marginBottom: 8, color: "#111" },
-  subtitle: { fontSize: 16, color: "#666", marginBottom: 32 },
-  spinner: { marginTop: 24 },
-  actions: { marginTop: 16 },
-  primaryButton: {
-    backgroundColor: "#2563eb",
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-    borderRadius: 12,
-    marginBottom: 12,
-  },
-  primaryButtonText: { color: "#fff", fontSize: 18, fontWeight: "600", textAlign: "center" },
-  secondaryButton: {
-    backgroundColor: "#f1f5f9",
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-    borderRadius: 12,
-  },
-  secondaryButtonText: { color: "#334155", fontSize: 18, fontWeight: "600", textAlign: "center" },
-});

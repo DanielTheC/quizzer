@@ -515,7 +515,7 @@ const styles = StyleSheet.create({
   },
   summaryCol: { flex: 1, minWidth: 0 },
   summaryDivider: { width: StyleSheet.hairlineWidth, backgroundColor: semantic.borderPrimary, marginHorizontal: spacing.md },
-  summaryValue: { ...typography.bodyStrong, fontSize: 22, color: semantic.textPrimary },
+  summaryValue: { ...typography.displaySmall, color: semantic.textPrimary },
   summaryValueSpinner: { alignSelf: "flex-start", minHeight: 28, marginBottom: 2 },
   summaryLabel: { ...typography.caption, color: semantic.textSecondary, marginTop: spacing.xs },
   summaryHint: { ...typography.caption, fontSize: 11, color: semantic.textSecondary, marginTop: spacing.xs, opacity: 0.9 },

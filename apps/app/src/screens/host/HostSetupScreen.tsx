@@ -356,7 +356,7 @@ const styles = StyleSheet.create({
   venueRowPressed: { transform: [{ translateY: 2 }], shadowOffset: { width: 1, height: 1 } },
   venueName: { ...typography.bodyStrong, color: semantic.textPrimary, fontSize: 17 },
   venueAddress: { ...typography.caption, color: semantic.textSecondary, marginTop: spacing.xs },
-  venuePostcode: { fontSize: 13, fontWeight: "500", color: colors.grey400, marginTop: 2 },
+  venuePostcode: { ...typography.caption, color: colors.grey400, marginTop: 2 },
   packRow: {
     padding: spacing.md,
     borderRadius: radius.medium,

@@ -20,6 +20,9 @@ export const colors = {
   grey200: "#EAEAEA",
   grey400: "#BDBDBD",
   grey700: "#4F4F4F",
+  /** Results podium (2nd / 3rd place bars) */
+  podiumSilver: "#E2E8F0",
+  podiumBronze: "#E8A87C",
 } as const;
 
 // ——— Semantic ———

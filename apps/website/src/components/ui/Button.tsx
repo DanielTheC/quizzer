@@ -6,13 +6,13 @@ type Size = "sm" | "md" | "lg";
 
 const variantStyles: Record<Variant, string> = {
   primary:
-    "bg-quizzer-yellow text-quizzer-black border-quizzer-black shadow-[4px_4px_0_#000] hover:shadow-[2px_2px_0_#000] hover:translate-x-[2px] hover:translate-y-[2px]",
+    "bg-quizzer-yellow text-quizzer-black border-quizzer-black shadow-[var(--shadow-button)] hover:shadow-[var(--shadow-button-hover)] hover:translate-x-[1px] hover:translate-y-[1px]",
   secondary:
-    "bg-quizzer-pink text-quizzer-white border-quizzer-black shadow-[4px_4px_0_#000] hover:shadow-[2px_2px_0_#000] hover:translate-x-[2px] hover:translate-y-[2px]",
+    "bg-quizzer-pink text-quizzer-white border-quizzer-black shadow-[var(--shadow-button)] hover:shadow-[var(--shadow-button-hover)] hover:translate-x-[1px] hover:translate-y-[1px]",
   outline:
-    "bg-transparent text-quizzer-black border-quizzer-black hover:bg-quizzer-black hover:text-quizzer-white shadow-[4px_4px_0_#000] hover:shadow-[2px_2px_0_#000] hover:translate-x-[2px] hover:translate-y-[2px]",
+    "bg-transparent text-quizzer-black border-quizzer-black hover:bg-quizzer-black hover:text-quizzer-white shadow-[var(--shadow-button)] hover:shadow-[var(--shadow-button-hover)] hover:translate-x-[1px] hover:translate-y-[1px]",
   ghost:
-    "bg-transparent text-quizzer-black border-quizzer-black hover:bg-quizzer-cream",
+    "bg-transparent text-quizzer-black border-quizzer-black shadow-[var(--shadow-button)] hover:shadow-[var(--shadow-button-hover)] hover:translate-x-[1px] hover:translate-y-[1px]",
 };
 
 const sizeStyles: Record<Size, string> = {
@@ -51,7 +51,7 @@ export function Button({
   ...rest
 }: ButtonProps) {
   const base =
-    "inline-flex items-center justify-center font-semibold border-[3px] border-solid rounded-[12px] transition-all duration-150 disabled:pointer-events-none disabled:opacity-50 " +
+    "inline-flex items-center justify-center font-semibold border-[3px] border-solid rounded-[var(--radius-button)] transition-all duration-150 disabled:pointer-events-none disabled:opacity-50 " +
     variantStyles[variant] +
     " " +
     sizeStyles[size];

@@ -259,7 +259,11 @@ export default function HostApplyScreen() {
                 ) : null}
 
                 <Pressable
-                  style={[styles.primaryBtn, submitting && styles.btnDisabled]}
+                  style={({ pressed }) => [
+                    styles.primaryBtn,
+                    submitting && styles.btnDisabled,
+                    pressed && !submitting && styles.btnPressed,
+                  ]}
                   onPress={() => void onSubmit()}
                   disabled={submitting}
                 >
@@ -304,7 +308,7 @@ const styles = StyleSheet.create({
     ...shadow.small,
   },
   heroIcon: { alignSelf: "center", marginBottom: spacing.md },
-  cardTitle: { ...typography.bodyStrong, fontSize: 20, color: semantic.textPrimary, textAlign: "center", marginBottom: spacing.sm },
+  cardTitle: { ...typography.displaySmall, color: semantic.textPrimary, textAlign: "center", marginBottom: spacing.sm },
   body: { ...typography.body, color: semantic.textPrimary, lineHeight: 22 },
   mono: { fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace", fontSize: 14 },
   muted: { ...typography.caption, color: semantic.textSecondary, marginTop: spacing.md, lineHeight: 20 },
@@ -329,11 +333,11 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
     padding: spacing.md,
     borderRadius: radius.medium,
-    backgroundColor: "rgba(220, 38, 38, 0.1)",
+    backgroundColor: colors.cream,
     borderWidth: borderWidth.default,
     borderColor: semantic.danger,
   },
-  errorText: { ...typography.body, color: semantic.danger, fontSize: 14 },
+  errorText: { ...typography.caption, color: semantic.danger },
   primaryBtn: {
     marginTop: spacing.xl,
     backgroundColor: semantic.accentYellow,

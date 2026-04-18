@@ -68,7 +68,10 @@ export default function PackQuestionsScreen() {
       <SafeAreaView style={styles.container}>
         <View style={styles.centered}>
           <Text style={styles.errorText}>Pack not found. Try again online.</Text>
-          <Pressable style={styles.retryBtn} onPress={loadPack}>
+          <Pressable
+            style={({ pressed }) => [styles.retryBtn, pressed && styles.btnPressed]}
+            onPress={loadPack}
+          >
             <Text style={styles.retryBtnText}>Retry</Text>
           </Pressable>
         </View>
@@ -125,7 +128,10 @@ function QuestionRow({
     <View style={styles.questionRow}>
       <View style={styles.questionHeader}>
         <Text style={styles.questionNum}>Q{question.question_number}</Text>
-        <Pressable style={styles.revealBtn} onPress={onReveal}>
+        <Pressable
+          style={({ pressed }) => [styles.revealBtn, pressed && styles.btnPressed]}
+          onPress={onReveal}
+        >
           <Text style={styles.revealBtnText}>{isRevealed ? "Hide answer" : "Reveal answer"}</Text>
         </Pressable>
       </View>
@@ -187,8 +193,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     backgroundColor: semantic.accentBlue,
     borderRadius: radius.small,
-    borderWidth: borderWidth.thin,
+    borderWidth: borderWidth.default,
     borderColor: semantic.borderPrimary,
+    ...shadow.small,
   },
   revealBtnText: { color: semantic.textInverse, fontSize: 13, fontWeight: "700" },
   questionText: { ...typography.body, color: semantic.textPrimary, marginBottom: spacing.xs },
@@ -198,12 +205,12 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     backgroundColor: semantic.bgSecondary,
     borderRadius: radius.medium,
-    borderLeftWidth: 6,
-    borderLeftColor: semantic.accentGreen,
-    borderWidth: borderWidth.thin,
+    borderWidth: borderWidth.default,
     borderColor: semantic.borderPrimary,
+    borderLeftColor: semantic.accentGreen,
   },
   answerLabel: { ...typography.labelUppercase, fontSize: 11, color: semantic.accentGreen, marginBottom: spacing.xs },
   answerText: { ...typography.bodyStrong, color: semantic.textPrimary },
   answerUnavailable: { ...typography.body, fontSize: 14, color: semantic.textSecondary, lineHeight: 20 },
+  btnPressed: { transform: [{ translateY: 2 }], shadowOffset: { width: 1, height: 1 } },
 });

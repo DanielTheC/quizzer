@@ -100,6 +100,7 @@ export function buildNearbyStyles(semantic: SemanticTheme, isDark: boolean) {
     },
     chipActive: { backgroundColor: semantic.bgInverse },
     chipPressed: { transform: [{ translateY: 2 }], shadowOffset: { width: 1, height: 1 } },
+    toolbarRevealRowPressed: { transform: [{ translateY: 2 }], shadowOffset: { width: 1, height: 1 } },
     chipText: { ...typography.captionStrong, color: semantic.textPrimary },
     chipTextActive: { color: semantic.textInverse },
     chipTonight: {

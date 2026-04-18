@@ -3,7 +3,7 @@ import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth } from "../context/AuthContext";
 import { useSavedQuizzes } from "../context/SavedQuizzesContext";
-import { borderWidth, radius, semantic, shadow, spacing, typography } from "../theme";
+import { borderWidth, fonts, radius, semantic, shadow, spacing, typography } from "../theme";
 
 /**
  * One gentle nudge per "unsigned save period" (see interest_nudge_shown in SavedQuizzesContext).
@@ -51,7 +51,7 @@ export function InterestSignInSheet() {
         </Text>
         <View style={styles.actions}>
           <Pressable
-            style={({ pressed }) => [styles.secondaryBtn, pressed && styles.pressed]}
+            style={({ pressed }) => [styles.secondaryBtn, pressed && styles.btnPressed]}
             onPress={onMaybeLater}
             accessibilityLabel="Maybe later"
             accessibilityRole="button"
@@ -59,7 +59,7 @@ export function InterestSignInSheet() {
             <Text style={styles.secondaryBtnText}>Maybe later</Text>
           </Pressable>
           <Pressable
-            style={({ pressed }) => [styles.primaryBtn, pressed && styles.pressed]}
+            style={({ pressed }) => [styles.primaryBtn, pressed && styles.btnPressed]}
             onPress={onSignIn}
             accessibilityLabel="Sign in"
             accessibilityRole="button"
@@ -105,8 +105,8 @@ const styles = StyleSheet.create({
     backgroundColor: semantic.textSecondary,
   },
   title: {
-    ...typography.bodyStrong,
-    fontSize: 18,
+    ...typography.heading,
+    fontFamily: fonts.display,
     color: semantic.textPrimary,
     marginTop: spacing.xs,
   },
@@ -129,6 +129,7 @@ const styles = StyleSheet.create({
     backgroundColor: semantic.accentYellow,
     borderWidth: borderWidth.default,
     borderColor: semantic.borderPrimary,
+    ...shadow.small,
   },
   primaryBtnText: { ...typography.bodyStrong, fontSize: 16, color: semantic.textPrimary },
   secondaryBtn: {
@@ -138,7 +139,8 @@ const styles = StyleSheet.create({
     borderWidth: borderWidth.default,
     borderColor: semantic.borderPrimary,
     backgroundColor: semantic.bgSecondary,
+    ...shadow.small,
   },
   secondaryBtnText: { ...typography.bodyStrong, fontSize: 16, color: semantic.textPrimary },
-  pressed: { opacity: 0.88 },
+  btnPressed: { transform: [{ translateY: 2 }], shadowOffset: { width: 1, height: 1 } },
 });

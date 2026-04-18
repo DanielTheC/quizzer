@@ -9,7 +9,7 @@ import {
 import { setStoredRole } from "../lib/roleStorage";
 import type { QuizzerRole } from "../lib/roleStorage";
 import { ScreenTitle } from "../components/ScreenTitle";
-import { semantic, spacing, radius, borderWidth, shadow } from "../theme";
+import { fonts, semantic, spacing, radius, borderWidth, shadow, typography } from "../theme";
 
 type Props = {
   onSelect: (role: QuizzerRole) => void;
@@ -34,7 +34,7 @@ export default function RoleSelectScreen({ onSelect }: Props) {
         </View>
 
         <Pressable
-          style={({ pressed }) => [styles.primaryButton, pressed && { transform: [{ translateY: 2 }], shadowOffset: { width: 1, height: 1 } }]}
+          style={({ pressed }) => [styles.primaryButton, pressed && styles.btnPressed]}
           onPress={() => choose("player")}
         >
           <Text style={styles.primaryButtonText}>I'm a Player</Text>
@@ -66,7 +66,7 @@ const styles = StyleSheet.create({
   topStripeBlack: { flex: 1, backgroundColor: semantic.bgInverse },
   topStripeYellow: { width: 100, backgroundColor: semantic.accentYellow },
   content: { flex: 1, padding: spacing.xxl, justifyContent: "center", alignItems: "stretch" },
-  heroTitleWrap: { marginBottom: 40 },
+  heroTitleWrap: { marginBottom: spacing.xxl + spacing.lg },
   primaryButton: {
     backgroundColor: semantic.accentYellow,
     paddingVertical: spacing.xxl,
@@ -78,7 +78,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     ...shadow.medium,
   },
-  primaryButtonText: { color: semantic.textPrimary, fontSize: 20, fontWeight: "800" },
+  primaryButtonText: { color: semantic.textPrimary, fontSize: 20, fontFamily: fonts.display, fontWeight: "400" },
   primaryButtonSubtitle: { color: semantic.textSecondary, fontSize: 15, marginTop: 6 },
   secondaryButton: {
     backgroundColor: semantic.bgPrimary,
@@ -87,15 +87,14 @@ const styles = StyleSheet.create({
     borderRadius: radius.xl,
     borderWidth: borderWidth.default,
     borderColor: semantic.borderPrimary,
-    marginBottom: 32,
+    marginBottom: spacing.xxl + spacing.sm,
     alignItems: "center",
     ...shadow.small,
   },
-  secondaryButtonText: { color: semantic.textPrimary, fontSize: 20, fontWeight: "700" },
+  secondaryButtonText: { color: semantic.textPrimary, fontSize: 20, fontFamily: fonts.display, fontWeight: "400" },
   secondaryButtonSubtitle: { color: semantic.textSecondary, fontSize: 15, marginTop: 6 },
   hostHint: {
-    fontSize: 14,
-    fontWeight: "500",
+    ...typography.caption,
     color: semantic.textSecondary,
     textAlign: "center",
     lineHeight: 20,
@@ -103,5 +102,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
   },
   hostHintEm: { fontWeight: "700", color: semantic.textPrimary },
-  note: { fontSize: 14, fontWeight: "500", color: semantic.textSecondary, textAlign: "center" },
+  note: { ...typography.caption, color: semantic.textSecondary, textAlign: "center" },
+  btnPressed: { transform: [{ translateY: 2 }], shadowOffset: { width: 1, height: 1 } },
 });

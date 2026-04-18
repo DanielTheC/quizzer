@@ -20,14 +20,14 @@ export function PortalSignInForm() {
   return (
     <section className="py-16">
       <Container>
-        <div className="mx-auto max-w-md border-[var(--border-thick)] border-quizzer-black bg-quizzer-white p-8 shadow-[var(--shadow-card)]">
+        <div className="mx-auto max-w-md border-[3px] border-quizzer-black bg-quizzer-white p-8 shadow-[var(--shadow-card)]">
           <h1 className="font-heading text-2xl uppercase text-quizzer-black">Publican sign in</h1>
           <p className="mt-2 text-sm text-quizzer-black/75">
             Sign in with the email and password for your Quizzer account.
           </p>
 
           {accessError ? (
-            <p className="mt-4 rounded-[var(--radius-button)] border-2 border-quizzer-black bg-amber-50 px-3 py-2 text-sm text-amber-950">
+            <p className="mt-4 rounded-[var(--radius-button)] border-[3px] border-quizzer-orange bg-quizzer-cream px-3 py-2 text-sm text-quizzer-orange">
               This account doesn’t have publican portal access. If you were invited, make sure you’re using the same email
               as your invitation, or contact Quizzer support.
             </p>
@@ -76,7 +76,7 @@ export function PortalSignInForm() {
                 autoComplete="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="mt-1 w-full rounded-[var(--radius-button)] border-2 border-quizzer-black bg-quizzer-white px-3 py-2 text-quizzer-black outline-none focus:ring-2 focus:ring-quizzer-yellow"
+                className="mt-1 w-full rounded-[var(--radius-button)] border-[3px] border-quizzer-black bg-quizzer-white px-3 py-2 text-quizzer-black outline-none focus:ring-2 focus:ring-quizzer-yellow"
               />
             </div>
             <div>
@@ -90,14 +90,14 @@ export function PortalSignInForm() {
                 autoComplete="current-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="mt-1 w-full rounded-[var(--radius-button)] border-2 border-quizzer-black bg-quizzer-white px-3 py-2 text-quizzer-black outline-none focus:ring-2 focus:ring-quizzer-yellow"
+                className="mt-1 w-full rounded-[var(--radius-button)] border-[3px] border-quizzer-black bg-quizzer-white px-3 py-2 text-quizzer-black outline-none focus:ring-2 focus:ring-quizzer-yellow"
               />
             </div>
             {error ? <p className="text-sm text-quizzer-red">{error}</p> : null}
             <button
               type="submit"
               disabled={pending}
-              className="w-full rounded-[var(--radius-button)] border-2 border-quizzer-black bg-quizzer-yellow px-4 py-3 text-sm font-semibold text-quizzer-black shadow-[var(--shadow-button)] transition hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[var(--shadow-button-hover)] disabled:opacity-50"
+              className="w-full rounded-[var(--radius-button)] border-[3px] border-quizzer-black bg-quizzer-yellow px-4 py-3 text-sm font-semibold text-quizzer-black shadow-[var(--shadow-button)] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[var(--shadow-button-hover)] disabled:opacity-50"
             >
               {pending ? "Signing in…" : "Sign in"}
             </button>

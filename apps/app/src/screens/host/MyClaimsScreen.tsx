@@ -86,8 +86,7 @@ function buildStyles(semantic: SemanticTheme) {
     loadingText: { marginTop: spacing.md, ...typography.body, color: semantic.textSecondary },
     listContent: { paddingHorizontal: spacing.lg, paddingBottom: spacing.xxl * 2 },
     sectionHeader: {
-      ...typography.labelUppercase,
-      fontSize: 12,
+      ...typography.label,
       color: semantic.textSecondary,
       marginTop: spacing.lg,
       marginBottom: spacing.sm,
