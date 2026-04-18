@@ -1,8 +1,9 @@
 import { withSentryConfig } from "@sentry/nextjs";
 import type { NextConfig } from "next";
 
+// Next.js requires 'unsafe-inline' for hydration scripts until nonce-based CSP is configured
 const cspGlobal =
-  "default-src 'self'; script-src 'self' https://cdn.sanity.io; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://cdn.sanity.io https://*.supabase.co; connect-src 'self' https://*.supabase.co https://api.sanity.io wss://*.supabase.co; frame-ancestors 'none';";
+  "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.sanity.io; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://cdn.sanity.io https://*.supabase.co; connect-src 'self' https://*.supabase.co https://api.sanity.io wss://*.supabase.co; frame-ancestors 'none';";
 
 const cspStudio =
   "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.sanity.io; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://cdn.sanity.io https://*.supabase.co; connect-src 'self' https://*.supabase.co https://api.sanity.io wss://*.supabase.co; frame-ancestors 'none';";
