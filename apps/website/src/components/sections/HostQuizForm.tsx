@@ -4,7 +4,6 @@ import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
-import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
 
 export function HostQuizForm() {
   const [sent, setSent] = useState(false);
@@ -16,14 +15,6 @@ export function HostQuizForm() {
     setSubmitError(null);
     setSubmitting(true);
     try {
-      let supabase;
-      try {
-        supabase = createBrowserSupabaseClient();
-      } catch {
-        setSubmitError("This form is not available right now. Please try again later.");
-        return;
-      }
-
       const form = e.currentTarget;
       const fd = new FormData(form);
       const venue = String(fd.get("venue") ?? "").trim();
@@ -44,21 +35,38 @@ export function HostQuizForm() {
         message || "—",
       ].join("\n");
 
-      const { error } = await supabase.from("host_applications").insert({
-        email,
-        full_name: venue,
-        phone: "Not provided",
-        experience_notes,
-      });
+      let res: Response;
+      try {
+        res = await fetch("/api/host-enquiry", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            full_name: venue,
+            email,
+            phone: "Not provided",
+            experience_notes,
+          }),
+        });
+      } catch {
+        setSubmitError("Could not send your message. Please try again.");
+        return;
+      }
 
-      if (error) {
-        if (error.code === "23505") {
+      if (!res.ok) {
+        if (res.status === 429) {
           setSubmitError(
             "You already have a pending enquiry with this email. We'll be in touch soon.",
           );
           return;
         }
-        setSubmitError(error.message || "Could not send your message. Please try again.");
+        let message = "Could not send your message. Please try again.";
+        try {
+          const data = (await res.json()) as { error?: string };
+          if (data?.error) message = data.error;
+        } catch {
+          /* ignore */
+        }
+        setSubmitError(message);
         return;
       }
 

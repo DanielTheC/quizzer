@@ -9,7 +9,12 @@ import { Container } from "@/components/ui/Container";
 export function PortalSignInForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const nextPath = searchParams.get("next")?.trim() || "/portal";
+  function safeNextPath(raw: string | null): string {
+    const t = raw?.trim() ?? "";
+    if (t.startsWith("/portal") && !t.startsWith("//")) return t;
+    return "/portal";
+  }
+  const nextPath = safeNextPath(searchParams.get("next"));
   const accessError = searchParams.get("error") === "no-access";
 
   const [email, setEmail] = useState("");
@@ -56,7 +61,7 @@ export function PortalSignInForm() {
                     setPending(false);
                     return;
                   }
-                  router.push(nextPath.startsWith("/") ? nextPath : "/portal");
+                  router.push(nextPath);
                   router.refresh();
                 } catch {
                   setError("Something went wrong. Try again.");
