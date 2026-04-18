@@ -22,6 +22,72 @@
 
   --font-heading: var(--font-anton), sans-serif;
   --font-body: var(--font-inter), sans-serif;
+
+  /* Neutrals */
+  --color-quizzer-grey-100: #F5F5F5;
+  --color-quizzer-grey-200: #EAEAEA;
+  --color-quizzer-grey-400: #BDBDBD;
+  --color-quizzer-grey-700: #4F4F4F;
+
+  /* Quiz Detail field tints */
+  --qd-hero-bg: #FFE8B3;
+  --qd-location-bg: #CFE6FF;
+  --qd-location-ink: #1E40AF;
+  --qd-info-bg: #FFDCEE;
+  --qd-info-ink: #9D174D;
+  --qd-turnup-bg: #C5F0DC;
+  --qd-turnup-ink: #047857;
+
+  /* Semantic aliases */
+  --fg1: var(--color-quizzer-black);
+  --fg2: var(--color-quizzer-grey-700);
+  --fg-inverse: var(--color-quizzer-white);
+  --bg1: var(--color-quizzer-white);
+  --bg2: var(--color-quizzer-cream);
+  --bg-accent: var(--color-quizzer-yellow);
+  --bg-inverse: var(--color-quizzer-black);
+  --border: var(--color-quizzer-black);
+  --accent-primary: var(--color-quizzer-yellow);
+  --accent-secondary: var(--color-quizzer-pink);
+  --success: var(--color-quizzer-green);
+  --warning: var(--color-quizzer-orange);
+  --danger: var(--color-quizzer-red);
+
+  /* Borders */
+  --border-thin: 1px solid var(--color-quizzer-black);
+
+  /* Extended shadow scale */
+  --shadow-sm: 3px 3px 0 #000;
+  --shadow-md: 5px 5px 0 #000;
+  --shadow-lg: 8px 8px 0 #000;
+
+  /* Extended radius scale */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 18px;
+  --radius-brutal: 22px;
+  --radius-pill: 100px;
+
+  /* Spacing scale (matches apps/app/src/theme.ts) */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 12px;
+  --space-lg: 16px;
+  --space-xl: 20px;
+  --space-2xl: 24px;
+
+  /* Type scale */
+  --fs-display-xl: clamp(2.5rem, 5vw, 4rem);
+  --fs-display-lg: clamp(2rem, 4vw, 3rem);
+  --fs-h1: 2.25rem;
+  --fs-h2: 1.875rem;
+  --fs-h3: 1.25rem;
+  --fs-h4: 1.125rem;
+  --fs-body: 1rem;
+  --fs-body-sm: 0.875rem;
+  --fs-caption: 0.75rem;
+  --fs-micro: 0.6875rem;
 }
 
 @theme inline {
@@ -50,10 +116,39 @@
   /* Fonts (set in layout via next/font) */
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
   --font-heading: var(--font-anton), ui-sans-serif, system-ui, sans-serif;
+
+  /* Extended shadows */
+  --shadow-sm: 3px 3px 0 #000000;
+  --shadow-md: 5px 5px 0 #000000;
+  --shadow-lg: 8px 8px 0 #000000;
+
+  /* Extended radius */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 18px;
+  --radius-brutal: 22px;
+  --radius-pill: 100px;
+
+  /* Spacing */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 12px;
+  --space-lg: 16px;
+  --space-xl: 20px;
+  --space-2xl: 24px;
 }
 
 .font-heading {
   font-family: var(--font-heading);
+}
+
+.label-upper {
+  font-family: var(--font-body);
+  font-size: var(--fs-micro);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
 }
 
 body {
@@ -63,10 +158,11 @@ body {
 }
 
 /* Utility for pressable hover */
-.hover-press:hover {
-  transform: translate(2px, 2px);
+.hover-press {
+  transition: transform 150ms, box-shadow 150ms;
 }
 .hover-press:hover {
+  transform: translate(2px, 2px);
   box-shadow: var(--shadow-card-hover);
 }
 
