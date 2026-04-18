@@ -27,6 +27,10 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     ...base,
     metadataBase: new URL("https://quizzerapp.co.uk"),
+    icons: {
+      icon: "/favicon.svg",
+      apple: "/apple-touch-icon.svg",
+    },
     alternates: {
       ...(base.alternates ?? {}),
       canonical: "/",

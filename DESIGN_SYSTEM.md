@@ -259,6 +259,23 @@ Photos are real venue interiors — warm, pub-lit, amber/low-light, no filters. 
 
 ---
 
+## Logo assets
+
+All logo variants live in `apps/website/public/brand/`. The Q mark is a magnifying glass — circle + inner ring + angled handle.
+
+| File | Description | Use |
+|---|---|---|
+| `quizzer-wordmark.svg` | "QUIZZER" in Anton with pink underline bar (1200×400) | Website header, marketing, social banners |
+| `quizzer-app-icon-ios.svg` | Yellow rounded square with Q mark (1024×1024) | iOS App Store icon, Android adaptive icon |
+| `quizzer-mark-yellow.svg` | Black Q mark on yellow background (1024×1024) | Default brand mark, social avatar |
+| `quizzer-mark-black.svg` | Yellow Q mark on black background (1024×1024) | Dark backgrounds, dark mode contexts |
+| `quizzer-mark-mono-black.svg` | Black Q mark on white background (1024×1024) | Print, monochrome contexts |
+| `quizzer-mark-mono-white.svg` | White Q mark on black background (1024×1024) | Reversed monochrome, dark print |
+
+Favicons (`/favicon.svg`, `/apple-touch-icon.svg`) are separate smaller versions in `public/`.
+
+---
+
 ## Source files
 
 | File | Platform | Purpose |
