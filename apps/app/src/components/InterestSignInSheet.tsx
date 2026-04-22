@@ -2,17 +2,17 @@ import React, { useCallback } from "react";
 import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth } from "../context/AuthContext";
-import { useSavedQuizzes } from "../context/SavedQuizzesContext";
+import { useInterestedOccurrences } from "../context/InterestedOccurrencesContext";
 import { borderWidth, fonts, radius, semantic, shadow, spacing, typography } from "../theme";
 
 /**
- * One gentle nudge per "unsigned save period" (see interest_nudge_shown in SavedQuizzesContext).
- * Sign in: sign out so RootNavigator shows Auth (local saves stay in AsyncStorage + provider state).
+ * One gentle nudge per install (see interest_nudge_shown in InterestedOccurrencesContext).
+ * Sign in: sign out so RootNavigator shows Auth (local state remains in AsyncStorage).
  */
 export function InterestSignInSheet() {
   const insets = useSafeAreaInsets();
   const { signOut } = useAuth();
-  const { interestSignInSheetVisible, dismissInterestSignInSheet } = useSavedQuizzes();
+  const { interestSignInSheetVisible, dismissInterestSignInSheet } = useInterestedOccurrences();
 
   const onMaybeLater = useCallback(() => {
     dismissInterestSignInSheet();
