@@ -292,6 +292,17 @@ export default function HostDashboardScreen() {
           </Pressable>
         </View>
 
+        <View style={styles.promoRow}>
+          <Pressable
+            onPress={() => navigation.navigate("OpenNights")}
+            style={({ pressed }) => [styles.promoBtnSecondary, pressed && styles.btnPressed]}
+            accessibilityRole="button"
+            accessibilityLabel="Open nights in series you cover"
+          >
+            <Text style={styles.promoBtnSecondaryText}>Open nights</Text>
+          </Pressable>
+        </View>
+
         <View style={styles.summaryBar}>
           <View style={styles.summaryCol}>
             <Text style={styles.summaryValue}>

@@ -31,6 +31,7 @@ import HostSetupScreen from "../screens/host/HostSetupScreen";
 import HostOnboardingScreen from "../screens/host/HostOnboardingScreen";
 import HostDashboardScreen from "../screens/host/HostDashboardScreen";
 import AvailableQuizzesScreen from "../screens/host/AvailableQuizzesScreen";
+import OpenNightsScreen from "../screens/host/OpenNightsScreen";
 import MyClaimsScreen from "../screens/host/MyClaimsScreen";
 import HostProfileScreen from "../screens/host/HostProfileScreen";
 import HostApplyScreen from "../screens/host/HostApplyScreen";
@@ -62,6 +63,7 @@ export type HostStackParamList = {
   HostApply: undefined;
   HostDashboard: undefined;
   AvailableQuizzes: undefined;
+  OpenNights: undefined;
   MyClaims: undefined;
   HostProfile: undefined;
   RunQuiz: { mode: "new" | "resume"; packId?: string; venueId?: string };
@@ -332,6 +334,8 @@ const HostDashboardScreenSafe =
   typeof HostDashboardScreen === "function" ? HostDashboardScreen : () => <PlaceholderScreen name="HostDashboard" />;
 const AvailableQuizzesScreenSafe =
   typeof AvailableQuizzesScreen === "function" ? AvailableQuizzesScreen : () => <PlaceholderScreen name="AvailableQuizzes" />;
+const OpenNightsScreenSafe =
+  typeof OpenNightsScreen === "function" ? OpenNightsScreen : () => <PlaceholderScreen name="OpenNights" />;
 const MyClaimsScreenSafe =
   typeof MyClaimsScreen === "function" ? MyClaimsScreen : () => <PlaceholderScreen name="MyClaims" />;
 const HostProfileScreenSafe =
@@ -429,6 +433,7 @@ function HostStackScreen() {
         component={AvailableQuizzesScreenSafe}
         options={{ headerTitle: "Available Quizzes" }}
       />
+      <HostStack.Screen name="OpenNights" component={OpenNightsScreenSafe} options={{ headerTitle: "Open Nights" }} />
       <HostStack.Screen name="MyClaims" component={MyClaimsScreenSafe} options={{ headerTitle: "My Claims" }} />
       <HostStack.Screen name="HostProfile" component={HostProfileScreenSafe} options={{ headerTitle: "Profile" }} />
       <HostStack.Screen name="RunQuiz" component={RunQuizScreenSafe} options={{ headerTitle: "" }} />

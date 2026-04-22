@@ -51,16 +51,6 @@ function todayUkIso(): string {
   return `${y}-${m}-${d}`;
 }
 
-function isoDatePlusDays(iso: string, days: number): string {
-  const [y, m, d] = iso.split("-").map((s) => parseInt(s, 10));
-  const dt = new Date(Date.UTC(y, m - 1, d));
-  dt.setUTCDate(dt.getUTCDate() + days);
-  const yy = dt.getUTCFullYear();
-  const mm = String(dt.getUTCMonth() + 1).padStart(2, "0");
-  const dd = String(dt.getUTCDate()).padStart(2, "0");
-  return `${yy}-${mm}-${dd}`;
-}
-
 function formatOccurrenceDate(iso: string): string {
   const [y, m, d] = iso.split("-").map((s) => parseInt(s, 10));
   if (!Number.isFinite(y) || !Number.isFinite(m) || !Number.isFinite(d)) return iso;
@@ -75,11 +65,12 @@ type VenueEmbed = {
 } | null;
 
 type QuizEventEmbed = {
+  id: string;
   day_of_week: number;
   start_time: string;
   entry_fee_pence: number | null;
   host_fee_pence: number | null;
-  is_active: boolean;
+  venue_id: string | null;
   venues: VenueEmbed;
 } | null;
 
@@ -93,7 +84,6 @@ type OccurrenceRow = {
 type ClaimRpcResponse = {
   ok: boolean;
   code?: string;
-  conflicting_quiz_event_id?: string;
 };
 
 const CLAIM_ERROR_MESSAGES: Record<string, string> = {
@@ -102,8 +92,6 @@ const CLAIM_ERROR_MESSAGES: Record<string, string> = {
   not_allowlisted: "You're not on the host allowlist for this venue.",
   already_claimed: "Another host got there first.",
 };
-
-const COVER_INTEREST_ERROR = "Couldn't update series interest. Try again.";
 
 function normalizeQuizEvent(raw: unknown): QuizEventEmbed {
   if (raw == null) return null;
@@ -177,39 +165,17 @@ function buildStyles(semantic: SemanticTheme) {
     claimBtnPressed: { transform: [{ translateY: 2 }], shadowOffset: { width: 1, height: 1 } },
     claimBtnText: { ...typography.bodyStrong, fontSize: 16, color: semantic.textPrimary },
     claimBtnDisabled: { opacity: 0.5 },
-    actionsRow: {
-      marginTop: spacing.md,
-      flexDirection: "row",
-      flexWrap: "wrap",
-      alignItems: "center",
-      gap: spacing.sm,
-    },
-    coverBtn: {
-      paddingVertical: spacing.sm,
-      paddingHorizontal: spacing.md,
-      borderWidth: borderWidth.default,
-      borderColor: semantic.borderPrimary,
-      borderRadius: radius.pill,
-      backgroundColor: semantic.bgSecondary,
-      flexDirection: "row",
-      alignItems: "center",
-    },
-    coverBtnOn: { backgroundColor: semantic.accentGreen },
-    coverBtnText: { ...typography.captionStrong, fontSize: 12, color: semantic.textPrimary },
-    coverBtnTextOn: { color: semantic.textInverse },
-    coverBtnIcon: { marginRight: spacing.xs },
     emptyBox: { alignItems: "center", paddingVertical: spacing.xxl * 2, paddingHorizontal: spacing.lg },
     emptyTitle: { marginTop: spacing.lg, ...typography.heading, textAlign: "center", color: semantic.textPrimary },
     emptySub: { marginTop: spacing.sm, ...typography.body, textAlign: "center", color: semantic.textSecondary },
   });
 }
 
-export default function AvailableQuizzesScreen() {
+export default function OpenNightsScreen() {
   const { session } = useAuth();
   const { semantic } = useAppTheme();
   const styles = useMemo(() => buildStyles(semantic), [semantic]);
 
-  const [defaultFeePence, setDefaultFeePence] = useState<number>(0);
   const [rows, setRows] = useState<OccurrenceRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -217,17 +183,13 @@ export default function AvailableQuizzesScreen() {
   const [successBanner, setSuccessBanner] = useState<string | null>(null);
   const [claimErrorBanner, setClaimErrorBanner] = useState<string | null>(null);
   const [claimingKey, setClaimingKey] = useState<string | null>(null);
-  const [coveredSeriesIds, setCoveredSeriesIds] = useState<Set<string>>(() => new Set());
-  const [coverBusyId, setCoverBusyId] = useState<string | null>(null);
 
   const user = session?.user ?? null;
-  const email = user?.email ?? null;
 
   const load = useCallback(async () => {
-    if (!email || !user?.id) {
-      setLoadError("You need a signed-in account with an email to view available quizzes.");
+    if (!user?.id) {
+      setLoadError("You need a signed-in account to view open nights.");
       setRows([]);
-      setDefaultFeePence(0);
       return;
     }
 
@@ -235,50 +197,55 @@ export default function AvailableQuizzesScreen() {
     setClaimErrorBanner(null);
 
     const fromIso = todayUkIso();
-    const toIso = isoDatePlusDays(fromIso, 21);
 
-    const [allowRes, occRes, claimsRes, interestsRes] = await Promise.all([
-      supabase.from("host_allowlisted_emails").select("default_fee_pence").eq("email", email).maybeSingle(),
-      supabase
-        .from("quiz_event_occurrences")
-        .select(
-          "id, quiz_event_id, occurrence_date, quiz_events!inner(day_of_week, start_time, entry_fee_pence, host_fee_pence, is_active, venues(name, postcode, address))"
-        )
-        .is("cancelled_at", null)
-        .gte("occurrence_date", fromIso)
-        .lte("occurrence_date", toIso)
-        .eq("quiz_events.is_active", true)
-        .order("occurrence_date", { ascending: true }),
-      supabase
-        .from("quiz_occurrence_claims")
-        .select("quiz_event_id, occurrence_date")
-        .is("released_at", null)
-        .gte("occurrence_date", fromIso),
-      supabase
-        .from("host_series_interests")
-        .select("quiz_event_id")
-        .eq("host_user_id", user.id),
-    ]);
+    const interestsRes = await supabase
+      .from("host_series_interests")
+      .select("quiz_event_id")
+      .eq("host_user_id", user.id);
 
-    if (allowRes.error) {
-      captureSupabaseError("host.available.allowlisted_by_email", allowRes.error);
-      setLoadError(allowRes.error.message);
+    if (interestsRes.error) {
+      captureSupabaseError("host.open_nights.series_interests", interestsRes.error);
+      setLoadError(interestsRes.error.message);
       setRows([]);
       return;
     }
 
-    const feeRaw = allowRes.data?.default_fee_pence;
-    setDefaultFeePence(feeRaw != null && Number.isFinite(Number(feeRaw)) ? Number(feeRaw) : 0);
+    const seriesIds = (interestsRes.data ?? [])
+      .map((r: { quiz_event_id?: string | null }) => r.quiz_event_id)
+      .filter((id): id is string => typeof id === "string" && id.length > 0);
+
+    if (seriesIds.length === 0) {
+      setRows([]);
+      return;
+    }
+
+    const [occRes, claimsRes] = await Promise.all([
+      supabase
+        .from("quiz_event_occurrences")
+        .select(
+          "id, quiz_event_id, occurrence_date, quiz_events!inner(id, day_of_week, start_time, entry_fee_pence, host_fee_pence, venue_id, venues(name, postcode, address))"
+        )
+        .in("quiz_event_id", seriesIds)
+        .is("cancelled_at", null)
+        .gte("occurrence_date", fromIso)
+        .order("occurrence_date", { ascending: true }),
+      supabase
+        .from("quiz_occurrence_claims")
+        .select("quiz_event_id, occurrence_date")
+        .in("quiz_event_id", seriesIds)
+        .is("released_at", null)
+        .gte("occurrence_date", fromIso),
+    ]);
 
     if (occRes.error) {
-      captureSupabaseError("host.available.upcoming_occurrences", occRes.error);
+      captureSupabaseError("host.open_nights.occurrences", occRes.error);
       setLoadError(occRes.error.message);
       setRows([]);
       return;
     }
 
     if (claimsRes.error) {
-      captureSupabaseError("host.available.active_occurrence_claims", claimsRes.error);
+      captureSupabaseError("host.open_nights.active_claims", claimsRes.error);
       setLoadError(claimsRes.error.message);
       setRows([]);
       return;
@@ -299,16 +266,7 @@ export default function AvailableQuizzesScreen() {
       .filter((r) => !claimedKeys.has(`${r.quiz_event_id}|${r.occurrence_date}`));
 
     setRows(normalized);
-
-    if (interestsRes.error) {
-      captureSupabaseError("host.available.series_interests", interestsRes.error);
-    } else {
-      const ids = (interestsRes.data ?? [])
-        .map((r: { quiz_event_id?: string | null }) => r.quiz_event_id)
-        .filter((id): id is string => typeof id === "string" && id.length > 0);
-      setCoveredSeriesIds(new Set(ids));
-    }
-  }, [email, user?.id]);
+  }, [user?.id]);
 
   useEffect(() => {
     let cancelled = false;
@@ -330,7 +288,7 @@ export default function AvailableQuizzesScreen() {
 
   const onClaim = useCallback(
     async (quizEventId: string, occurrenceDate: string) => {
-      if (!user?.id || !email) return;
+      if (!user?.id) return;
       const key = `${quizEventId}|${occurrenceDate}`;
       setClaimErrorBanner(null);
       setSuccessBanner(null);
@@ -343,7 +301,7 @@ export default function AvailableQuizzesScreen() {
       setClaimingKey(null);
 
       if (error) {
-        captureSupabaseError("host.available.claim_occurrence_rpc", error, {
+        captureSupabaseError("host.open_nights.claim_occurrence_rpc", error, {
           quiz_event_id: quizEventId,
           occurrence_date: occurrenceDate,
         });
@@ -362,58 +320,13 @@ export default function AvailableQuizzesScreen() {
         return;
       }
 
-      setRows((prev) => prev.filter((r) => !(r.quiz_event_id === quizEventId && r.occurrence_date === occurrenceDate)));
+      setRows((prev) =>
+        prev.filter((r) => !(r.quiz_event_id === quizEventId && r.occurrence_date === occurrenceDate))
+      );
       setSuccessBanner(`Claimed ${formatOccurrenceDate(occurrenceDate)} — see My upcoming nights.`);
       await load();
     },
-    [email, user?.id, load]
-  );
-
-  const onToggleCover = useCallback(
-    async (quizEventId: string) => {
-      if (!user?.id) return;
-      setClaimErrorBanner(null);
-      setCoverBusyId(quizEventId);
-
-      const wasCovered = coveredSeriesIds.has(quizEventId);
-
-      setCoveredSeriesIds((prev) => {
-        const next = new Set(prev);
-        if (wasCovered) next.delete(quizEventId);
-        else next.add(quizEventId);
-        return next;
-      });
-
-      const op = wasCovered
-        ? supabase
-            .from("host_series_interests")
-            .delete()
-            .match({ host_user_id: user.id, quiz_event_id: quizEventId })
-        : supabase
-            .from("host_series_interests")
-            .upsert(
-              { host_user_id: user.id, quiz_event_id: quizEventId },
-              { onConflict: "host_user_id,quiz_event_id" }
-            );
-
-      const { error } = await op;
-      setCoverBusyId(null);
-
-      if (error) {
-        captureSupabaseError("host.available.toggle_series_interest", error, {
-          quiz_event_id: quizEventId,
-          was_covered: wasCovered,
-        });
-        setCoveredSeriesIds((prev) => {
-          const next = new Set(prev);
-          if (wasCovered) next.add(quizEventId);
-          else next.delete(quizEventId);
-          return next;
-        });
-        setClaimErrorBanner(COVER_INTEREST_ERROR);
-      }
-    },
-    [user?.id, coveredSeriesIds]
+    [user?.id, load]
   );
 
   const renderItem = useCallback(
@@ -428,15 +341,13 @@ export default function AvailableQuizzesScreen() {
         entryPence != null && Number.isFinite(Number(entryPence))
           ? `${formatPounds(Number(entryPence))} entry`
           : "Entry TBC";
-      const resolvedHostPence = (ev?.host_fee_pence ?? defaultFeePence) || 0;
+      const resolvedHostPence = ev?.host_fee_pence ?? 0;
       const payLabel =
         resolvedHostPence > 0 ? `${formatPounds(resolvedHostPence)} per session` : "Pay TBC";
       const dayTime =
         ev != null ? `${dayLabel(ev.day_of_week)} · ${formatTime(ev.start_time)}` : "Schedule TBC";
       const key = `${item.quiz_event_id}|${item.occurrence_date}`;
       const busy = claimingKey === key;
-      const isCovered = coveredSeriesIds.has(item.quiz_event_id);
-      const coverBusy = coverBusyId === item.quiz_event_id;
 
       return (
         <View style={styles.card}>
@@ -448,61 +359,32 @@ export default function AvailableQuizzesScreen() {
           <Text style={styles.dayTime}>{dayTime}</Text>
           <Text style={styles.feeLine}>{entryLabel}</Text>
           <Text style={styles.payLine}>Your pay: {payLabel}</Text>
-          <View style={styles.actionsRow}>
-            <Pressable
-              onPress={() => void onClaim(item.quiz_event_id, item.occurrence_date)}
-              disabled={busy}
-              style={({ pressed }) => [
-                styles.claimBtn,
-                pressed && styles.claimBtnPressed,
-                busy && styles.claimBtnDisabled,
-              ]}
-              accessibilityRole="button"
-              accessibilityLabel={`Claim quiz at ${venueName} on ${formatOccurrenceDate(item.occurrence_date)}`}
-            >
-              <Text style={styles.claimBtnText}>{busy ? "Claiming…" : "Claim this night"}</Text>
-            </Pressable>
-            <Pressable
-              onPress={() => void onToggleCover(item.quiz_event_id)}
-              disabled={coverBusy}
-              style={({ pressed }) => [
-                styles.coverBtn,
-                isCovered && styles.coverBtnOn,
-                pressed && styles.claimBtnPressed,
-                coverBusy && styles.claimBtnDisabled,
-              ]}
-              accessibilityRole="switch"
-              accessibilityState={{ checked: isCovered, busy: coverBusy }}
-              accessibilityLabel={
-                isCovered
-                  ? `Stop covering the series at ${venueName}`
-                  : `Cover the series at ${venueName}`
-              }
-            >
-              <MaterialCommunityIcons
-                name={isCovered ? "check-circle" : "flag-outline"}
-                size={14}
-                color={isCovered ? semantic.textInverse : semantic.textPrimary}
-                style={styles.coverBtnIcon}
-              />
-              <Text style={[styles.coverBtnText, isCovered && styles.coverBtnTextOn]}>
-                {isCovered ? "Covering this quiz" : "Cover this quiz"}
-              </Text>
-            </Pressable>
-          </View>
+          <Pressable
+            onPress={() => void onClaim(item.quiz_event_id, item.occurrence_date)}
+            disabled={busy}
+            style={({ pressed }) => [
+              styles.claimBtn,
+              pressed && styles.claimBtnPressed,
+              busy && styles.claimBtnDisabled,
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel={`Claim quiz at ${venueName} on ${formatOccurrenceDate(item.occurrence_date)}`}
+          >
+            <Text style={styles.claimBtnText}>{busy ? "Claiming…" : "Claim"}</Text>
+          </Pressable>
         </View>
       );
     },
-    [styles, semantic, defaultFeePence, claimingKey, onClaim, coveredSeriesIds, coverBusyId, onToggleCover]
+    [styles, claimingKey, onClaim]
   );
 
-  if (!email) {
+  if (!user?.id) {
     return (
       <SafeAreaView style={styles.container} edges={["bottom", "left", "right"]}>
         <View style={styles.center}>
-          <MaterialCommunityIcons name="email-alert-outline" size={48} color={colors.grey700} />
-          <Text style={styles.emptyTitle}>Email required</Text>
-          <Text style={styles.emptySub}>Available quizzes use your account email. Sign in with an email-based method.</Text>
+          <MaterialCommunityIcons name="account-alert-outline" size={48} color={colors.grey700} />
+          <Text style={styles.emptyTitle}>Sign in required</Text>
+          <Text style={styles.emptySub}>Sign in to see nights from series you cover.</Text>
         </View>
       </SafeAreaView>
     );
@@ -513,7 +395,7 @@ export default function AvailableQuizzesScreen() {
       <SafeAreaView style={styles.container} edges={["bottom", "left", "right"]}>
         <View style={styles.center}>
           <ActivityIndicator size="large" color={semantic.accentYellow} />
-          <Text style={styles.loadingText}>Loading quizzes…</Text>
+          <Text style={styles.loadingText}>Loading open nights…</Text>
         </View>
       </SafeAreaView>
     );
@@ -552,9 +434,11 @@ export default function AvailableQuizzesScreen() {
         }
         ListEmptyComponent={
           <View style={styles.emptyBox}>
-            <MaterialCommunityIcons name="calendar-remove-outline" size={56} color={semantic.textSecondary} />
-            <Text style={styles.emptyTitle}>No upcoming nights to claim right now.</Text>
-            <Text style={styles.emptySub}>Pull to refresh once operators schedule more occurrences.</Text>
+            <MaterialCommunityIcons name="flag-outline" size={56} color={semantic.textSecondary} />
+            <Text style={styles.emptyTitle}>No open nights.</Text>
+            <Text style={styles.emptySub}>
+              Flag a series with "Cover this quiz" on Available Quizzes to see its open nights here.
+            </Text>
           </View>
         }
       />
