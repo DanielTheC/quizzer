@@ -259,24 +259,6 @@ function createQuizDetailStyles(semantic: SemanticTheme, detail: DetailScreenThe
       borderBottomColor: isDark ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.12)",
     },
     ticketBody: { padding: spacing.lg },
-    cancelBanner: {
-      flexDirection: "row",
-      alignItems: "flex-start",
-      padding: spacing.md,
-      marginBottom: spacing.md,
-      borderRadius: radius.medium,
-      borderWidth: borderWidth.default,
-      borderColor: semantic.danger,
-      backgroundColor: isDark ? "rgba(248, 113, 113, 0.14)" : "rgba(220, 38, 38, 0.09)",
-      gap: spacing.sm,
-    },
-    cancelBannerText: {
-      flex: 1,
-      ...typography.body,
-      fontSize: 14,
-      color: semantic.textPrimary,
-      lineHeight: 22,
-    },
     ticketHeaderRow: {
       flexDirection: "row",
       alignItems: "center",
@@ -861,14 +843,6 @@ export default function QuizDetailScreen() {
           <Animated.View entering={ZoomIn.springify().damping(16).mass(0.8)} style={styles.ticketCard}>
             <View style={styles.ticketStripe} />
             <View style={styles.ticketBody}>
-              {quiz.host_cancelled_at ? (
-                <View style={styles.cancelBanner}>
-                  <MaterialCommunityIcons name="alert-circle-outline" size={22} color={semantic.danger} style={{ marginTop: 1 }} />
-                  <Text style={styles.cancelBannerText}>
-                    This week’s quiz is cancelled. Check with the venue before you travel.
-                  </Text>
-                </View>
-              ) : null}
               <View style={styles.ticketHeaderRow}>
                 <MaterialCommunityIcons
                   name="glass-mug-variant"

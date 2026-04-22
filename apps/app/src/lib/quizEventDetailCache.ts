@@ -10,8 +10,6 @@ export type QuizEventDetail = {
   fee_basis: string;
   prize: string;
   turn_up_guidance: string | null;
-  /** ISO timestamp when host marked quiz cancelled; players see a notice. */
-  host_cancelled_at: string | null;
   venues: {
     name: string;
     address: string;
@@ -35,7 +33,6 @@ const QUIZ_EVENT_DETAIL_SELECT = `
           fee_basis,
           prize,
           turn_up_guidance,
-          host_cancelled_at,
           venues (
             name,
             address,

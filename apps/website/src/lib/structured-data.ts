@@ -56,9 +56,6 @@ function entryFeePounds(entryFee: string): string | null {
 }
 
 export function buildQuizEventJsonLd(quiz: QuizDetail | Quiz, quizEventId: string): object {
-  const isDetail = "whatToExpect" in quiz;
-  const isCancelled = isDetail && !!(quiz as QuizDetail).hostCancelledAt;
-
   // Only QuizDetail has the raw day_of_week integer — Quiz has the string name.
   // We need day_of_week for schema and next occurrence; fall back via DAY_NAMES lookup.
   // Since Quiz.day is a formatted string like "Monday", map it back.
@@ -122,9 +119,7 @@ export function buildQuizEventJsonLd(quiz: QuizDetail | Quiz, quizEventId: strin
     url: pageUrl,
     startDate: nextStart,
     endDate: nextEnd,
-    eventStatus: isCancelled
-      ? "https://schema.org/EventCancelled"
-      : "https://schema.org/EventScheduled",
+    eventStatus: "https://schema.org/EventScheduled",
     eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
     isAccessibleForFree: quiz.entryFee === "Free",
     location,

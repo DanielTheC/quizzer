@@ -71,7 +71,6 @@ type QuizRow = {
   start_time: string;
   entry_fee_pence: number;
   prize: string;
-  host_cancelled_at: string | null;
   venues: { name: string } | null;
 };
 
@@ -94,11 +93,10 @@ export async function scheduleTodaysQuizNotifications(
   const today = new Date().getDay(); // 0 = Sun, 6 = Sat
   const { data, error } = await supabase
     .from("quiz_events")
-    .select("id, day_of_week, start_time, entry_fee_pence, prize, host_cancelled_at, venues ( name )")
+    .select("id, day_of_week, start_time, entry_fee_pence, prize, venues ( name )")
     .in("id", savedQuizIds)
     .eq("is_active", true)
-    .eq("day_of_week", today)
-    .is("host_cancelled_at", null);
+    .eq("day_of_week", today);
 
   if (error) {
     captureSupabaseError("notifications.saved_today_events", error);
@@ -107,6 +105,23 @@ export async function scheduleTodaysQuizNotifications(
   if (!data?.length) return;
 
   let events = data as unknown as QuizRow[];
+
+  // Per-occurrence cancellation source of truth lives in quiz_event_occurrences.
+  const todayIso = new Date().toLocaleDateString("en-CA", { timeZone: "Europe/London" });
+  const { data: feedRows, error: feedError } = await supabase.rpc("get_upcoming_occurrences_feed", {
+    p_from: todayIso,
+    p_to: todayIso,
+  });
+  if (feedError) {
+    captureSupabaseError("notifications.today_occurrences_feed", feedError);
+  } else {
+    const cancelledEventIds = new Set(
+      ((feedRows ?? []) as Array<{ quiz_event_id?: string; cancelled?: boolean }>).flatMap((r) =>
+        r.cancelled && typeof r.quiz_event_id === "string" ? [r.quiz_event_id] : []
+      )
+    );
+    events = events.filter((e) => !cancelledEventIds.has(e.id));
+  }
 
   if (
     options.onlyWithinMiles != null &&

@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -37,7 +36,6 @@ type HostDashboardRow = {
   start_time: string;
   interest_count: number;
   host_capacity_note: string | null;
-  host_cancelled_at: string | null;
 };
 
 type DashboardTab = "mine" | "all";
@@ -189,9 +187,6 @@ export default function HostDashboardScreen() {
       const { data, error } = await supabase.rpc("host_patch_quiz_event_host_fields", {
         p_quiz_event_id: quizEventId,
         p_capacity_note: text.trim() || null,
-        p_update_note: true,
-        p_cancelled_at: null,
-        p_update_cancellation: false,
       });
       setSavingId(null);
       if (error) {
@@ -208,45 +203,6 @@ export default function HostDashboardScreen() {
       );
     },
     [noteDrafts]
-  );
-
-  const setCancelled = useCallback(
-    async (quizEventId: string, cancelled: boolean) => {
-      setSavingId(quizEventId);
-      const { data, error } = await supabase.rpc("host_patch_quiz_event_host_fields", {
-        p_quiz_event_id: quizEventId,
-        p_capacity_note: null,
-        p_update_note: false,
-        p_cancelled_at: cancelled ? new Date().toISOString() : null,
-        p_update_cancellation: true,
-      });
-      setSavingId(null);
-      if (error) {
-        captureSupabaseError("host.dashboard_patch_cancelled_rpc", error, { quiz_event_id: quizEventId });
-        setErrorMsg(error.message);
-        return;
-      }
-      if (data !== true) {
-        setErrorMsg("Couldn’t update cancellation (check host allowlist).");
-        return;
-      }
-      setRows((prev) =>
-        prev.map((r) =>
-          r.quiz_event_id === quizEventId
-            ? { ...r, host_cancelled_at: cancelled ? new Date().toISOString() : null }
-            : r
-        )
-      );
-
-      if (cancelled) {
-        void supabase.functions
-          .invoke("notify-quiz-cancelled", { body: { quiz_event_id: quizEventId } })
-          .then(({ error: fnError }) => {
-            if (fnError) console.warn("notify-quiz-cancelled:", fnError.message);
-          });
-      }
-    },
-    []
   );
 
   const emptyHintAll = useMemo(
@@ -269,7 +225,7 @@ export default function HostDashboardScreen() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         showsVerticalScrollIndicator={false}
       >
-        <ScreenTitle subtitle="Interest counts from players who save a quiz while signed in. Cancellation shows on the player quiz screen.">
+        <ScreenTitle subtitle="Interest counts from players who save a quiz while signed in.">
           Listings
         </ScreenTitle>
 
@@ -383,7 +339,6 @@ export default function HostDashboardScreen() {
               </View>
             ) : (
               displayRows.map((r) => {
-                const cancelled = r.host_cancelled_at != null;
                 const busy = savingId === r.quiz_event_id;
                 const next = computeNextOccurrence(r.day_of_week, r.start_time, new Date());
                 const nextSchedule = next ? formatNextOccurrenceLabel(next.at, new Date()) : null;
@@ -400,60 +355,12 @@ export default function HostDashboardScreen() {
                       {r.interest_count} interested (RSVP)
                     </Text>
 
-                    {cancelled ? (
-                      <View style={styles.cancellationBanner}>
-                        <MaterialCommunityIcons
-                          name="alert-circle-outline"
-                          size={18}
-                          color={semantic.danger}
-                          style={styles.cancellationBannerIcon}
-                        />
-                        <Text style={styles.cancellationBannerText}>
-                          Cancelled for players — players see a cancellation notice on the quiz screen.
-                        </Text>
-                      </View>
-                    ) : null}
-
                     {savedNote ? (
                       <View style={styles.noteReadonlyBox}>
                         <Text style={styles.noteReadonlyLabel}>Host note on listing</Text>
                         <Text style={styles.noteReadonlyBody}>{savedNote}</Text>
                       </View>
                     ) : null}
-
-                    <View style={styles.cancelRow}>
-                      <Text style={styles.fieldLabel}>Last-minute cancellation</Text>
-                      <Pressable
-                        disabled={busy}
-                        onPress={() => {
-                          if (cancelled) {
-                            void setCancelled(r.quiz_event_id, false);
-                            return;
-                          }
-                          Alert.alert(
-                            "Cancel tonight's quiz?",
-                            "Players who saved this quiz will be notified.",
-                            [
-                              { text: "Keep quiz on", style: "cancel" },
-                              {
-                                text: "Cancel quiz",
-                                style: "destructive",
-                                onPress: () => void setCancelled(r.quiz_event_id, true),
-                              },
-                            ]
-                          );
-                        }}
-                        style={({ pressed }) => [
-                          cancelled ? styles.cancelOnBtn : styles.cancelOffBtn,
-                          pressed && styles.btnPressed,
-                          busy && styles.btnDisabled,
-                        ]}
-                      >
-                        <Text style={cancelled ? styles.cancelOnBtnText : styles.cancelOffBtnText}>
-                          {cancelled ? "Cancelled (tap to clear)" : "Mark cancelled"}
-                        </Text>
-                      </Pressable>
-                    </View>
 
                     <Text style={styles.fieldLabel}>Capacity / notes (host only)</Text>
                     <TextInput
@@ -568,18 +475,6 @@ const styles = StyleSheet.create({
   cardTitle: { ...typography.bodyStrong, fontSize: 17, color: semantic.textPrimary },
   cardSchedule: { ...typography.body, color: semantic.textPrimary, marginTop: spacing.sm },
   cardRsvp: { ...typography.caption, color: semantic.textSecondary, marginTop: spacing.xs },
-  cancellationBanner: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    marginTop: spacing.md,
-    padding: spacing.md,
-    borderRadius: radius.medium,
-    borderWidth: borderWidth.default,
-    borderColor: semantic.danger,
-    backgroundColor: semantic.bgSecondary,
-  },
-  cancellationBannerIcon: { marginRight: spacing.sm, marginTop: 1 },
-  cancellationBannerText: { flex: 1, ...typography.caption, color: semantic.textPrimary, lineHeight: 20 },
   noteReadonlyBox: {
     marginTop: spacing.md,
     padding: spacing.md,
@@ -591,29 +486,6 @@ const styles = StyleSheet.create({
   noteReadonlyLabel: { ...typography.labelUppercase, fontSize: 10, color: semantic.textSecondary, marginBottom: spacing.xs },
   noteReadonlyBody: { ...typography.body, color: semantic.textPrimary },
   fieldLabel: { ...typography.labelUppercase, color: semantic.textSecondary, marginTop: spacing.md, marginBottom: spacing.xs },
-  cancelRow: { marginTop: spacing.sm },
-  cancelOffBtn: {
-    marginTop: spacing.xs,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.md,
-    borderRadius: radius.medium,
-    borderWidth: borderWidth.default,
-    borderColor: semantic.borderPrimary,
-    backgroundColor: semantic.bgSecondary,
-    alignItems: "center",
-  },
-  cancelOffBtnText: { ...typography.bodyStrong, fontSize: 15, color: semantic.textPrimary },
-  cancelOnBtn: {
-    marginTop: spacing.xs,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.md,
-    borderRadius: radius.medium,
-    borderWidth: borderWidth.default,
-    borderColor: semantic.danger,
-    backgroundColor: semantic.bgSecondary,
-    alignItems: "center",
-  },
-  cancelOnBtnText: { ...typography.bodyStrong, fontSize: 15, color: semantic.danger },
   noteInput: {
     minHeight: 72,
     textAlignVertical: "top",

@@ -24,7 +24,6 @@ export interface Quiz {
 export interface QuizDetail extends Quiz {
   feeBasis: string; // "per_team" | "per_person"
   turnUpGuidance: string | null;
-  hostCancelledAt: string | null;
   whatToExpect: string | null; // newline-separated bullets from venues.what_to_expect
   venueImages: VenueImage[];
 }

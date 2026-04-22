@@ -60,13 +60,12 @@ type SupabaseQuizRow = {
   fee_basis?: string | null;
   prize?: string | null;
   turn_up_guidance?: string | null;
-  host_cancelled_at?: string | null;
   venues?: VenueShape | null;
   venue?: VenueShape | null;
 };
 
 const QUIZ_EVENT_DETAIL_SELECT =
-  "id, venue_id, day_of_week, start_time, entry_fee_pence, fee_basis, prize, turn_up_guidance, host_cancelled_at, venues(name, address, postcode, city, borough, lat, lng, what_to_expect)";
+  "id, venue_id, day_of_week, start_time, entry_fee_pence, fee_basis, prize, turn_up_guidance, venues(name, address, postcode, city, borough, lat, lng, what_to_expect)";
 
 function toCitySlug(city: string | null): string {
   if (!city || !city.trim()) return "other";
@@ -250,7 +249,6 @@ export async function fetchQuizDetailById(id: string): Promise<QuizDetail | null
     ...base,
     feeBasis: row.fee_basis ?? "per_team",
     turnUpGuidance: row.turn_up_guidance ?? null,
-    hostCancelledAt: row.host_cancelled_at ?? null,
     whatToExpect: venue?.what_to_expect ?? null,
     venueImages,
   };

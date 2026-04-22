@@ -90,7 +90,6 @@ export default async function QuizDetailPage({ params }: Props) {
     : DEFAULT_WHAT_TO_EXPECT;
   const whatToExpectLines = [turnUp, ...venueLines];
 
-  const isCancelled = !!quiz.hostCancelledAt;
   const feeBasis = quiz.feeBasis === "per_team" ? " per team" : " per person";
   const venueImages = quiz.venueImages;
 
@@ -149,15 +148,6 @@ export default async function QuizDetailPage({ params }: Props) {
             </span>
             <span className="text-quizzer-black font-medium">{quiz.venueName}</span>
           </nav>
-
-          {isCancelled && (
-            <div className="mb-6 flex items-start gap-3 rounded-[var(--radius-card)] border-[3px] border-quizzer-red bg-quizzer-cream p-4">
-              <span className="text-quizzer-red text-xl mt-0.5">⚠</span>
-              <p className="text-sm font-semibold text-quizzer-red">
-                This week&apos;s quiz is cancelled. Check with the venue before you travel.
-              </p>
-            </div>
-          )}
 
           <div className="rounded-[var(--radius-card)] border-[3px] border-quizzer-black bg-quizzer-white shadow-[var(--shadow-card)] overflow-hidden mb-8">
             <div className="h-2 bg-quizzer-yellow border-b-[3px] border-quizzer-black" />
