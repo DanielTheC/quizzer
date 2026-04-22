@@ -11,7 +11,7 @@ import {
   formatPrizeDisplay,
 } from "@/lib/formatters";
 import type { CSSProperties } from "react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 const REFRESH_MS = 60_000;
 const USER_ACTIVITY_REFETCH_GAP_MS = 900;
@@ -62,6 +62,10 @@ type QuizEventRow = {
   venue_id: string;
   day_of_week: number;
   start_time: string;
+  frequency: "weekly" | "monthly" | "quarterly" | "one_off";
+  nth_week: number | null;
+  start_date: string | null;
+  occurrences_planned: number;
   is_active: boolean;
   entry_fee_pence: number | null;
   fee_basis: string | null;
@@ -82,19 +86,59 @@ function truncateEmail(email: string, maxLen: number) {
   return `${t.slice(0, maxLen)}…`;
 }
 
-/** Monday 00:00:00 local of the week containing `d`. */
-function startOfWeekMonday(d: Date): Date {
-  const day = d.getDay();
-  const diff = day === 0 ? -6 : 1 - day;
-  const mon = new Date(d.getFullYear(), d.getMonth(), d.getDate() + diff);
-  mon.setHours(0, 0, 0, 0);
-  return mon;
+type QuizClaimSummary = { status: string; host_email: string };
+
+type OccurrenceFeedRow = {
+  quiz_event_id: string;
+  occurrence_date: string;
+  venue_id: string;
+  venue_name: string;
+  cadence_pill_label: string;
+  cancelled: boolean;
+  interest_count: number;
+  has_host: boolean;
+};
+
+type OccurrenceClaimRow = {
+  quiz_event_id: string;
+  occurrence_date: string;
+  host_user_id: string;
+};
+
+function ukTodayISO(): string {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/London",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date());
+  const y = parts.find((p) => p.type === "year")?.value ?? "1970";
+  const m = parts.find((p) => p.type === "month")?.value ?? "01";
+  const d = parts.find((p) => p.type === "day")?.value ?? "01";
+  return `${y}-${m}-${d}`;
 }
 
-/** Column order Mon–Sun maps to DB day_of_week (Sun=0 … Sat=6). */
-const SCHEDULE_COLUMN_DOW = [1, 2, 3, 4, 5, 6, 0] as const;
+function plusDaysISO(baseIso: string, days: number): string {
+  const [y, m, d] = baseIso.split("-").map((s) => parseInt(s, 10));
+  const dt = new Date(Date.UTC(y || 1970, (m || 1) - 1, d || 1));
+  dt.setUTCDate(dt.getUTCDate() + days);
+  const yy = String(dt.getUTCFullYear()).padStart(4, "0");
+  const mm = String(dt.getUTCMonth() + 1).padStart(2, "0");
+  const dd = String(dt.getUTCDate()).padStart(2, "0");
+  return `${yy}-${mm}-${dd}`;
+}
 
-type QuizClaimSummary = { status: string; host_email: string };
+function formatOccurrenceDateLabel(iso: string): string {
+  const [y, m, d] = iso.split("-").map((s) => parseInt(s, 10));
+  if (!Number.isFinite(y) || !Number.isFinite(m) || !Number.isFinite(d)) return iso;
+  const dt = new Date(Date.UTC(y || 1970, (m || 1) - 1, d || 1));
+  return dt.toLocaleDateString("en-GB", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    timeZone: "UTC",
+  });
+}
 
 export function AdminQuizzesDashboard() {
   const [venues, setVenues] = useState<VenueRow[]>([]);
@@ -126,6 +170,9 @@ export function AdminQuizzesDashboard() {
   const [qVenueId, setQVenueId] = useState("");
   const [qDay, setQDay] = useState(3);
   const [qStart, setQStart] = useState("20:00");
+  const [qFrequency, setQFrequency] = useState<"weekly" | "monthly" | "quarterly" | "one_off">("weekly");
+  const [qStartDate, setQStartDate] = useState("");
+  const [qOccurrencesPlanned, setQOccurrencesPlanned] = useState("12");
   const [qFeePence, setQFeePence] = useState("");
   const [qFeeBasis, setQFeeBasis] = useState<"per_person" | "per_team">("per_person");
   const [qPrize, setQPrize] = useState<string>(PRIZE_OPTIONS[4]);
@@ -138,6 +185,11 @@ export function AdminQuizzesDashboard() {
   const [quizToggleBusy, setQuizToggleBusy] = useState<string | null>(null);
   const [quizDeleteBusy, setQuizDeleteBusy] = useState<string | null>(null);
   const [viewTab, setViewTab] = useState<"list" | "schedule">("list");
+  const [scheduleRows, setScheduleRows] = useState<OccurrenceFeedRow[]>([]);
+  const [occurrenceClaims, setOccurrenceClaims] = useState<Map<string, OccurrenceClaimRow>>(() => new Map());
+  const [selectedOccurrence, setSelectedOccurrence] = useState<OccurrenceFeedRow | null>(null);
+  const [occurrenceCancelReason, setOccurrenceCancelReason] = useState("");
+  const [cancelOccurrenceBusy, setCancelOccurrenceBusy] = useState(false);
 
   const initialLoad = useRef(true);
   const loadGenerationRef = useRef(0);
@@ -161,6 +213,9 @@ export function AdminQuizzesDashboard() {
     setQVenueId("");
     setQDay(3);
     setQStart("20:00");
+    setQFrequency("weekly");
+    setQStartDate("");
+    setQOccurrencesPlanned("12");
     setQFeePence("");
     setQFeeBasis("per_person");
     setQPrize(PRIZE_OPTIONS[4]);
@@ -200,6 +255,9 @@ export function AdminQuizzesDashboard() {
       setQVenueId(row.venue_id);
       setQDay(row.day_of_week);
       setQStart(toTimeInputValue(row.start_time));
+      setQFrequency(row.frequency ?? "weekly");
+      setQStartDate(row.start_date ?? "");
+      setQOccurrencesPlanned(String(row.occurrences_planned ?? 12));
       setQFeePence(row.entry_fee_pence != null ? String(row.entry_fee_pence) : "");
       setQFeeBasis(
         row.fee_basis === "per_team" ? "per_team" : "per_person",
@@ -244,7 +302,7 @@ export function AdminQuizzesDashboard() {
         supabase
           .from("quiz_events")
           .select(
-            "id, venue_id, day_of_week, start_time, is_active, entry_fee_pence, fee_basis, prize, prize_1st, prize_2nd, prize_3rd, turn_up_guidance",
+            "id, venue_id, day_of_week, start_time, frequency, nth_week, start_date, occurrences_planned, is_active, entry_fee_pence, fee_basis, prize, prize_1st, prize_2nd, prize_3rd, turn_up_guidance",
           )
           .order("day_of_week", { ascending: true })
           .order("start_time", { ascending: true })
@@ -264,6 +322,8 @@ export function AdminQuizzesDashboard() {
 
       const quizRows = (q.data ?? []) as QuizEventRow[];
       const quizIds = quizRows.map((r) => r.id);
+      const fromIso = ukTodayISO();
+      const toIso = plusDaysISO(fromIso, 56);
 
       let nextClaimMap = new Map<string, QuizClaimSummary>();
       if (quizIds.length > 0) {
@@ -296,6 +356,42 @@ export function AdminQuizzesDashboard() {
       setVenues((v.data ?? []) as VenueRow[]);
       setQuizzes(quizRows);
       setQuizClaimByEventId(nextClaimMap);
+
+      const { data: scheduleData, error: scheduleErr } = await supabase.rpc(
+        "get_upcoming_occurrences_feed",
+        { p_from: fromIso, p_to: toIso },
+      );
+      if (gen !== loadGenerationRef.current) return;
+      if (scheduleErr) {
+        captureSupabaseError("admin.schedule.get_upcoming_occurrences_feed", scheduleErr);
+        setScheduleRows([]);
+      } else {
+        setScheduleRows((scheduleData ?? []) as OccurrenceFeedRow[]);
+      }
+
+      if (quizIds.length > 0) {
+        const { data: occClaimRows, error: occClaimErr } = await supabase
+          .from("quiz_occurrence_claims")
+          .select("quiz_event_id, occurrence_date, host_user_id")
+          .in("quiz_event_id", quizIds)
+          .is("released_at", null)
+          .gte("occurrence_date", fromIso)
+          .lte("occurrence_date", toIso)
+          .abortSignal(signal);
+        if (gen !== loadGenerationRef.current) return;
+        if (occClaimErr) {
+          captureSupabaseError("admin.schedule.quiz_occurrence_claims", occClaimErr);
+          setOccurrenceClaims(new Map());
+        } else {
+          const map = new Map<string, OccurrenceClaimRow>();
+          for (const row of (occClaimRows ?? []) as OccurrenceClaimRow[]) {
+            map.set(`${row.quiz_event_id}|${row.occurrence_date}`, row);
+          }
+          setOccurrenceClaims(map);
+        }
+      } else {
+        setOccurrenceClaims(new Map());
+      }
     } catch (e) {
       if (gen !== loadGenerationRef.current) return;
       setError(e instanceof Error ? e.message : "Failed to load data.");
@@ -494,6 +590,17 @@ export function AdminQuizzesDashboard() {
       }
       entry_fee_pence = parsed;
     }
+    const startDate = qStartDate.trim();
+    if (!startDate) {
+      setError("Start date is required.");
+      return;
+    }
+    const occurrencesRaw = qOccurrencesPlanned.trim();
+    const occurrences = Number.parseInt(occurrencesRaw, 10);
+    if (!Number.isFinite(occurrences) || occurrences < 1 || occurrences > 52) {
+      setError("Occurrences planned must be a whole number between 1 and 52.");
+      return;
+    }
 
     setQuizSaveBusy(true);
     setError(null);
@@ -503,6 +610,10 @@ export function AdminQuizzesDashboard() {
         venue_id: venueId,
         day_of_week: qDay,
         start_time: start,
+        frequency: qFrequency,
+        nth_week: qFrequency === "monthly" || qFrequency === "quarterly" ? 1 : null,
+        start_date: startDate,
+        occurrences_planned: occurrences,
         entry_fee_pence,
         fee_basis: qFeeBasis,
         prize: qPrize,
@@ -623,20 +734,75 @@ export function AdminQuizzesDashboard() {
     }
   }
 
+  async function cancelSelectedOccurrence() {
+    if (!selectedOccurrence) return;
+    const reason = occurrenceCancelReason.trim();
+    if (reason.length < 6) {
+      setError("Please enter a reason (at least 6 characters).");
+      return;
+    }
+    setCancelOccurrenceBusy(true);
+    setError(null);
+    try {
+      const supabase = createBrowserSupabaseClient();
+      const { data, error: rpcError } = await supabase.rpc("cancel_quiz_occurrence", {
+        p_quiz_event_id: selectedOccurrence.quiz_event_id,
+        p_occurrence_date: selectedOccurrence.occurrence_date,
+        p_cancelled_by: "operator",
+        p_reason: reason,
+      });
+      if (rpcError) {
+        captureSupabaseError("admin.cancel_quiz_occurrence", rpcError, {
+          quiz_event_id: selectedOccurrence.quiz_event_id,
+          occurrence_date: selectedOccurrence.occurrence_date,
+        });
+        throw new Error(rpcError.message);
+      }
+      if (!data) {
+        setError("Occurrence could not be cancelled (already cancelled or unavailable).");
+        return;
+      }
+      setScheduleRows((prev) =>
+        prev.map((row) =>
+          row.quiz_event_id === selectedOccurrence.quiz_event_id &&
+          row.occurrence_date === selectedOccurrence.occurrence_date
+            ? { ...row, cancelled: true }
+            : row
+        )
+      );
+      setToast("Occurrence cancelled.");
+      setSelectedOccurrence((prev) => (prev ? { ...prev, cancelled: true } : prev));
+      setOccurrenceCancelReason("");
+      void load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not cancel occurrence.");
+    } finally {
+      setCancelOccurrenceBusy(false);
+    }
+  }
+
   const venueFormVisible = addVenueOpen || editingVenue !== null;
   const quizFormVisible = addQuizOpen || editingQuiz !== null;
+  const scheduleGroups = useMemo(() => {
+    const grouped = new Map<string, OccurrenceFeedRow[]>();
+    for (const row of scheduleRows) {
+      const list = grouped.get(row.occurrence_date) ?? [];
+      list.push(row);
+      grouped.set(row.occurrence_date, list);
+    }
+    return Array.from(grouped.entries())
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .map(([date, rows]) => ({
+        date,
+        rows: rows
+          .slice()
+          .sort((a, b) => a.venue_name.localeCompare(b.venue_name)),
+      }));
+  }, [scheduleRows]);
 
-  const mondayThisWeek = startOfWeekMonday(new Date());
-  const scheduleWeekColumns = SCHEDULE_COLUMN_DOW.map((dow, i) => {
-    const d = new Date(mondayThisWeek);
-    d.setDate(mondayThisWeek.getDate() + i);
-    const header = d.toLocaleDateString("en-GB", {
-      weekday: "short",
-      day: "numeric",
-      month: "short",
-    });
-    return { dow, header: header.replace(",", "") };
-  });
+  const selectedOccurrenceClaim = selectedOccurrence
+    ? occurrenceClaims.get(`${selectedOccurrence.quiz_event_id}|${selectedOccurrence.occurrence_date}`) ?? null
+    : null;
 
   return (
     <div className="relative space-y-6">
@@ -729,6 +895,21 @@ export function AdminQuizzesDashboard() {
                 </select>
               </label>
               <label className="block text-xs font-medium text-quizzer-black">
+                Frequency *
+                <select
+                  value={qFrequency}
+                  onChange={(e) =>
+                    setQFrequency(e.target.value as "weekly" | "monthly" | "quarterly" | "one_off")
+                  }
+                  className="mt-1 w-full rounded-[var(--radius-button)] border-[3px] border-quizzer-black bg-quizzer-white px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-quizzer-yellow"
+                >
+                  <option value="weekly">Weekly</option>
+                  <option value="monthly">Monthly</option>
+                  <option value="quarterly">Quarterly</option>
+                  <option value="one_off">One-off</option>
+                </select>
+              </label>
+              <label className="block text-xs font-medium text-quizzer-black">
                 Start time (HH:MM) *
                 <input
                   type="time"
@@ -737,6 +918,33 @@ export function AdminQuizzesDashboard() {
                   className="mt-1 w-full rounded-[var(--radius-button)] border-[3px] border-quizzer-black bg-quizzer-white px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-quizzer-yellow"
                 />
               </label>
+              <label className="block text-xs font-medium text-quizzer-black">
+                Start date *
+                <input
+                  type="date"
+                  value={qStartDate}
+                  onChange={(e) => setQStartDate(e.target.value)}
+                  className="mt-1 w-full rounded-[var(--radius-button)] border-[3px] border-quizzer-black bg-quizzer-white px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-quizzer-yellow"
+                />
+              </label>
+              <label className="block text-xs font-medium text-quizzer-black">
+                Occurrences planned *
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  min={1}
+                  max={52}
+                  value={qOccurrencesPlanned}
+                  onChange={(e) => setQOccurrencesPlanned(e.target.value)}
+                  className="mt-1 w-full rounded-[var(--radius-button)] border-[3px] border-quizzer-black bg-quizzer-white px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-quizzer-yellow"
+                />
+              </label>
+              {qFrequency === "monthly" || qFrequency === "quarterly" ? (
+                <p className="text-xs text-quizzer-black/70 sm:col-span-2">
+                  Recurrence rule: First {DAY_OPTIONS.find((d) => d.v === qDay)?.label ?? "day"} of the month
+                  (nth week set automatically to 1).
+                </p>
+              ) : null}
               <label className="block text-xs font-medium text-quizzer-black">
                 Entry fee (pence)
                 <input
@@ -967,58 +1175,105 @@ export function AdminQuizzesDashboard() {
 
         {viewTab === "schedule" ? (
           <div className="mt-4">
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">
-              {scheduleWeekColumns.map(({ dow, header }) => {
-                const dayQuizzes = quizzes
-                  .filter((q) => q.day_of_week === dow)
-                  .slice()
-                  .sort((a, b) => formatTimeDisplay(a.start_time).localeCompare(formatTimeDisplay(b.start_time)));
-                return (
-                  <div key={dow} className="flex min-h-[120px] flex-col border border-quizzer-black/15 bg-quizzer-cream/30 p-2">
-                    <div className="border-b border-quizzer-black/15 pb-2 text-center text-xs font-semibold text-quizzer-black">
-                      {header}
+            {scheduleGroups.length === 0 ? (
+              <p className="rounded-[var(--radius-button)] border-2 border-quizzer-black/10 bg-quizzer-cream/30 px-4 py-5 text-sm text-quizzer-black/65">
+                No upcoming occurrences in the next 8 weeks.
+              </p>
+            ) : (
+              <div className="space-y-4">
+                {scheduleGroups.map((group) => (
+                  <section
+                    key={group.date}
+                    className="rounded-[var(--radius-button)] border-2 border-quizzer-black/15 bg-quizzer-cream/20 p-3"
+                  >
+                    <h3 className="font-heading text-sm uppercase text-quizzer-black">
+                      {formatOccurrenceDateLabel(group.date)}
+                    </h3>
+                    <div className="mt-2 grid gap-2 md:grid-cols-2">
+                      {group.rows.map((row) => {
+                        const claim = occurrenceClaims.get(`${row.quiz_event_id}|${row.occurrence_date}`);
+                        const hostStatus = row.cancelled
+                          ? "Cancelled"
+                          : claim || row.has_host
+                              ? "Claimed"
+                              : "Open";
+                        return (
+                          <button
+                            key={`${row.quiz_event_id}|${row.occurrence_date}`}
+                            type="button"
+                            onClick={() => {
+                              setSelectedOccurrence(row);
+                              setOccurrenceCancelReason("");
+                            }}
+                            className="w-full rounded-[var(--radius-button)] border-[3px] border-quizzer-black bg-quizzer-white p-2 text-left text-xs shadow-[var(--shadow-button)] outline-none ring-quizzer-yellow transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[var(--shadow-button-hover)] focus-visible:ring-2"
+                          >
+                            <div className="flex items-center justify-between gap-2">
+                              <p className="font-bold text-quizzer-black">{row.venue_name}</p>
+                              <span className="rounded-full border-2 border-quizzer-black bg-quizzer-yellow/30 px-2 py-0.5 text-[10px] font-semibold uppercase">
+                                {row.cadence_pill_label}
+                              </span>
+                            </div>
+                            <p className="mt-1 text-quizzer-black/80">{row.interest_count} interested</p>
+                            <p className="mt-1 text-[10px] font-semibold uppercase tracking-wide text-quizzer-black/70">
+                              {hostStatus}
+                            </p>
+                          </button>
+                        );
+                      })}
                     </div>
-                    <div className="mt-2 flex flex-1 flex-col gap-2">
-                      {dayQuizzes.length === 0 ? (
-                        <p className="flex flex-1 items-center justify-center text-center text-xs text-quizzer-black/40">
-                          —
-                        </p>
-                      ) : (
-                        dayQuizzes.map((quiz) => {
-                          const claim = quizClaimByEventId.get(quiz.id);
-                          return (
-                            <button
-                              key={quiz.id}
-                              type="button"
-                              onClick={() => openEditQuiz(quiz)}
-                              className="w-full rounded-[var(--radius-button)] border-[3px] border-quizzer-black bg-quizzer-white p-2 text-left text-xs shadow-[var(--shadow-button)] outline-none ring-quizzer-yellow transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[var(--shadow-button-hover)] focus-visible:ring-2"
-                            >
-                              <p className="font-bold text-quizzer-black">{venueNameById(venues, quiz.venue_id)}</p>
-                              <p className="mt-0.5 text-quizzer-black/90">{formatTimeDisplay(quiz.start_time)}</p>
-                              <div className="mt-1.5">
-                                {claim?.status === "confirmed" ? (
-                                  <span className="inline-block rounded-full border-[3px] border-quizzer-green bg-quizzer-green/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase leading-tight text-quizzer-green">
-                                    {truncateEmail(claim.host_email, 18)}
-                                  </span>
-                                ) : claim?.status === "pending" ? (
-                                  <span className="inline-block rounded-full border-[3px] border-quizzer-orange bg-quizzer-yellow/20 px-1.5 py-0.5 text-[10px] font-semibold uppercase leading-tight text-quizzer-orange">
-                                    Pending claim
-                                  </span>
-                                ) : (
-                                  <span className="inline-block rounded-full border-[3px] border-quizzer-red bg-quizzer-cream px-1.5 py-0.5 text-[10px] font-semibold uppercase leading-tight text-quizzer-red">
-                                    No host
-                                  </span>
-                                )}
-                              </div>
-                            </button>
-                          );
-                        })
-                      )}
-                    </div>
+                  </section>
+                ))}
+              </div>
+            )}
+
+            {selectedOccurrence ? (
+              <div className="mt-4 rounded-[var(--radius-button)] border-[3px] border-quizzer-black bg-quizzer-white p-4 shadow-[var(--shadow-card)]">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="font-heading text-base uppercase text-quizzer-black">{selectedOccurrence.venue_name}</p>
+                    <p className="text-sm text-quizzer-black/75">
+                      {formatOccurrenceDateLabel(selectedOccurrence.occurrence_date)} · {selectedOccurrence.interest_count} interested
+                    </p>
+                    <p className="mt-1 text-xs text-quizzer-black/65">
+                      {selectedOccurrence.cancelled
+                        ? "Already cancelled"
+                        : selectedOccurrenceClaim || selectedOccurrence.has_host
+                          ? "Claimed by a host"
+                          : "Unclaimed"}
+                    </p>
                   </div>
-                );
-              })}
-            </div>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedOccurrence(null)}
+                    className="rounded-[var(--radius-button)] border-[3px] border-quizzer-black/25 bg-quizzer-white px-2 py-1 text-xs font-semibold text-quizzer-black"
+                  >
+                    Close
+                  </button>
+                </div>
+                {!selectedOccurrence.cancelled ? (
+                  <div className="mt-3 space-y-2 border-t border-quizzer-black/10 pt-3">
+                    <label className="block text-xs font-medium text-quizzer-black">
+                      Cancel reason (operator)
+                      <textarea
+                        value={occurrenceCancelReason}
+                        onChange={(e) => setOccurrenceCancelReason(e.target.value)}
+                        rows={3}
+                        className="mt-1 w-full rounded-[var(--radius-button)] border-[3px] border-quizzer-black bg-quizzer-white px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-quizzer-yellow"
+                        placeholder="Reason shown in audit trail and operator notifications"
+                      />
+                    </label>
+                    <button
+                      type="button"
+                      disabled={cancelOccurrenceBusy}
+                      onClick={() => void cancelSelectedOccurrence()}
+                      className="rounded-[var(--radius-button)] border-[3px] border-quizzer-black bg-quizzer-red px-3 py-1.5 text-xs font-semibold text-quizzer-white shadow-[var(--shadow-button)] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[var(--shadow-button-hover)] disabled:opacity-50"
+                    >
+                      {cancelOccurrenceBusy ? "Cancelling…" : "Cancel occurrence"}
+                    </button>
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
           </div>
         ) : null}
       </section>

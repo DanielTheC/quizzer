@@ -19,7 +19,7 @@ import { QuizListSkeleton } from "../../components/QuizListSkeleton";
 import { NearbyMapView } from "../../components/NearbyMapView";
 import { hapticLight, hapticMedium } from "../../lib/playerHaptics";
 import { spacing } from "../../theme";
-import { formatNearbyListInterestLabel } from "../../lib/quizEventInterestCount";
+import { dayShort, formatTime24 } from "../../lib/formatters";
 import { SEARCH_DEBOUNCE_MS } from "./nearby/nearbyConstants";
 import { buildNearbyStyles } from "./nearby/nearbyScreenStyles";
 import type { DistanceFilter, PrizeFilter } from "./nearby/nearbyTypes";
@@ -30,6 +30,21 @@ import { useNearbyListToolbarScroll } from "./nearby/useNearbyListToolbarScroll"
 import { NearbyListToolbar } from "./nearby/NearbyListToolbar";
 import { NearbyMapFloatingToolbar } from "./nearby/NearbyMapFloatingToolbar";
 import { NearbySortModal } from "./nearby/NearbySortModal";
+
+/** "2026-04-28" + "20:30:00" → "Tue 28 Apr · 20:30" */
+function formatOccurrenceDateTimeLabel(occurrenceDate: string, startTime: string): string {
+  const [y, m, d] = (occurrenceDate ?? "").split("-").map((s) => parseInt(s, 10));
+  let datePart = occurrenceDate;
+  if (Number.isFinite(y) && Number.isFinite(m) && Number.isFinite(d)) {
+    const dt = new Date(Date.UTC(y as number, (m as number) - 1, d as number));
+    const weekday = dayShort(dt.getUTCDay());
+    const day = dt.getUTCDate();
+    const month = dt.toLocaleDateString("en-GB", { month: "short", timeZone: "UTC" });
+    datePart = `${weekday} ${day} ${month}`;
+  }
+  const time = formatTime24(startTime ?? "");
+  return time ? `${datePart} · ${time}` : datePart;
+}
 
 export default function NearbyScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<NearbyStackParamList>>();
@@ -161,6 +176,8 @@ export default function NearbyScreen() {
     ({ item, index }: ListRenderItemInfo<(typeof filteredQuizzes)[number]>) => {
       const miles = locationPermission !== "denied" && referenceLocation ? getMiles(item.venues) : null;
       const distanceLabel = miles != null ? `${miles.toFixed(1)} mi` : null;
+      const occurrenceLabel = formatOccurrenceDateTimeLabel(item.occurrence_date, item.start_time);
+      const goingLabel = item.interest_count > 0 ? `${item.interest_count} going` : null;
       return (
         <QuizCard
           quiz={item}
@@ -172,7 +189,11 @@ export default function NearbyScreen() {
           isTonightMode={tonightMode}
           showRank={sortBy === "distance"}
           rank={sortBy === "distance" ? index + 1 : null}
-          interestPillLabel={formatNearbyListInterestLabel(item.interest_count, isSaved(item.id))}
+          nextOccurrenceLabel={occurrenceLabel}
+          interestPillLabel={goingLabel}
+          cadenceLabel={item.cadence_pill_label || null}
+          noHost={!item.has_host}
+          cancelled={item.cancelled}
           squareTopEdge={index === 0}
         />
       );
@@ -280,7 +301,7 @@ export default function NearbyScreen() {
               ref={quizListRef}
               style={styles.list}
               data={filteredQuizzes}
-              keyExtractor={(item) => item.id}
+              keyExtractor={(item) => `${item.id}|${item.occurrence_date}`}
               ListHeaderComponent={nearbyListHeader}
               ItemSeparatorComponent={() => <View style={styles.listSeparator} />}
               showsVerticalScrollIndicator={false}

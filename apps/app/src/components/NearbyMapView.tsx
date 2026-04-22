@@ -12,6 +12,17 @@ import {
   formatTime24 as formatPreviewTime,
   formatEntryFeeLine,
 } from "../lib/formatters";
+
+/** "2026-04-28" → "Tue 28 Apr" */
+function formatOccurrenceDayLabel(occurrenceDate: string): string {
+  const [y, m, d] = (occurrenceDate ?? "").split("-").map((s) => parseInt(s, 10));
+  if (!Number.isFinite(y) || !Number.isFinite(m) || !Number.isFinite(d)) return occurrenceDate;
+  const dt = new Date(Date.UTC(y as number, (m as number) - 1, d as number));
+  const weekday = dayShort(dt.getUTCDay());
+  const day = dt.getUTCDate();
+  const month = dt.toLocaleDateString("en-GB", { month: "short", timeZone: "UTC" });
+  return `${weekday} ${day} ${month}`;
+}
 import { spacing, radius, borderWidth, shadow, typography, type SemanticTheme } from "../theme";
 import type { MapQuizPin } from "./NearbyMapView.types";
 
@@ -147,6 +158,70 @@ function buildMapStyles(semantic: SemanticTheme) {
       textTransform: "uppercase",
       letterSpacing: 0.6,
     },
+    sheetTitleRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.sm,
+      flexWrap: "wrap",
+    },
+    sheetCadencePill: {
+      paddingVertical: 2,
+      paddingHorizontal: spacing.sm,
+      borderRadius: radius.small,
+      borderWidth: borderWidth.default,
+      borderColor: semantic.borderPrimary,
+      backgroundColor: semantic.accentYellow,
+    },
+    sheetCadencePillText: {
+      ...typography.captionStrong,
+      fontSize: 10,
+      letterSpacing: 0.9,
+      color: semantic.textPrimary,
+      textTransform: "uppercase",
+    },
+    sheetMetaRow: {
+      marginTop: spacing.sm,
+      flexDirection: "row",
+      alignItems: "center",
+      flexWrap: "wrap",
+      gap: spacing.sm,
+    },
+    sheetMetaText: {
+      ...typography.captionStrong,
+      fontSize: 12,
+      color: semantic.textSecondary,
+    },
+    sheetCancelledPill: {
+      paddingVertical: 2,
+      paddingHorizontal: spacing.sm,
+      borderRadius: radius.small,
+      borderWidth: borderWidth.default,
+      borderColor: semantic.borderPrimary,
+      backgroundColor: semantic.accentRed,
+    },
+    sheetCancelledPillText: {
+      ...typography.captionStrong,
+      fontSize: 10,
+      letterSpacing: 1,
+      color: "#fff",
+      textTransform: "uppercase",
+    },
+    sheetNoHostPill: {
+      paddingVertical: 2,
+      paddingHorizontal: spacing.sm,
+      borderRadius: radius.small,
+      borderWidth: borderWidth.default,
+      borderColor: semantic.borderPrimary,
+      backgroundColor: semantic.bgSecondary,
+    },
+    sheetNoHostPillText: {
+      ...typography.captionStrong,
+      fontSize: 10,
+      letterSpacing: 0.8,
+      color: semantic.textPrimary,
+      textTransform: "uppercase",
+    },
+    heartBtnDisabled: { opacity: 0.45 },
   });
 }
 
@@ -201,11 +276,23 @@ export function NearbyMapView({ quizzes, userLocation, onOpenQuizDetail }: Props
     wasOpenRef.current = true;
   }, [sheetQuiz?.id, translateY]);
 
+  /** One pin per series: keep the earliest upcoming occurrence for each quiz_event_id. */
+  const nextByQuizEvent = useMemo(() => {
+    const byId = new Map<string, MapQuizPin>();
+    for (const q of quizzes) {
+      const prev = byId.get(q.id);
+      if (!prev || String(q.occurrence_date) < String(prev.occurrence_date)) {
+        byId.set(q.id, q);
+      }
+    }
+    return Array.from(byId.values());
+  }, [quizzes]);
+
   useEffect(() => {
-    if (sheetQuiz && !quizzes.some((q) => q.id === sheetQuiz.id)) {
+    if (sheetQuiz && !nextByQuizEvent.some((q) => q.id === sheetQuiz.id)) {
       closeSheet();
     }
-  }, [quizzes, sheetQuiz, closeSheet]);
+  }, [nextByQuizEvent, sheetQuiz, closeSheet]);
 
   const sheetAnimatedStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: translateY.value }],
@@ -213,7 +300,7 @@ export function NearbyMapView({ quizzes, userLocation, onOpenQuizDetail }: Props
 
   const placemarks = useMemo(() => {
     const out: { id: string; title: string; latitude: number; longitude: number }[] = [];
-    for (const q of quizzes) {
+    for (const q of nextByQuizEvent) {
       const v = q.venues;
       if (!v) continue;
       const lat = v.lat;
@@ -228,7 +315,7 @@ export function NearbyMapView({ quizzes, userLocation, onOpenQuizDetail }: Props
       });
     }
     return out;
-  }, [quizzes]);
+  }, [nextByQuizEvent]);
 
   const initialRegion = useMemo((): Region => {
     if (userLocation) {
@@ -277,18 +364,18 @@ export function NearbyMapView({ quizzes, userLocation, onOpenQuizDetail }: Props
         closeSheet();
         return;
       }
-      const q = quizzes.find((x) => x.id === quizId);
+      const q = nextByQuizEvent.find((x) => x.id === quizId);
       if (!q) return;
       if (sheetQuiz != null) {
         translateY.value = withSpring(0, SPRING_IN);
       }
       setSheetQuiz(q);
     },
-    [quizzes, sheetQuiz, closeSheet, translateY]
+    [nextByQuizEvent, sheetQuiz, closeSheet, translateY]
   );
 
   const onToggleHeart = useCallback(() => {
-    if (!sheetQuiz) return;
+    if (!sheetQuiz || sheetQuiz.cancelled) return;
     if (isSaved(sheetQuiz.id)) hapticLight();
     else hapticSavedQuiz();
     toggleSaved(sheetQuiz.id);
@@ -358,13 +445,37 @@ export function NearbyMapView({ quizzes, userLocation, onOpenQuizDetail }: Props
                 accessibilityRole="button"
                 accessibilityLabel={`${sheetQuiz.venues?.name ?? "Quiz"}, open full details`}
               >
-                <Text style={styles.sheetVenueName} numberOfLines={2}>
-                  {sheetQuiz.venues?.name?.trim() || "Quiz night"}
-                </Text>
+                <View style={styles.sheetTitleRow}>
+                  <Text style={styles.sheetVenueName} numberOfLines={2}>
+                    {sheetQuiz.venues?.name?.trim() || "Quiz night"}
+                  </Text>
+                  {sheetQuiz.cadence_pill_label ? (
+                    <View style={styles.sheetCadencePill}>
+                      <Text style={styles.sheetCadencePillText} numberOfLines={1}>
+                        {sheetQuiz.cadence_pill_label}
+                      </Text>
+                    </View>
+                  ) : null}
+                </View>
                 <Text style={styles.sheetDayTime}>
-                  {dayShort(sheetQuiz.day_of_week)} · {formatPreviewTime(sheetQuiz.start_time)}
+                  {formatOccurrenceDayLabel(sheetQuiz.occurrence_date)} · {formatPreviewTime(sheetQuiz.start_time)}
                 </Text>
                 <Text style={styles.sheetFee}>{formatEntryFeeLine(sheetQuiz.entry_fee_pence)}</Text>
+                <View style={styles.sheetMetaRow}>
+                  {sheetQuiz.cancelled ? (
+                    <View style={styles.sheetCancelledPill}>
+                      <Text style={styles.sheetCancelledPillText}>Cancelled</Text>
+                    </View>
+                  ) : null}
+                  {!sheetQuiz.cancelled && sheetQuiz.interest_count > 0 ? (
+                    <Text style={styles.sheetMetaText}>{sheetQuiz.interest_count} going</Text>
+                  ) : null}
+                  {!sheetQuiz.has_host && !sheetQuiz.cancelled ? (
+                    <View style={styles.sheetNoHostPill}>
+                      <Text style={styles.sheetNoHostPillText}>No host yet</Text>
+                    </View>
+                  ) : null}
+                </View>
                 <View style={styles.sheetHint}>
                   <Text style={styles.sheetHintText}>Full details</Text>
                   <MaterialCommunityIcons name="chevron-right" size={20} color={semantic.textSecondary} />
@@ -372,10 +483,12 @@ export function NearbyMapView({ quizzes, userLocation, onOpenQuizDetail }: Props
               </Pressable>
               <Pressable
                 onPress={onToggleHeart}
-                style={styles.heartBtn}
+                style={[styles.heartBtn, sheetQuiz.cancelled && styles.heartBtnDisabled]}
                 hitSlop={12}
                 accessibilityLabel={saved ? "Remove from saved" : "Save quiz"}
                 accessibilityRole="button"
+                accessibilityState={sheetQuiz.cancelled ? { disabled: true } : undefined}
+                disabled={sheetQuiz.cancelled}
               >
                 <MaterialCommunityIcons
                   name={saved ? "heart" : "heart-outline"}

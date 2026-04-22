@@ -3,6 +3,19 @@ import type { SortMode } from "../../../lib/sortStorage";
 import { startTimeToMinutes } from "./nearbyConstants";
 import type { DistanceFilter, PrizeFilter, QuizEvent, Venue } from "./nearbyTypes";
 
+function ukTodayIso(): string {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/London",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date());
+  const y = parts.find((p) => p.type === "year")?.value ?? "1970";
+  const m = parts.find((p) => p.type === "month")?.value ?? "01";
+  const d = parts.find((p) => p.type === "day")?.value ?? "01";
+  return `${y}-${m}-${d}`;
+}
+
 export type NearbyFilteredInput = {
   quizzes: QuizEvent[];
   referenceLocation: { lat: number; lng: number } | null;
@@ -40,10 +53,11 @@ export function useNearbyFilteredQuizzes(p: NearbyFilteredInput) {
     const maxFeePence =
       p.maxFeePounds.trim() === "" || !Number.isFinite(parsed) ? null : Math.round(parsed * 100);
 
+    const todayIso = ukTodayIso();
+
     if (p.tonightMode) {
-      const todayDow = new Date().getDay();
       let filtered = p.quizzes.filter((q) => {
-        if (q.day_of_week !== todayDow) return false;
+        if (q.occurrence_date !== todayIso) return false;
         if (!matchesSearch(q)) return false;
         if (p.prizeFilter !== "all" && q.prize !== p.prizeFilter) return false;
         if (maxFeePence !== null && q.entry_fee_pence > maxFeePence) return false;
@@ -91,9 +105,9 @@ export function useNearbyFilteredQuizzes(p: NearbyFilteredInput) {
       if (p.sortBy === "entry_fee") {
         if (a.entry_fee_pence !== b.entry_fee_pence) return a.entry_fee_pence - b.entry_fee_pence;
       }
-      return (
-        a.day_of_week - b.day_of_week || String(a.start_time).localeCompare(String(b.start_time))
-      );
+      const dateCmp = String(a.occurrence_date).localeCompare(String(b.occurrence_date));
+      if (dateCmp !== 0) return dateCmp;
+      return startTimeToMinutes(a.start_time) - startTimeToMinutes(b.start_time);
     });
     return sorted;
   }, [
@@ -110,10 +124,14 @@ export function useNearbyFilteredQuizzes(p: NearbyFilteredInput) {
     searchLower,
   ]);
 
-  const mapPlottableCount = useMemo(
-    () => filteredQuizzes.filter((q) => q.venues?.lat != null && q.venues?.lng != null).length,
-    [filteredQuizzes]
-  );
+  const mapPlottableCount = useMemo(() => {
+    const seen = new Set<string>();
+    for (const q of filteredQuizzes) {
+      if (q.venues?.lat == null || q.venues?.lng == null) continue;
+      seen.add(q.id);
+    }
+    return seen.size;
+  }, [filteredQuizzes]);
 
   const resultLine =
     p.nearbyView === "map"

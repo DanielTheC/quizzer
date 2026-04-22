@@ -9,6 +9,11 @@ export type Venue = {
   lng?: number | null;
 };
 
+/**
+ * One card = one occurrence. `id` is still the series `quiz_event_id` so that
+ * bookmarks/interests/navigation stay series-level; the list uses
+ * `${id}|${occurrence_date}` as its React key.
+ */
 export type QuizEvent = {
   id: string;
   day_of_week: number;
@@ -16,8 +21,11 @@ export type QuizEvent = {
   entry_fee_pence: number;
   prize: string;
   venues: Venue | null;
-  /** From list query embed; omit if unavailable. */
-  interest_count?: number;
+  occurrence_date: string;
+  cancelled: boolean;
+  has_host: boolean;
+  cadence_pill_label: string;
+  interest_count: number;
 };
 
 export const PRIZE_OPTIONS = ["all", "cash", "bar_tab", "drinks", "voucher", "other"] as const;

@@ -160,10 +160,83 @@ function BtnSpinner() {
   );
 }
 
+type OperatorNotificationRow = {
+  id: string;
+  reason: string;
+  payload: Record<string, unknown>;
+  created_at: string;
+  read_at: string | null;
+};
+
+type LateUnclaimPayload = {
+  quiz_event_id: string;
+  occurrence_date: string;
+  host_user_id: string;
+  hours_until: number;
+};
+
+type OccurrenceCancelledPayload = {
+  quiz_event_id: string;
+  occurrence_date: string;
+  cancelled_by: string;
+  reason?: string | null;
+};
+
+type QuizEventLookup = {
+  quiz_event_id: string;
+  venue_name: string;
+  day_of_week: number;
+  start_time: string;
+};
+
+type HostLookup = {
+  host_user_id: string;
+  display_name: string;
+  email: string | null;
+};
+
 type InboxItem =
   | { kind: "application"; sortAt: string; app: HostApplication }
   | { kind: "claim"; sortAt: string; claim: PendingClaimInbox }
-  | { kind: "message"; sortAt: string; msg: PublicanMessageRow };
+  | { kind: "message"; sortAt: string; msg: PublicanMessageRow }
+  | { kind: "late_unclaim"; sortAt: string; isRead: boolean; note: OperatorNotificationRow; payload: LateUnclaimPayload }
+  | { kind: "occurrence_cancelled"; sortAt: string; isRead: boolean; note: OperatorNotificationRow; payload: OccurrenceCancelledPayload };
+
+function formatOccurrenceDate(iso: string): string {
+  const s = (iso ?? "").trim();
+  if (!s) return "—";
+  const parsed = /^\d{4}-\d{2}-\d{2}$/.test(s) ? new Date(`${s}T12:00:00`) : new Date(s);
+  if (Number.isNaN(parsed.getTime())) return s;
+  return parsed.toLocaleDateString("en-GB", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+function formatHoursUntil(n: unknown): string {
+  const v = typeof n === "number" ? n : Number(n);
+  if (!Number.isFinite(v)) return "—";
+  const rounded = Math.round(v * 10) / 10;
+  if (rounded <= 0) return "now";
+  const whole = Math.round(rounded);
+  return `${whole} hr${whole === 1 ? "" : "s"}`;
+}
+
+function labelForQuiz(q: QuizEventLookup | undefined, fallbackQuizEventId: string): string {
+  if (!q) return `Quiz ${fallbackQuizEventId.slice(0, 8)}…`;
+  return `${q.venue_name} · ${dayShortLabel(q.day_of_week)} ${formatTime(q.start_time)}`;
+}
+
+function cancelledByLabel(v: unknown): string {
+  const s = typeof v === "string" ? v.trim() : "";
+  if (!s) return "unknown";
+  if (s === "publican") return "Publican";
+  if (s === "operator") return "Operator";
+  if (s === "host") return "Host";
+  return s;
+}
 
 export function AdminHomeDashboard() {
   const [apps, setApps] = useState<HostApplication[]>([]);
@@ -187,6 +260,10 @@ export function AdminHomeDashboard() {
   const [claimNotesDraft, setClaimNotesDraft] = useState<Record<string, string>>({});
   const [claimBusy, setClaimBusy] = useState<{ id: string; action: "confirm" | "reject" } | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const [notifications, setNotifications] = useState<OperatorNotificationRow[]>([]);
+  const [quizLookup, setQuizLookup] = useState<Record<string, QuizEventLookup>>({});
+  const [hostLookup, setHostLookup] = useState<Record<string, HostLookup>>({});
+  const [notificationAckBusy, setNotificationAckBusy] = useState<string | null>(null);
   const initialLoad = useRef(true);
   const loadGenerationRef = useRef(0);
   const lastUserActivityRefetchAtRef = useRef(0);
@@ -203,7 +280,7 @@ export function AdminHomeDashboard() {
     setError(null);
     try {
       const supabase = createBrowserSupabaseClient();
-      const [a, m, u, claimsCountRes, netRes, claimsRowsRes] = await Promise.all([
+      const [a, m, u, claimsCountRes, netRes, claimsRowsRes, notificationsRes] = await Promise.all([
         supabase
           .from("host_applications")
           .select("id, full_name, email, experience_notes, created_at, status")
@@ -230,6 +307,14 @@ export function AdminHomeDashboard() {
           .select("id, host_email, claimed_at, quiz_event_id, quiz_events(day_of_week, start_time, venues(name))")
           .eq("status", "pending")
           .order("claimed_at", { ascending: true })
+          .abortSignal(signal),
+        supabase
+          .from("operator_notifications")
+          .select("id, reason, payload, created_at, read_at")
+          .in("reason", ["late_unclaim_attempt", "occurrence_cancelled"])
+          .order("read_at", { ascending: true, nullsFirst: true })
+          .order("created_at", { ascending: false })
+          .limit(50)
           .abortSignal(signal),
       ]);
 
@@ -278,6 +363,93 @@ export function AdminHomeDashboard() {
           }
           return next;
         });
+      }
+
+      let notes: OperatorNotificationRow[] = [];
+      if (notificationsRes.error) {
+        captureSupabaseError("operator_notifications.triage_list", notificationsRes.error);
+        setNotifications([]);
+      } else {
+        notes = (notificationsRes.data ?? []).map((r) => ({
+          id: String(r.id ?? ""),
+          reason: String(r.reason ?? ""),
+          payload: (r.payload ?? {}) as Record<string, unknown>,
+          created_at: String(r.created_at ?? ""),
+          read_at: r.read_at != null ? String(r.read_at) : null,
+        }));
+        setNotifications(notes);
+      }
+
+      const quizIds = new Set<string>();
+      const hostIds = new Set<string>();
+      for (const n of notes) {
+        const qid = n.payload?.quiz_event_id;
+        if (typeof qid === "string" && qid.length > 0) quizIds.add(qid);
+        if (n.reason === "late_unclaim_attempt") {
+          const hid = n.payload?.host_user_id;
+          if (typeof hid === "string" && hid.length > 0) hostIds.add(hid);
+        }
+      }
+
+      if (quizIds.size > 0) {
+        const qRes = await supabase
+          .from("quiz_events")
+          .select("id, day_of_week, start_time, venues(name)")
+          .in("id", Array.from(quizIds))
+          .abortSignal(signal);
+        if (gen !== loadGenerationRef.current) return;
+        if (qRes.error) {
+          captureSupabaseError("operator_notifications.quiz_lookup", qRes.error);
+        } else {
+          const map: Record<string, QuizEventLookup> = {};
+          for (const row of (qRes.data ?? []) as Array<{
+            id: string;
+            day_of_week: number;
+            start_time: string;
+            venues: { name: string } | { name: string }[] | null;
+          }>) {
+            const v = venueFromEmbed(row.venues);
+            map[row.id] = {
+              quiz_event_id: row.id,
+              venue_name: v?.name?.trim() || "Venue",
+              day_of_week: Number(row.day_of_week ?? 0),
+              start_time: String(row.start_time ?? ""),
+            };
+          }
+          setQuizLookup(map);
+        }
+      } else {
+        setQuizLookup({});
+      }
+
+      if (hostIds.size > 0) {
+        const hRes = await supabase
+          .from("host_applications")
+          .select("host_user_id, full_name, email")
+          .in("host_user_id", Array.from(hostIds))
+          .abortSignal(signal);
+        if (gen !== loadGenerationRef.current) return;
+        if (hRes.error) {
+          captureSupabaseError("operator_notifications.host_lookup", hRes.error);
+        } else {
+          const map: Record<string, HostLookup> = {};
+          for (const row of (hRes.data ?? []) as Array<{
+            host_user_id: string | null;
+            full_name: string | null;
+            email: string | null;
+          }>) {
+            if (!row.host_user_id) continue;
+            if (map[row.host_user_id]) continue;
+            map[row.host_user_id] = {
+              host_user_id: row.host_user_id,
+              display_name: (row.full_name ?? "").trim() || (row.email ?? "").trim() || "Host",
+              email: row.email ?? null,
+            };
+          }
+          setHostLookup(map);
+        }
+      } else {
+        setHostLookup({});
       }
 
       setApps((a.data ?? []) as HostApplication[]);
@@ -335,19 +507,63 @@ export function AdminHomeDashboard() {
   }, [toast]);
 
   const inboxItems = useMemo((): InboxItem[] => {
-    const items: InboxItem[] = [];
+    const unreadNotes: InboxItem[] = [];
+    const readNotes: InboxItem[] = [];
+    for (const n of notifications) {
+      if (n.reason === "late_unclaim_attempt") {
+        const p = n.payload as Partial<LateUnclaimPayload>;
+        const payload: LateUnclaimPayload = {
+          quiz_event_id: String(p.quiz_event_id ?? ""),
+          occurrence_date: String(p.occurrence_date ?? ""),
+          host_user_id: String(p.host_user_id ?? ""),
+          hours_until: typeof p.hours_until === "number" ? p.hours_until : Number(p.hours_until ?? 0),
+        };
+        const item: InboxItem = {
+          kind: "late_unclaim",
+          sortAt: n.created_at,
+          isRead: n.read_at != null,
+          note: n,
+          payload,
+        };
+        (item.isRead ? readNotes : unreadNotes).push(item);
+      } else if (n.reason === "occurrence_cancelled") {
+        const p = n.payload as Partial<OccurrenceCancelledPayload>;
+        const payload: OccurrenceCancelledPayload = {
+          quiz_event_id: String(p.quiz_event_id ?? ""),
+          occurrence_date: String(p.occurrence_date ?? ""),
+          cancelled_by: String(p.cancelled_by ?? ""),
+          reason: typeof p.reason === "string" ? p.reason : null,
+        };
+        const item: InboxItem = {
+          kind: "occurrence_cancelled",
+          sortAt: n.created_at,
+          isRead: n.read_at != null,
+          note: n,
+          payload,
+        };
+        (item.isRead ? readNotes : unreadNotes).push(item);
+      }
+    }
+
+    const descByCreated = (x: InboxItem, y: InboxItem) =>
+      new Date(y.sortAt).getTime() - new Date(x.sortAt).getTime();
+    unreadNotes.sort(descByCreated);
+    readNotes.sort(descByCreated);
+
+    const legacy: InboxItem[] = [];
     for (const app of apps) {
-      items.push({ kind: "application", sortAt: app.created_at, app });
+      legacy.push({ kind: "application", sortAt: app.created_at, app });
     }
     for (const claim of pendingClaims) {
-      items.push({ kind: "claim", sortAt: claim.claimed_at, claim });
+      legacy.push({ kind: "claim", sortAt: claim.claimed_at, claim });
     }
     for (const msg of msgs) {
-      items.push({ kind: "message", sortAt: msg.created_at, msg });
+      legacy.push({ kind: "message", sortAt: msg.created_at, msg });
     }
-    items.sort((x, y) => new Date(x.sortAt).getTime() - new Date(y.sortAt).getTime());
-    return items;
-  }, [apps, pendingClaims, msgs]);
+    legacy.sort((x, y) => new Date(x.sortAt).getTime() - new Date(y.sortAt).getTime());
+
+    return [...unreadNotes, ...legacy, ...readNotes];
+  }, [apps, pendingClaims, msgs, notifications]);
 
   async function approve(id: string) {
     setApproveBusy(id);
@@ -453,6 +669,34 @@ export function AdminHomeDashboard() {
       setError(e instanceof Error ? e.message : "Could not update claim.");
     } finally {
       setClaimBusy(null);
+    }
+  }
+
+  async function acknowledgeNotification(id: string) {
+    setNotificationAckBusy(id);
+    setError(null);
+    const nowIso = new Date().toISOString();
+    setNotifications((prev) =>
+      prev.map((n) => (n.id === id ? { ...n, read_at: n.read_at ?? nowIso } : n)),
+    );
+    try {
+      const supabase = createBrowserSupabaseClient();
+      const { error: e } = await supabase
+        .from("operator_notifications")
+        .update({ read_at: nowIso })
+        .eq("id", id);
+      if (e) {
+        captureSupabaseError("operator_notifications.acknowledge", e, { notificationId: id });
+        setNotifications((prev) =>
+          prev.map((n) => (n.id === id ? { ...n, read_at: null } : n)),
+        );
+        throw new Error(e.message);
+      }
+      setToast("Notification acknowledged.");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not acknowledge notification.");
+    } finally {
+      setNotificationAckBusy(null);
     }
   }
 
@@ -663,6 +907,122 @@ export function AdminHomeDashboard() {
                         Reject
                       </button>
                     </div>
+                  </div>
+                );
+              }
+
+              if (item.kind === "late_unclaim") {
+                const n = item.note;
+                const p = item.payload;
+                const q = quizLookup[p.quiz_event_id];
+                const host = hostLookup[p.host_user_id];
+                const hostLabel = host?.display_name ?? "Host";
+                const hoursLabel = formatHoursUntil(p.hours_until);
+                const dimmed = item.isRead;
+                return (
+                  <div
+                    key={`late-${n.id}`}
+                    className={`animate-admin-row rounded-[var(--radius-button)] border-[3px] border-quizzer-black/15 bg-quizzer-cream/40 p-4 ${
+                      dimmed ? "opacity-60" : ""
+                    }`}
+                    style={{ "--admin-row-delay": `${Math.min(rowIdx, 20) * 32}ms` } as CSSProperties}
+                  >
+                    <div className="flex flex-wrap items-start justify-between gap-2">
+                      <span className="inline-block rounded-full border-[3px] border-quizzer-red bg-quizzer-red/10 px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-quizzer-red">
+                        Late unclaim
+                      </span>
+                      {dimmed ? (
+                        <span className="rounded-full border-2 border-quizzer-black/20 bg-quizzer-white px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-quizzer-black/60">
+                          Acknowledged
+                        </span>
+                      ) : null}
+                    </div>
+                    <p className="mt-2 font-semibold text-quizzer-black">
+                      {labelForQuiz(q, p.quiz_event_id)}
+                    </p>
+                    <p className="mt-1 text-sm text-quizzer-black/80">
+                      {formatOccurrenceDate(p.occurrence_date)} · {hoursLabel} until quiz
+                    </p>
+                    <p className="mt-1 text-sm text-quizzer-black/85">
+                      Host: <span className="font-medium text-quizzer-black">{hostLabel}</span>
+                      {host?.email ? (
+                        <span className="text-quizzer-black/70"> · {host.email}</span>
+                      ) : null}
+                    </p>
+                    <p className="mt-1 text-xs text-quizzer-black/55">
+                      {new Date(n.created_at).toLocaleString("en-GB")}
+                    </p>
+                    {dimmed ? null : (
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          disabled={notificationAckBusy === n.id}
+                          onClick={() => void acknowledgeNotification(n.id)}
+                          className="inline-flex items-center justify-center gap-2 rounded-[var(--radius-button)] border-[3px] border-quizzer-black bg-quizzer-white px-2 py-1 text-xs font-semibold text-quizzer-black shadow-[var(--shadow-button)] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[var(--shadow-button-hover)] disabled:opacity-50"
+                        >
+                          {notificationAckBusy === n.id ? <BtnSpinner /> : null}
+                          Acknowledge
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                );
+              }
+
+              if (item.kind === "occurrence_cancelled") {
+                const n = item.note;
+                const p = item.payload;
+                const q = quizLookup[p.quiz_event_id];
+                const dimmed = item.isRead;
+                const reason = (p.reason ?? "").trim();
+                return (
+                  <div
+                    key={`cxl-${n.id}`}
+                    className={`animate-admin-row rounded-[var(--radius-button)] border-[3px] border-quizzer-black/15 bg-quizzer-cream/40 p-4 ${
+                      dimmed ? "opacity-60" : ""
+                    }`}
+                    style={{ "--admin-row-delay": `${Math.min(rowIdx, 20) * 32}ms` } as CSSProperties}
+                  >
+                    <div className="flex flex-wrap items-start justify-between gap-2">
+                      <span className="inline-block rounded-full border-[3px] border-quizzer-orange bg-quizzer-orange/10 px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-quizzer-orange">
+                        Occurrence cancelled
+                      </span>
+                      {dimmed ? (
+                        <span className="rounded-full border-2 border-quizzer-black/20 bg-quizzer-white px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-quizzer-black/60">
+                          Acknowledged
+                        </span>
+                      ) : null}
+                    </div>
+                    <p className="mt-2 font-semibold text-quizzer-black">
+                      {labelForQuiz(q, p.quiz_event_id)}
+                    </p>
+                    <p className="mt-1 text-sm text-quizzer-black/80">
+                      {formatOccurrenceDate(p.occurrence_date)} · cancelled by{" "}
+                      <span className="font-medium text-quizzer-black">
+                        {cancelledByLabel(p.cancelled_by)}
+                      </span>
+                    </p>
+                    {reason ? (
+                      <p className="mt-1 text-sm text-quizzer-black/85">
+                        Reason: <span className="text-quizzer-black">{reason}</span>
+                      </p>
+                    ) : null}
+                    <p className="mt-1 text-xs text-quizzer-black/55">
+                      {new Date(n.created_at).toLocaleString("en-GB")}
+                    </p>
+                    {dimmed ? null : (
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          disabled={notificationAckBusy === n.id}
+                          onClick={() => void acknowledgeNotification(n.id)}
+                          className="inline-flex items-center justify-center gap-2 rounded-[var(--radius-button)] border-[3px] border-quizzer-black bg-quizzer-white px-2 py-1 text-xs font-semibold text-quizzer-black shadow-[var(--shadow-button)] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[var(--shadow-button-hover)] disabled:opacity-50"
+                        >
+                          {notificationAckBusy === n.id ? <BtnSpinner /> : null}
+                          Acknowledge
+                        </button>
+                      </div>
+                    )}
                   </div>
                 );
               }

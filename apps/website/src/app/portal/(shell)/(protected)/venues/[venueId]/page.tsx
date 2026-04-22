@@ -2,7 +2,11 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { venueLinksFromPublicanProfile } from "@/components/portal/portal-types";
 import { PortalSupabaseEnvMissing } from "@/components/portal/PortalSupabaseEnvMissing";
-import { VenueQuizSchedule, type VenueQuizEventRow } from "@/components/portal/VenueQuizSchedule";
+import {
+  VenueQuizSchedule,
+  type UpcomingOccurrence,
+  type VenueQuizEventRow,
+} from "@/components/portal/VenueQuizSchedule";
 import { createServerSupabaseClientSafe } from "@/lib/supabase/server";
 import { captureSupabaseError } from "@/lib/observability/supabaseErrors";
 
@@ -11,12 +15,9 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-type InterestCountRow = {
-  quiz_event_id: string;
-  interest_count: number | string;
-};
-
 type PageProps = { params: Promise<{ venueId: string }> };
+
+const OCCURRENCE_LOOKAHEAD = 8;
 
 export default async function PublicanVenueSchedulePage({ params }: PageProps) {
   const { venueId } = await params;
@@ -54,7 +55,7 @@ export default async function PublicanVenueSchedulePage({ params }: PageProps) {
 
   const { data: events, error: eventsError } = await supabase
     .from("quiz_events")
-    .select("id, day_of_week, start_time, entry_fee_pence, prize, host_cancelled_at")
+    .select("id, day_of_week, start_time, entry_fee_pence, prize")
     .eq("venue_id", venueId)
     .eq("is_active", true)
     .order("day_of_week", { ascending: true })
@@ -65,35 +66,35 @@ export default async function PublicanVenueSchedulePage({ params }: PageProps) {
   }
 
   const rows = (events ?? []) as VenueQuizEventRow[];
-  const scheduled = rows.filter((r) => r.host_cancelled_at == null);
-  const cancelled = rows.filter((r) => r.host_cancelled_at != null);
 
-  const interestByEventId = new Map<string, number>();
-  const { data: countData, error: countError } = await supabase.rpc("publican_venue_quiz_interest_counts", {
-    p_venue_id: venueId,
-  });
-  if (countError) {
-    captureSupabaseError("portal.venue_interest_counts_rpc", countError, { venue_id: venueId });
-    const eventIds = rows.map((r) => r.id);
-    if (eventIds.length > 0) {
-      const { data: interestRows, error: intErr } = await supabase
-        .from("quiz_event_interests")
-        .select("quiz_event_id")
-        .in("quiz_event_id", eventIds);
-      if (intErr) {
-        captureSupabaseError("portal.venue_interests_fallback", intErr, { venue_id: venueId });
-      } else {
-        for (const r of interestRows ?? []) {
-          const qid = r.quiz_event_id as string;
-          interestByEventId.set(qid, (interestByEventId.get(qid) ?? 0) + 1);
-        }
+  const occurrencesByEventId = new Map<string, UpcomingOccurrence[]>();
+  if (rows.length > 0) {
+    const results = await Promise.all(
+      rows.map(async (r) => {
+        const res = await supabase.rpc("get_upcoming_quiz_occurrences", {
+          p_quiz_event_id: r.id,
+          p_limit: OCCURRENCE_LOOKAHEAD,
+        });
+        return { id: r.id, res };
+      }),
+    );
+    for (const { id, res } of results) {
+      if (res.error) {
+        captureSupabaseError("portal.get_upcoming_quiz_occurrences", res.error, { quiz_event_id: id });
+        occurrencesByEventId.set(id, []);
+        continue;
       }
-    }
-  } else {
-    for (const row of (countData ?? []) as InterestCountRow[]) {
-      if (row?.quiz_event_id) {
-        interestByEventId.set(row.quiz_event_id, Number(row.interest_count) || 0);
-      }
+      const raw = (res.data ?? []) as Array<{
+        occurrence_date?: string | null;
+        cancelled?: boolean | null;
+        interest_count?: number | string | null;
+      }>;
+      const normalized: UpcomingOccurrence[] = raw.map((o) => ({
+        occurrence_date: String(o.occurrence_date ?? ""),
+        cancelled: Boolean(o.cancelled),
+        interest_count: Number(o.interest_count ?? 0) || 0,
+      }));
+      occurrencesByEventId.set(id, normalized);
     }
   }
 
@@ -101,9 +102,8 @@ export default async function PublicanVenueSchedulePage({ params }: PageProps) {
     <VenueQuizSchedule
       venueId={venueId}
       venueName={current.venueName}
-      scheduled={scheduled}
-      cancelled={cancelled}
-      interestByEventId={interestByEventId}
+      events={rows}
+      occurrencesByEventId={occurrencesByEventId}
     />
   );
 }

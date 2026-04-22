@@ -25,10 +25,12 @@ const HeartToggleButton = React.memo(function HeartToggleButton({
   isSaved,
   onToggleSaved,
   semantic,
+  disabled,
 }: {
   isSaved: boolean;
   onToggleSaved: () => void;
   semantic: SemanticTheme;
+  disabled?: boolean;
 }) {
   const scale = useSharedValue(1);
   const animatedStyle = useAnimatedStyle(() => ({
@@ -36,6 +38,7 @@ const HeartToggleButton = React.memo(function HeartToggleButton({
   }));
 
   const onPress = useCallback(() => {
+    if (disabled) return;
     scale.value = withSequence(
       withSpring(heartScalePeak, heartSpringIn),
       withSpring(1, heartSpringOut)
@@ -43,20 +46,27 @@ const HeartToggleButton = React.memo(function HeartToggleButton({
     if (isSaved) hapticLight();
     else hapticSavedQuiz();
     onToggleSaved();
-  }, [isSaved, onToggleSaved, scale]);
+  }, [disabled, isSaved, onToggleSaved, scale]);
 
   return (
     <Pressable
       onPress={onPress}
       hitSlop={12}
-      style={stylesStatic.heartWrap}
+      style={[stylesStatic.heartWrap, disabled && stylesStatic.heartWrapDisabled]}
       accessibilityLabel={isSaved ? "Remove from saved" : "Save quiz"}
+      accessibilityState={disabled ? { disabled: true } : undefined}
     >
       <Animated.View style={animatedStyle}>
         <MaterialCommunityIcons
           name={isSaved ? "heart" : "heart-outline"}
           size={22}
-          color={isSaved ? semantic.accentRed : semantic.textSecondary}
+          color={
+            disabled
+              ? semantic.textSecondary
+              : isSaved
+                ? semantic.accentRed
+                : semantic.textSecondary
+          }
         />
       </Animated.View>
     </Pressable>
@@ -65,6 +75,7 @@ const HeartToggleButton = React.memo(function HeartToggleButton({
 
 const stylesStatic = StyleSheet.create({
   heartWrap: { padding: spacing.xs },
+  heartWrapDisabled: { opacity: 0.45 },
 });
 
 function createQuizCardStyles(semantic: SemanticTheme, isDark: boolean) {
@@ -195,7 +206,7 @@ function createQuizCardStyles(semantic: SemanticTheme, isDark: boolean) {
       fontWeight: "800",
       textTransform: "uppercase",
       letterSpacing: 0.5,
-      color: colors.findQuizTabYellow,
+      color: colors.yellow,
     },
     tagRow: {
       flexDirection: "row",
@@ -239,6 +250,54 @@ function createQuizCardStyles(semantic: SemanticTheme, isDark: boolean) {
       color: semantic.textSecondary,
       letterSpacing: 0.15,
     },
+    cadencePill: {
+      ...playerBrutalPill,
+      marginHorizontal: spacing.xs,
+      marginBottom: spacing.sm,
+      backgroundColor: semantic.accentYellow,
+    },
+    cadencePillText: {
+      fontSize: 10,
+      fontWeight: "800",
+      textTransform: "uppercase",
+      letterSpacing: 0.9,
+      color: colors.black,
+      fontFamily: fonts.display,
+    },
+    noHostPill: {
+      ...playerBrutalPill,
+      marginHorizontal: spacing.xs,
+      marginBottom: spacing.sm,
+      backgroundColor: semantic.bgSecondary,
+      borderColor: colors.black,
+    },
+    noHostPillText: {
+      fontSize: 10,
+      fontWeight: "800",
+      textTransform: "uppercase",
+      letterSpacing: 0.7,
+      color: colors.black,
+    },
+    cancelledRibbon: {
+      alignSelf: "stretch",
+      paddingVertical: spacing.xs + 2,
+      paddingHorizontal: spacing.md,
+      backgroundColor: semantic.accentRed,
+      borderBottomWidth: borderWidth.thin,
+      borderBottomColor: semantic.borderPrimary,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    cancelledRibbonText: {
+      fontSize: 12,
+      fontWeight: "800",
+      textTransform: "uppercase",
+      letterSpacing: 1.2,
+      color: colors.white,
+      fontFamily: fonts.display,
+    },
+    cardDimmed: { opacity: 0.7 },
   });
 }
 
@@ -283,6 +342,12 @@ type QuizCardProps = {
   interestPillLabel?: string | null;
   /** When true, top corners are square (e.g. flush with a header above the first list row). */
   squareTopEdge?: boolean;
+  /** "WEEKLY" / "MONTHLY" / etc. Renders neo-brutalist yellow pill when set. */
+  cadenceLabel?: string | null;
+  /** When true, show "No host yet" pill alongside prize pill. */
+  noHost?: boolean;
+  /** When true, render full-width red CANCELLED ribbon and dim the card. */
+  cancelled?: boolean;
 };
 
 const QuizCard = React.memo(function QuizCard({
@@ -299,6 +364,9 @@ const QuizCard = React.memo(function QuizCard({
   nextOccurrenceLabel = null,
   interestPillLabel = null,
   squareTopEdge = false,
+  cadenceLabel = null,
+  noHost = false,
+  cancelled = false,
 }: QuizCardProps) {
   const { semantic, isDark } = useAppTheme();
   const styles = useMemo(() => createQuizCardStyles(semantic, isDark), [semantic, isDark]);
@@ -326,11 +394,17 @@ const QuizCard = React.memo(function QuizCard({
         styles.card,
         squareTopEdge && { borderTopLeftRadius: 0, borderTopRightRadius: 0 },
         pressed && styles.cardPressed,
+        cancelled && styles.cardDimmed,
       ]}
       onPress={onPress}
       onPressIn={onPressIn}
     >
       <View style={[styles.cardAccentTop, { backgroundColor: leftStripeColor }]} />
+      {cancelled ? (
+        <View style={styles.cancelledRibbon}>
+          <Text style={styles.cancelledRibbonText}>Cancelled</Text>
+        </View>
+      ) : null}
       <View style={styles.cardInner}>
         <View style={styles.inner}>
           {showRank && rank != null ? (
@@ -355,7 +429,12 @@ const QuizCard = React.memo(function QuizCard({
                     {distanceLabel}
                   </Text>
                 ) : null}
-                <HeartToggleButton isSaved={isSaved} onToggleSaved={onToggleSaved} semantic={semantic} />
+                <HeartToggleButton
+                  isSaved={isSaved}
+                  onToggleSaved={onToggleSaved}
+                  semantic={semantic}
+                  disabled={cancelled}
+                />
               </View>
             </View>
 
@@ -366,7 +445,7 @@ const QuizCard = React.memo(function QuizCard({
                 <View style={styles.tonightRow}>
                   <Text style={styles.timeEmphasis}>{timeStr}</Text>
                   <View style={styles.tonightBadge}>
-                    <MaterialCommunityIcons name="fire" size={14} color={colors.findQuizTabYellow} style={styles.tonightFire} />
+                    <MaterialCommunityIcons name="fire" size={14} color={colors.yellow} style={styles.tonightFire} />
                     <Text style={styles.tonightBadgeText}>Tonight</Text>
                   </View>
                 </View>
@@ -389,6 +468,20 @@ const QuizCard = React.memo(function QuizCard({
                   {prizePill}
                 </Text>
               </View>
+              {cadenceLabel ? (
+                <View style={styles.cadencePill}>
+                  <Text style={styles.cadencePillText} numberOfLines={1}>
+                    {cadenceLabel}
+                  </Text>
+                </View>
+              ) : null}
+              {noHost ? (
+                <View style={styles.noHostPill}>
+                  <Text style={styles.noHostPillText} numberOfLines={1}>
+                    No host yet
+                  </Text>
+                </View>
+              ) : null}
             </View>
           </View>
         </View>

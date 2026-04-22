@@ -4,6 +4,7 @@ import { useFonts, Anton_400Regular } from "@expo-google-fonts/anton";
 import * as SplashScreen from "expo-splash-screen";
 import * as Sentry from "@sentry/react-native";
 import { AuthProvider } from "./src/context/AuthContext";
+import { InterestedOccurrencesProvider } from "./src/context/InterestedOccurrencesContext";
 import { SavedQuizzesProvider } from "./src/context/SavedQuizzesContext";
 import { ThemeProvider } from "./src/context/ThemeContext";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -77,10 +78,12 @@ function AppRoot() {
         <ThemeProvider>
           <AuthProvider>
             <SavedQuizzesProvider>
-              <RootNavigator />
-              {!splashAnimDone && (
-                <SplashAnimated onFinished={() => setSplashAnimDone(true)} />
-              )}
+              <InterestedOccurrencesProvider>
+                <RootNavigator />
+                {!splashAnimDone && (
+                  <SplashAnimated onFinished={() => setSplashAnimDone(true)} />
+                )}
+              </InterestedOccurrencesProvider>
             </SavedQuizzesProvider>
           </AuthProvider>
         </ThemeProvider>

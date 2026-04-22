@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useState } from "react";
 import {
   Image,
   Linking,
@@ -33,9 +33,9 @@ import {
 } from "../../lib/quizEventDetailCache";
 import { supabase } from "../../lib/supabase";
 import { fetchClosestOtherQuizzes, type ClosestOtherQuizRow } from "../../lib/fetchClosestOtherQuizzes";
-import { fetchQuizEventInterestCount, formatInterestCaption } from "../../lib/quizEventInterestCount";
 import { postcodeOutwardOrArea } from "../../lib/venueLocationSnippet";
 import { useSavedQuizzes } from "../../context/SavedQuizzesContext";
+import { useInterestedOccurrences } from "../../context/InterestedOccurrencesContext";
 import { useAppTheme } from "../../context/ThemeContext";
 import type { NearbyStackParamList } from "../../navigation/RootNavigator";
 import { heartScalePeak, heartSpringIn, heartSpringOut } from "../../lib/heartPressAnimation";
@@ -132,6 +132,29 @@ function whatToExpectVenueLines(quiz: QuizEventDetail): string[] {
 function buildWhatToExpectLines(quiz: QuizEventDetail): string[] {
   const turnUp = quiz.turn_up_guidance?.trim() || "Arrive 10–15 minutes early to bag a table.";
   return [turnUp, ...whatToExpectVenueLines(quiz)];
+}
+
+type UpcomingOccurrenceChip = {
+  occurrence_date: string;
+  cancelled: boolean;
+  interest_count: number;
+};
+
+function formatOccurrenceChipTitle(occurrenceDate: string, startTime: string): string {
+  const [y, m, d] = occurrenceDate.split("-").map((s) => parseInt(s, 10));
+  if (!Number.isFinite(y) || !Number.isFinite(m) || !Number.isFinite(d)) {
+    return `${occurrenceDate} · ${formatTime(startTime)}`;
+  }
+  const dt = new Date(Date.UTC(y as number, (m as number) - 1, d as number));
+  const weekday = dayNameShort(dt.getUTCDay());
+  const day = dt.getUTCDate();
+  const month = dt.toLocaleDateString("en-GB", { month: "short", timeZone: "UTC" });
+  return `${weekday} ${day} ${month} · ${formatTime(startTime)}`;
+}
+
+function interestCountLabel(count: number): string {
+  if (count === 1) return "1 going";
+  return `${count} going`;
 }
 
 function venueImagePublicUrl(storagePath: string): string {
@@ -326,6 +349,22 @@ function createQuizDetailStyles(semantic: SemanticTheme, detail: DetailScreenThe
       color: colors.yellow,
       textAlign: "center",
     },
+    ticketHeaderCadencePill: {
+      paddingVertical: spacing.xs + 1,
+      paddingHorizontal: spacing.sm + 2,
+      borderRadius: radius.pill,
+      borderWidth: borderWidth.default,
+      borderColor: semantic.borderPrimary,
+      backgroundColor: semantic.accentYellow,
+    },
+    ticketHeaderCadencePillText: {
+      fontSize: 10,
+      fontWeight: "800",
+      letterSpacing: 0.85,
+      color: colors.black,
+      textTransform: "uppercase",
+      fontFamily: fonts.display,
+    },
     ticketActionsFooter: {
       marginTop: spacing.lg,
       paddingTop: spacing.lg,
@@ -335,8 +374,6 @@ function createQuizDetailStyles(semantic: SemanticTheme, detail: DetailScreenThe
     },
     ticketActionSavePrimary: {
       flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "center",
       paddingVertical: spacing.md + 2,
       paddingHorizontal: spacing.lg,
       ...websiteCta.yellow,
@@ -356,8 +393,6 @@ function createQuizDetailStyles(semantic: SemanticTheme, detail: DetailScreenThe
     ticketActionShare: {
       flex: 1,
       flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "center",
       paddingVertical: spacing.sm + 2,
       paddingHorizontal: spacing.sm,
       ...websiteCta.blue,
@@ -367,8 +402,6 @@ function createQuizDetailStyles(semantic: SemanticTheme, detail: DetailScreenThe
     ticketActionMaps: {
       flex: 1,
       flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "center",
       paddingVertical: spacing.sm + 2,
       paddingHorizontal: spacing.sm,
       ...websiteCta.pink,
@@ -376,22 +409,6 @@ function createQuizDetailStyles(semantic: SemanticTheme, detail: DetailScreenThe
       gap: spacing.xs,
     },
     ticketActionBtnPressed: { transform: [{ translateY: 2 }], shadowOffset: { width: 1, height: 1 } },
-    interestCaption: {
-      alignSelf: "center",
-      ...typography.caption,
-      fontSize: 11,
-      color: semantic.textSecondary,
-      textAlign: "center",
-      lineHeight: 15,
-    },
-    interestCaptionSaved: {
-      alignSelf: "center",
-      ...typography.captionStrong,
-      fontSize: 12,
-      color: detail.ticketInkSecondary,
-      textAlign: "center",
-      lineHeight: 16,
-    },
     ticketActionLabelInverse: {
       ...typography.captionStrong,
       color: colors.white,
@@ -459,6 +476,71 @@ function createQuizDetailStyles(semantic: SemanticTheme, detail: DetailScreenThe
       fontSize: 14,
       lineHeight: 22,
       color: semantic.textSecondary,
+    },
+    upcomingSection: {
+      marginTop: spacing.md,
+      paddingTop: spacing.md,
+      borderTopWidth: borderWidth.thin,
+      borderTopColor: isDark ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.12)",
+    },
+    upcomingHeader: {
+      ...typography.labelUppercase,
+      marginBottom: spacing.sm,
+      color: semantic.textPrimary,
+    },
+    upcomingRow: {
+      flexDirection: "row",
+      gap: spacing.sm,
+      flexWrap: "wrap",
+    },
+    upcomingChip: {
+      minWidth: 118,
+      flexGrow: 1,
+      paddingVertical: spacing.sm,
+      paddingHorizontal: spacing.sm,
+      borderRadius: radius.medium,
+      borderWidth: borderWidth.default,
+      borderColor: semantic.borderPrimary,
+      backgroundColor: semantic.bgPrimary,
+      ...shadow.small,
+    },
+    upcomingChipPressed: {
+      transform: [{ translateY: 2 }],
+      shadowOffset: { width: 1, height: 1 },
+    },
+    upcomingChipTitle: {
+      ...typography.captionStrong,
+      fontSize: 12,
+      color: detail.ticketInkPrimary,
+      lineHeight: 16,
+    },
+    upcomingChipCount: {
+      marginTop: spacing.xs,
+      ...typography.caption,
+      fontSize: 12,
+      color: semantic.textSecondary,
+    },
+    upcomingChipInterested: {
+      backgroundColor: semantic.accentGreen,
+    },
+    upcomingChipInterestedTitle: {
+      color: colors.black,
+    },
+    upcomingChipInterestedCount: {
+      color: colors.black,
+      fontWeight: "700",
+    },
+    upcomingChipCancelled: {
+      opacity: 0.68,
+      backgroundColor: isDark ? semantic.bgSecondary : "#f5f5f5",
+    },
+    upcomingChipCancelledText: {
+      marginTop: spacing.xs,
+      ...typography.captionStrong,
+      fontSize: 11,
+      color: semantic.danger,
+      textTransform: "uppercase",
+      letterSpacing: 0.5,
     },
     bulletList: { marginTop: spacing.xs },
     bulletRow: {
@@ -549,16 +631,13 @@ export default function QuizDetailScreen() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [quiz, setQuiz] = useState<QuizEventDetail | null>(null);
   const [retryCount, setRetryCount] = useState(0);
-  const [interestCount, setInterestCount] = useState<number | null>(null);
+  const [upcomingOccurrences, setUpcomingOccurrences] = useState<UpcomingOccurrenceChip[]>([]);
+  const [chipBusyKey, setChipBusyKey] = useState<string | null>(null);
   const [otherNearby, setOtherNearby] = useState<ClosestOtherQuizRow[] | null>(null);
-  const interestSyncedRef = useRef(false);
-  const savedBaselineRef = useRef(false);
-  const savedLiveRef = useRef(false);
   const { isSaved, toggleSaved } = useSavedQuizzes();
+  const { isInterestedOccurrence, primeInterestedOccurrences, toggleInterestedOccurrence } = useInterestedOccurrences();
 
   const saved = quizEventId != null && isSaved(quizEventId);
-  savedLiveRef.current = saved;
-  const interestCaption = formatInterestCaption(interestCount, saved);
 
   useEffect(() => {
     if (!quizEventId) {
@@ -588,37 +667,41 @@ export default function QuizDetailScreen() {
 
   useEffect(() => {
     if (!quizEventId || !quiz) {
-      setInterestCount(null);
-      interestSyncedRef.current = false;
+      setUpcomingOccurrences([]);
       return;
     }
     let cancelled = false;
-    interestSyncedRef.current = false;
     void (async () => {
-      const n = await fetchQuizEventInterestCount(quizEventId);
-      if (!cancelled) {
-        setInterestCount(n);
-        interestSyncedRef.current = true;
-        savedBaselineRef.current = savedLiveRef.current;
+      const { data, error } = await supabase.rpc("get_upcoming_quiz_occurrences", {
+        p_quiz_event_id: quizEventId,
+        p_limit: 3,
+      });
+      if (cancelled) return;
+      if (error) {
+        setUpcomingOccurrences([]);
+        return;
       }
+      const rows = ((data ?? []) as Array<{
+        occurrence_date?: string | null;
+        cancelled?: boolean | null;
+        interest_count?: number | string | null;
+      }>)
+        .map((r) => ({
+          occurrence_date: String(r.occurrence_date ?? ""),
+          cancelled: Boolean(r.cancelled),
+          interest_count: Number(r.interest_count ?? 0) || 0,
+        }))
+        .filter((r) => r.occurrence_date.length > 0);
+      setUpcomingOccurrences(rows);
+      await primeInterestedOccurrences(
+        quizEventId,
+        rows.map((r) => r.occurrence_date)
+      );
     })();
     return () => {
       cancelled = true;
     };
-  }, [quizEventId, quiz?.id, retryCount]);
-
-  useEffect(() => {
-    if (!interestSyncedRef.current || !quizEventId || !quiz) return;
-    const baseline = savedBaselineRef.current;
-    if (saved === baseline) return;
-    savedBaselineRef.current = saved;
-    setInterestCount((c) => {
-      if (c == null) return c;
-      if (saved && !baseline) return c + 1;
-      if (!saved && baseline) return Math.max(0, c - 1);
-      return c;
-    });
-  }, [saved, quizEventId, quiz?.id]);
+  }, [quizEventId, quiz?.id, retryCount, primeInterestedOccurrences]);
 
   useEffect(() => {
     if (!quizEventId || !quiz || quiz.id !== quizEventId) {
@@ -647,6 +730,37 @@ export default function QuizDetailScreen() {
       navigation.push("QuizDetail", { quizEventId: id });
     },
     [navigation, quizEventId]
+  );
+
+  const onToggleOccurrenceChip = useCallback(
+    async (occurrenceDate: string) => {
+      if (!quizEventId) return;
+      const key = `${quizEventId}|${occurrenceDate}`;
+      if (chipBusyKey === key) return;
+      const currentlyInterested = isInterestedOccurrence(quizEventId, occurrenceDate);
+      setChipBusyKey(key);
+      setUpcomingOccurrences((prev) =>
+        prev.map((row) =>
+          row.occurrence_date === occurrenceDate
+            ? { ...row, interest_count: Math.max(0, row.interest_count + (currentlyInterested ? -1 : 1)) }
+            : row
+        )
+      );
+      const result = await toggleInterestedOccurrence(quizEventId, occurrenceDate);
+      if (!result.ok) {
+        setUpcomingOccurrences((prev) =>
+          prev.map((row) =>
+            row.occurrence_date === occurrenceDate
+              ? { ...row, interest_count: Math.max(0, row.interest_count + (currentlyInterested ? 1 : -1)) }
+              : row
+          )
+        );
+      } else {
+        hapticLight();
+      }
+      setChipBusyKey(null);
+    },
+    [quizEventId, chipBusyKey, isInterestedOccurrence, toggleInterestedOccurrence]
   );
 
   const openInMaps = useCallback(() => {
@@ -769,6 +883,11 @@ export default function QuizDetailScreen() {
                       <Text style={styles.ticketHeaderPostcode}>{` · ${locationSnippet}`}</Text>
                     ) : null}
                   </Text>
+                  {quiz.cadence_pill_label ? (
+                    <View style={styles.ticketHeaderCadencePill}>
+                      <Text style={styles.ticketHeaderCadencePillText}>{quiz.cadence_pill_label}</Text>
+                    </View>
+                  ) : null}
                 </View>
                 <View style={styles.ticketHeaderPills}>
                   <View style={styles.ticketHeaderTimePill}>
@@ -792,6 +911,57 @@ export default function QuizDetailScreen() {
                 <MaterialCommunityIcons name="trophy-outline" size={20} color={detail.ticketInkPrimary} style={styles.factIcon} />
                 <Text style={styles.factText}>Prize · {prize}</Text>
               </View>
+              {upcomingOccurrences.length > 0 ? (
+                <View style={styles.upcomingSection}>
+                  <Text style={styles.upcomingHeader}>Upcoming dates</Text>
+                  <View style={styles.upcomingRow}>
+                    {upcomingOccurrences.map((occ) => {
+                      const key = `${quizEventId}|${occ.occurrence_date}`;
+                      const interested = quizEventId ? isInterestedOccurrence(quizEventId, occ.occurrence_date) : false;
+                      const disabled = occ.cancelled || chipBusyKey === key || !quizEventId;
+                      return (
+                        <Pressable
+                          key={occ.occurrence_date}
+                          onPress={() => void onToggleOccurrenceChip(occ.occurrence_date)}
+                          disabled={disabled}
+                          style={({ pressed }) => [
+                            styles.upcomingChip,
+                            interested && !occ.cancelled ? styles.upcomingChipInterested : null,
+                            occ.cancelled ? styles.upcomingChipCancelled : null,
+                            pressed && !disabled ? styles.upcomingChipPressed : null,
+                          ]}
+                          accessibilityRole="button"
+                          accessibilityLabel={`${formatOccurrenceChipTitle(occ.occurrence_date, quiz.start_time)} ${interestCountLabel(
+                            occ.interest_count
+                          )}${occ.cancelled ? ", cancelled" : interested ? ", interested" : ""}`}
+                          accessibilityState={{ disabled, selected: interested }}
+                        >
+                          <Text
+                            style={[
+                              styles.upcomingChipTitle,
+                              interested && !occ.cancelled ? styles.upcomingChipInterestedTitle : null,
+                            ]}
+                            numberOfLines={2}
+                          >
+                            {formatOccurrenceChipTitle(occ.occurrence_date, quiz.start_time)}
+                          </Text>
+                          <Text
+                            style={[
+                              styles.upcomingChipCount,
+                              interested && !occ.cancelled ? styles.upcomingChipInterestedCount : null,
+                            ]}
+                          >
+                            {interestCountLabel(occ.interest_count)}
+                          </Text>
+                          {occ.cancelled ? (
+                            <Text style={styles.upcomingChipCancelledText}>Cancelled</Text>
+                          ) : null}
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                </View>
+              ) : null}
               {quiz.venues?.venue_images && quiz.venues.venue_images.length > 0 ? (
                 <ScrollView
                   horizontal
@@ -843,9 +1013,6 @@ export default function QuizDetailScreen() {
                     heartOutlineColor={semantic.accentRed}
                     iconSize={22}
                   />
-                  {interestCaption ? (
-                    <Text style={saved ? styles.interestCaptionSaved : styles.interestCaption}>{interestCaption}</Text>
-                  ) : null}
                   <View style={styles.ticketActionsSecondaryRow}>
                     <Pressable
                       onPress={() => {
