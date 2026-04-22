@@ -4,6 +4,7 @@ import { PublicanNewMessageForm } from "@/components/portal/PublicanNewMessageFo
 import { venueLinksFromPublicanProfile } from "@/components/portal/portal-types";
 import { PortalSupabaseEnvMissing } from "@/components/portal/PortalSupabaseEnvMissing";
 import { createServerSupabaseClientSafe } from "@/lib/supabase/server";
+import { captureSupabaseError } from "@/lib/observability/supabaseErrors";
 
 export const metadata: Metadata = {
   title: "Messages · Portal",
@@ -23,11 +24,15 @@ export default async function PublicanMessagesPage() {
     return null;
   }
 
-  const { data: profile } = await supabase
+  const { data: profile, error: profileError } = await supabase
     .from("publican_profiles")
     .select("venue_id, venues ( name )")
     .eq("id", user.id)
     .maybeSingle();
+
+  if (profileError) {
+    captureSupabaseError("portal.messages_profile_by_user", profileError, { user_id: user.id });
+  }
 
   if (!profile) {
     return null;
@@ -42,7 +47,7 @@ export default async function PublicanMessagesPage() {
     .order("created_at", { ascending: false });
 
   if (msgError) {
-    console.error("[portal] publican_messages:", msgError.message);
+    captureSupabaseError("portal.messages_list_by_venue", msgError, { venue_id: profile.venue_id });
   }
 
   const messages = (msgRows ?? []) as unknown as PublicanMessageListRow[];

@@ -3,6 +3,10 @@
 import type { NetworkSummary } from "@/components/admin/AdminAnalyticsDashboard";
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
 import { captureSupabaseError } from "@/lib/observability/supabaseErrors";
+import {
+  formatTime24 as formatTime,
+  dayShort as dayShortLabel,
+} from "@/lib/formatters";
 import Link from "next/link";
 import type { CSSProperties } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -19,8 +23,6 @@ const DAY_NAMES = [
   "Friday",
   "Saturday",
 ] as const;
-
-const DAY_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
 
 function daysSinceCreated(iso: string): number {
   const c = new Date(iso);
@@ -125,16 +127,6 @@ function snippet(s: string, n: number) {
   const t = s.trim();
   if (t.length <= n) return t;
   return `${t.slice(0, n)}…`;
-}
-
-function formatTime(t: string) {
-  const x = t.trim();
-  if (/^\d{2}:\d{2}/.test(x)) return x.slice(0, 5);
-  return x;
-}
-
-function dayShortLabel(d: number): string {
-  return DAY_SHORT[d] ?? String(d);
 }
 
 function venueFromEmbed(venues: { name: string } | { name: string }[] | null): { name: string } | null {

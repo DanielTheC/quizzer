@@ -1,5 +1,7 @@
 import { getSupabaseSafe } from "./supabase";
 import { getCities } from "./quizzes";
+import { captureSupabaseError } from "./observability/supabaseErrors";
+import { runSupabase } from "./observability/runSupabase";
 
 export type SiteStats = {
   quizCount: number;
@@ -52,21 +54,34 @@ export async function fetchSiteStats(): Promise<SiteStats | null> {
       getCities().catch(() => []),
     ]);
 
-    if (quizRes.error || venueRes.error || teamsRes.error) return null;
+    if (quizRes.error) {
+      captureSupabaseError("marketing.quiz_count", quizRes.error);
+      return null;
+    }
+    if (venueRes.error) {
+      captureSupabaseError("marketing.venue_count", venueRes.error);
+      return null;
+    }
+    if (teamsRes.error) {
+      captureSupabaseError("marketing.team_counts_list", teamsRes.error);
+      return null;
+    }
 
     const quizCount = quizRes.count ?? 0;
 
     // venue_id is not DISTINCT in the count above — get unique count from data
     // Use a separate query for distinct venue count
-    const distinctVenueRes = await supabase
-      .from("quiz_events")
-      .select("venue_id")
-      .eq("is_active", true)
-      .not("venue_id", "is", null);
+    const distinctVenueRows = await runSupabase<Array<{ venue_id: string }>>(
+      "marketing.distinct_venues_list",
+      () =>
+        supabase
+          .from("quiz_events")
+          .select("venue_id")
+          .eq("is_active", true)
+          .not("venue_id", "is", null),
+    );
 
-    const venueCount = distinctVenueRes.data
-      ? new Set(distinctVenueRes.data.map((r: { venue_id: string }) => r.venue_id)).size
-      : 0;
+    const venueCount = new Set(distinctVenueRows.map((r) => r.venue_id)).size;
 
     const teamCount = (teamsRes.data ?? []).reduce(
       (sum: number, row: { team_count: number | null }) => sum + (row.team_count ?? 0),

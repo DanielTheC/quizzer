@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useCallback, useState } from "react";
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
+import { captureSupabaseError } from "@/lib/observability/supabaseErrors";
 import {
   PUBLICAN_MESSAGE_TYPE_OPTIONS,
   type PublicanMessageTypeValue,
@@ -69,6 +70,11 @@ export function PublicanNewMessageForm({
         };
         const { error: insertError } = await supabase.from("publican_messages").insert(row);
         if (insertError) {
+          captureSupabaseError("portal.message_insert", insertError, {
+            venue_id: effectiveVenueId,
+            quiz_event_id: quizEventId,
+            message_type: messageType,
+          });
           setError(insertError.message);
           setPending(false);
           return;

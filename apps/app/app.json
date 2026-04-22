@@ -10,7 +10,7 @@
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#FFD400"
     },
     "ios": {
       "supportsTablet": true
@@ -18,13 +18,20 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#FFD400"
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "supabaseUrl": "https://xcmqvnddhcmombiqflny.supabase.co",
+      "supabaseAnonKey": "sb_publishable_vDNt8LUH56HjUVYlJcRWrg_0SGoBPDp",
+      "eas": {
+        "projectId": "49b6e492-ce76-4ec5-8bfb-74158e9307d5"
+      }
     }
   }
 }

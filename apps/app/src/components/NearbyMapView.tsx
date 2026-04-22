@@ -7,27 +7,15 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAppTheme } from "../context/ThemeContext";
 import { useSavedQuizzes } from "../context/SavedQuizzesContext";
 import { hapticLight, hapticSavedQuiz } from "../lib/playerHaptics";
+import {
+  dayShort,
+  formatTime24 as formatPreviewTime,
+  formatEntryFeeLine,
+} from "../lib/formatters";
 import { spacing, radius, borderWidth, shadow, typography, type SemanticTheme } from "../theme";
 import type { MapQuizPin } from "./NearbyMapView.types";
 
 export type { MapQuizPin } from "./NearbyMapView.types";
-
-const DAY_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-
-function dayShort(day: number): string {
-  return DAY_SHORT[day] ?? String(day);
-}
-
-function formatPreviewTime(time: string): string {
-  const s = String(time);
-  if (s.length >= 5) return s.slice(0, 5);
-  return s;
-}
-
-function formatEntryFeeLine(pence: number): string {
-  if (pence === 0) return "Free entry";
-  return `Entry £${(pence / 100).toFixed(2)}`;
-}
 
 const SHEET_HIDDEN = 320;
 const SPRING_IN = { damping: 22, stiffness: 280 };

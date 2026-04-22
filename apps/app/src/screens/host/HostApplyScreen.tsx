@@ -17,6 +17,7 @@ import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { HostStackParamList } from "../../navigation/RootNavigator";
 import { useAuth } from "../../context/AuthContext";
 import { supabase } from "../../lib/supabase";
+import { captureSupabaseError } from "../../lib/sentryInit";
 import {
   authEmailForHost,
   fetchLatestHostApplication,
@@ -105,6 +106,7 @@ export default function HostApplyScreen() {
         await loadLatestApplication();
         return;
       }
+      captureSupabaseError("host.application_insert", error);
       setErrorMsg("Could not submit your application. Please try again.");
       return;
     }

@@ -20,6 +20,7 @@ import { useAuth } from "../context/AuthContext";
 import { RoleProvider } from "../context/RoleContext";
 import { useSavedQuizzes } from "../context/SavedQuizzesContext";
 import { supabase } from "../lib/supabase";
+import { runSupabase } from "../lib/runSupabase";
 import AuthNavigator from "./AuthNavigator";
 import RoleSelectScreen from "../screens/RoleSelectScreen";
 import SettingsScreen from "../screens/SettingsScreen";
@@ -448,15 +449,21 @@ function PlayerTabScreen() {
     }
     const todayDow = new Date().getDay();
     let cancelled = false;
-    void supabase
-      .from("quiz_events")
-      .select("id")
-      .in("id", savedIds)
-      .eq("is_active", true)
-      .eq("day_of_week", todayDow)
-      .then(({ data }) => {
-        if (!cancelled) setSavedTonightCount(data?.length ?? 0);
-      });
+    void (async () => {
+      try {
+        const data = await runSupabase<Array<{ id: string }>>("nav.saved_tonight_count", () =>
+          supabase
+            .from("quiz_events")
+            .select("id")
+            .in("id", savedIds)
+            .eq("is_active", true)
+            .eq("day_of_week", todayDow),
+        );
+        if (!cancelled) setSavedTonightCount(data.length);
+      } catch {
+        if (!cancelled) setSavedTonightCount(0);
+      }
+    })();
     return () => {
       cancelled = true;
     };
@@ -495,7 +502,7 @@ function LoadingGate() {
 }
 
 export default function RootNavigator() {
-  const { session, initializing: authInitializing } = useAuth();
+  const { session, initializing: authInitializing, recoveryMode } = useAuth();
   const [role, setRoleState] = useState<QuizzerRole | null>(null);
   const [roleLoading, setRoleLoading] = useState(true);
   /** Bumps whenever we intentionally set role (sign-out, reset, role picker). Stale getStoredRole() callbacks must not overwrite. */
@@ -555,11 +562,11 @@ export default function RootNavigator() {
     );
   }
 
-  if (!session) {
+  if (!session || recoveryMode) {
     return (
       <NavigationContainer>
         <Animated.View style={{ flex: 1 }} entering={FadeIn.duration(200)}>
-          <AuthNavigator />
+          <AuthNavigator initialRoute={recoveryMode ? "SetNewPassword" : undefined} />
         </Animated.View>
       </NavigationContainer>
     );

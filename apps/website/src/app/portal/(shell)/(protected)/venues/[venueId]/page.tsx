@@ -4,6 +4,7 @@ import { venueLinksFromPublicanProfile } from "@/components/portal/portal-types"
 import { PortalSupabaseEnvMissing } from "@/components/portal/PortalSupabaseEnvMissing";
 import { VenueQuizSchedule, type VenueQuizEventRow } from "@/components/portal/VenueQuizSchedule";
 import { createServerSupabaseClientSafe } from "@/lib/supabase/server";
+import { captureSupabaseError } from "@/lib/observability/supabaseErrors";
 
 export const metadata: Metadata = {
   title: "Venue schedule · Portal",
@@ -31,11 +32,15 @@ export default async function PublicanVenueSchedulePage({ params }: PageProps) {
     return null;
   }
 
-  const { data: profile } = await supabase
+  const { data: profile, error: profileError } = await supabase
     .from("publican_profiles")
     .select("venue_id, venues ( name )")
     .eq("id", user.id)
     .maybeSingle();
+
+  if (profileError) {
+    captureSupabaseError("portal.venue_profile_by_user", profileError, { user_id: user.id });
+  }
 
   if (!profile || profile.venue_id !== venueId) {
     notFound();
@@ -56,7 +61,7 @@ export default async function PublicanVenueSchedulePage({ params }: PageProps) {
     .order("start_time", { ascending: true });
 
   if (eventsError) {
-    console.error("[portal] quiz_events:", eventsError.message);
+    captureSupabaseError("portal.venue_events_by_venue", eventsError, { venue_id: venueId });
   }
 
   const rows = (events ?? []) as VenueQuizEventRow[];
@@ -68,14 +73,16 @@ export default async function PublicanVenueSchedulePage({ params }: PageProps) {
     p_venue_id: venueId,
   });
   if (countError) {
-    console.error("[portal] publican_venue_quiz_interest_counts:", countError.message);
+    captureSupabaseError("portal.venue_interest_counts_rpc", countError, { venue_id: venueId });
     const eventIds = rows.map((r) => r.id);
     if (eventIds.length > 0) {
       const { data: interestRows, error: intErr } = await supabase
         .from("quiz_event_interests")
         .select("quiz_event_id")
         .in("quiz_event_id", eventIds);
-      if (!intErr) {
+      if (intErr) {
+        captureSupabaseError("portal.venue_interests_fallback", intErr, { venue_id: venueId });
+      } else {
         for (const r of interestRows ?? []) {
           const qid = r.quiz_event_id as string;
           interestByEventId.set(qid, (interestByEventId.get(qid) ?? 0) + 1);

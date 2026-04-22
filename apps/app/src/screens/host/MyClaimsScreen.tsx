@@ -16,6 +16,8 @@ import { HostStackParamList } from "../../navigation/RootNavigator";
 import { useAuth } from "../../context/AuthContext";
 import { useAppTheme } from "../../context/ThemeContext";
 import { supabase } from "../../lib/supabase";
+import { captureSupabaseError } from "../../lib/sentryInit";
+import { formatTime24 as formatTime } from "../../lib/formatters";
 import {
   borderWidth,
   colors,
@@ -30,12 +32,6 @@ const DAY_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
 
 function dayLabel(d: number): string {
   return DAY_SHORT[d] ?? String(d);
-}
-
-function formatTime(t: string): string {
-  const s = String(t).trim();
-  if (s.length >= 5) return s.slice(0, 5);
-  return s;
 }
 
 function formatPounds(pence: number | null | undefined): string {
@@ -244,6 +240,7 @@ export default function MyClaimsScreen() {
     ]);
 
     if (allowRes.error) {
+      captureSupabaseError("host.claims.allowlisted_by_email", allowRes.error);
       setErrorMsg(allowRes.error.message);
     } else {
       const feeRaw = allowRes.data?.default_fee_pence;
@@ -251,6 +248,7 @@ export default function MyClaimsScreen() {
     }
 
     if (claimsRes.error) {
+      captureSupabaseError("host.claims.list_by_host", claimsRes.error);
       setErrorMsg(claimsRes.error.message);
       setClaims([]);
       return;
@@ -288,6 +286,7 @@ export default function MyClaimsScreen() {
       const { error } = await supabase.from("quiz_claims").update({ status: "cancelled" }).eq("id", claimId);
       setCancelingId(null);
       if (error) {
+        captureSupabaseError("host.claims.cancel_update", error, { claim_id: claimId });
         setErrorMsg(error.message);
         return;
       }

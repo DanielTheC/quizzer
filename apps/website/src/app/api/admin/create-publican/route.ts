@@ -2,6 +2,7 @@ import {
   createServerSupabaseClientSafe,
   createServiceRoleSupabaseClient,
 } from "@/lib/supabase/server";
+import { captureSupabaseError } from "@/lib/observability/supabaseErrors";
 import { NextResponse } from "next/server";
 
 export async function POST(req: Request) {
@@ -19,7 +20,7 @@ export async function POST(req: Request) {
 
   const { data: isOperator, error: rpcError } = await supabase.rpc("is_operator");
   if (rpcError) {
-    console.error("is_operator:", rpcError.message);
+    captureSupabaseError("api.admin.create_publican.is_operator", rpcError);
     return NextResponse.json({ error: "Could not verify access" }, { status: 500 });
   }
   if (!isOperator) {
@@ -72,6 +73,10 @@ export async function POST(req: Request) {
   });
 
   if (profileError) {
+    captureSupabaseError("api.admin.create_publican.profile_insert", profileError, {
+      user_id: newUser.id,
+      venue_id,
+    });
     const { error: delErr } = await adminClient.auth.admin.deleteUser(newUser.id);
     if (delErr) {
       console.error("create-publican rollback deleteUser:", delErr.message);

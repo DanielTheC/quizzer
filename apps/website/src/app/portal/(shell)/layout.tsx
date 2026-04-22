@@ -3,6 +3,7 @@ import { PortalShell } from "@/components/portal/PortalShell";
 import { venueLinksFromPublicanProfile } from "@/components/portal/portal-types";
 import { PortalSupabaseEnvMissing } from "@/components/portal/PortalSupabaseEnvMissing";
 import { createServerSupabaseClientSafe } from "@/lib/supabase/server";
+import { captureSupabaseError } from "@/lib/observability/supabaseErrors";
 
 export default async function PortalShellLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createServerSupabaseClientSafe();
@@ -24,7 +25,7 @@ export default async function PortalShellLayout({ children }: { children: React.
     .maybeSingle();
 
   if (profileError) {
-    console.error("publican_profiles shell:", profileError.message);
+    captureSupabaseError("portal.shell_profile_by_user", profileError, { user_id: user.id });
   }
 
   const venueLinks = venueLinksFromPublicanProfile(profile ?? null);

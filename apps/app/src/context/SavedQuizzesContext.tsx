@@ -4,6 +4,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import NetInfo from "@react-native-community/netinfo";
 import { useAuth } from "./AuthContext";
 import { supabase } from "../lib/supabase";
+import { captureSupabaseError } from "../lib/sentryInit";
 import {
   clearInterestQueue,
   deleteInterestOrQueue,
@@ -112,6 +113,7 @@ export function SavedQuizzesProvider({ children }: { children: React.ReactNode }
           .eq("user_id", uid);
         if (cancelled) return;
         if (error) {
+          captureSupabaseError("saved.interests_by_user", error);
           if (__DEV__) console.warn("quiz_event_interests fetch:", error.message);
           return;
         }

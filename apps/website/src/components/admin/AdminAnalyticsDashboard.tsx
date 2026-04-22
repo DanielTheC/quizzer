@@ -2,6 +2,10 @@
 
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
 import { captureSupabaseError } from "@/lib/observability/supabaseErrors";
+import {
+  formatTime24 as formatTime,
+  formatPrizeDisplay,
+} from "@/lib/formatters";
 import type { CSSProperties } from "react";
 import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 
@@ -49,17 +53,6 @@ function formatShortDate(isoDate: string) {
   const d = /^\d{4}-\d{2}-\d{2}$/.test(isoDate) ? new Date(`${isoDate}T12:00:00`) : new Date(isoDate);
   if (Number.isNaN(d.getTime())) return isoDate;
   return d.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
-}
-
-function formatTime(t: string) {
-  const x = t.trim();
-  if (/^\d{2}:\d{2}/.test(x)) return x.slice(0, 5);
-  return x;
-}
-
-function formatPrizeDisplay(p: string | null) {
-  if (!p) return "—";
-  return p.replace(/_/g, " ");
 }
 
 function formatGbpPence(pence: number) {

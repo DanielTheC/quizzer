@@ -1,4 +1,5 @@
 import { supabase } from "./supabase";
+import { captureSupabaseError } from "./sentryInit";
 
 export type QuizEventDetail = {
   id: string;
@@ -74,7 +75,10 @@ async function loadFromNetwork(
     .eq("id", quizEventId)
     .single();
 
-  if (error) return { data: null, error: error.message };
+  if (error) {
+    captureSupabaseError("player.quiz_event_detail_by_id", error);
+    return { data: null, error: error.message };
+  }
   const row = data as unknown as QuizEventDetail;
   cache.set(quizEventId, { data: row, storedAt: Date.now() });
   return { data: row, error: null };

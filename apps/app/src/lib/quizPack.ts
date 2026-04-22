@@ -1,5 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { supabase } from "./supabase";
+import { captureSupabaseError } from "./sentryInit";
 
 const CACHE_KEY_PREFIX = "quiz_pack:";
 const LATEST_PACK_ID_KEY = "quiz_pack_latest_id";
@@ -65,7 +66,11 @@ export async function fetchLatestPack(): Promise<QuizPack | null> {
     .order("created_at", { ascending: false })
     .limit(1);
 
-  if (error || !packs?.length) return null;
+  if (error) {
+    captureSupabaseError("host.pack.latest_pack_meta", error);
+    return null;
+  }
+  if (!packs?.length) return null;
   const packMeta = packs[0] as { id: string; name: string; created_at: string };
 
   const { data: roundsData, error: roundsError } = await supabase
@@ -74,7 +79,11 @@ export async function fetchLatestPack(): Promise<QuizPack | null> {
     .eq("quiz_pack_id", packMeta.id)
     .order("round_number", { ascending: true });
 
-  if (roundsError || !roundsData?.length) {
+  if (roundsError) {
+    captureSupabaseError("host.pack.rounds_by_pack", roundsError, { pack_id: packMeta.id });
+    return { ...packMeta, rounds: [] };
+  }
+  if (!roundsData?.length) {
     return { ...packMeta, rounds: [] };
   }
 
@@ -85,6 +94,9 @@ export async function fetchLatestPack(): Promise<QuizPack | null> {
     .in("quiz_round_id", roundIds)
     .order("question_number", { ascending: true });
 
+  if (questionsError) {
+    captureSupabaseError("host.pack.questions_by_rounds", questionsError, { pack_id: packMeta.id });
+  }
   const raw = (questionsError ? [] : (questionsData ?? [])) as QuestionRow[];
   const questions: QuizQuestion[] = raw.map((row) => ({
     id: row.id,

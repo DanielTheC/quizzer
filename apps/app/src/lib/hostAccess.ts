@@ -1,5 +1,6 @@
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "./supabase";
+import { captureSupabaseError } from "./sentryInit";
 
 const ALLOWLIST_CACHE_TTL_MS = 45_000;
 let allowlistCache: { userId: string; value: boolean; at: number } | null = null;
@@ -34,7 +35,7 @@ export async function fetchIsAllowlistedHost(session: Session | null): Promise<b
   }
   const { data, error } = await supabase.rpc("is_allowlisted_host");
   if (error) {
-    console.warn("is_allowlisted_host:", error.message);
+    captureSupabaseError("host.access.is_allowlisted_rpc", error);
     return null;
   }
   const value = data === true;
@@ -65,7 +66,7 @@ export async function fetchLatestHostApplication(emailLower: string): Promise<Ho
     .maybeSingle();
 
   if (error) {
-    console.warn("host_applications latest fetch:", error.message);
+    captureSupabaseError("host.access.latest_application_by_email", error);
     return null;
   }
   if (!data) return null;

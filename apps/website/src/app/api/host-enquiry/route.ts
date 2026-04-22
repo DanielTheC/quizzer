@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceRoleSupabaseClient } from "@/lib/supabase/server";
+import { captureSupabaseError } from "@/lib/observability/supabaseErrors";
 
 export async function POST(req: NextRequest) {
   const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
@@ -24,11 +25,16 @@ export async function POST(req: NextRequest) {
 
   const supabase = createServiceRoleSupabaseClient();
 
-  const { count } = await supabase
+  const { count, error: countError } = await supabase
     .from("host_applications")
     .select("id", { count: "exact", head: true })
     .eq("email", email.trim().toLowerCase())
     .eq("status", "pending");
+
+  if (countError) {
+    captureSupabaseError("api.host_enquiry.pending_count", countError, { ip });
+    return NextResponse.json({ error: "Failed to submit" }, { status: 500 });
+  }
 
   if ((count ?? 0) >= 3) {
     return NextResponse.json({ error: "Too many pending applications for this email" }, { status: 429 });
@@ -44,7 +50,7 @@ export async function POST(req: NextRequest) {
   });
 
   if (error) {
-    console.error("host-enquiry insert error:", error.message, "ip:", ip);
+    captureSupabaseError("api.host_enquiry.insert", error, { ip });
     return NextResponse.json({ error: "Failed to submit" }, { status: 500 });
   }
 

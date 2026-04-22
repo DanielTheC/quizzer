@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { PublicanDashboard } from "@/components/portal/PublicanDashboard";
 import { createServerSupabaseClientSafe } from "@/lib/supabase/server";
+import { captureSupabaseError } from "@/lib/observability/supabaseErrors";
 
 export const metadata: Metadata = {
   title: "Dashboard · Publican portal",
@@ -20,11 +21,15 @@ export default async function PortalDashboardPage() {
     return null;
   }
 
-  const { data: profile } = await supabase
+  const { data: profile, error: profileError } = await supabase
     .from("publican_profiles")
     .select("id, venue_id, first_name, last_name, email, venues ( id, name, address, postcode )")
     .eq("id", user.id)
     .maybeSingle();
+
+  if (profileError) {
+    captureSupabaseError("portal.dashboard_profile_by_user", profileError, { user_id: user.id });
+  }
 
   if (!profile) {
     return null;
@@ -49,7 +54,7 @@ export default async function PortalDashboardPage() {
     .order("start_time", { ascending: true });
 
   if (evErr) {
-    console.error("[portal] quiz_events:", evErr.message);
+    captureSupabaseError("portal.dashboard_events_by_venue", evErr, { venue_id: venueId });
   }
 
   const eventRows = events ?? [];
@@ -62,7 +67,7 @@ export default async function PortalDashboardPage() {
       .select("quiz_event_id")
       .in("quiz_event_id", eventIds);
     if (intErr) {
-      console.error("[portal] quiz_event_interests:", intErr.message);
+      captureSupabaseError("portal.dashboard_interests_by_events", intErr);
     }
     for (const r of interestRows ?? []) {
       const qid = r.quiz_event_id as string;
@@ -78,7 +83,7 @@ export default async function PortalDashboardPage() {
       .in("quiz_event_id", eventIds)
       .in("status", ["pending", "confirmed"]);
     if (claimErr) {
-      console.error("[portal] quiz_claims:", claimErr.message);
+      captureSupabaseError("portal.dashboard_claims_by_events", claimErr);
     }
     for (const c of claimRows ?? []) {
       const eid = c.quiz_event_id as string;
@@ -109,7 +114,7 @@ export default async function PortalDashboardPage() {
     .limit(25);
 
   if (msgErr) {
-    console.error("[portal] publican_messages:", msgErr.message);
+    captureSupabaseError("portal.dashboard_messages_by_venue", msgErr, { venue_id: venueId });
   }
 
   const recentMessages = (msgRows ?? []).map((m) => ({

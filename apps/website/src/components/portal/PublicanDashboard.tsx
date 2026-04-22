@@ -3,6 +3,11 @@
 import { useRouter } from "next/navigation";
 import { useCallback, useState } from "react";
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
+import { captureSupabaseError } from "@/lib/observability/supabaseErrors";
+import {
+  formatTime24 as formatTime,
+  formatFeePenceOrDash as formatFeePence,
+} from "@/lib/formatters";
 import { labelForMessageStatus } from "./publicanMessageLabels";
 import { PortalSignOutButton } from "./PortalSignOutButton";
 
@@ -37,17 +42,6 @@ export type PublicanDashboardProps = {
     operator_reply: string | null;
   }>;
 };
-
-function formatTime(t: string): string {
-  const s = String(t).trim();
-  if (s.length >= 5) return s.slice(0, 5);
-  return s;
-}
-
-function formatFeePence(pence: number | null): string {
-  if (pence == null || !Number.isFinite(Number(pence))) return "—";
-  return `£${(Number(pence) / 100).toFixed(2)}`;
-}
 
 function truncateEmail(email: string, max: number): string {
   const e = email.trim();
@@ -115,6 +109,10 @@ export function PublicanDashboard({ venue, profile, quizEvents, recentMessages }
           status: "open",
         });
         if (error) {
+          captureSupabaseError("portal.message_insert", error, {
+            venue_id: venue.id,
+            message_type: messageType,
+          });
           setSendError(error.message);
           setSendBusy(false);
           return;

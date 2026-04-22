@@ -13,6 +13,8 @@ import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { useAuth } from "../../context/AuthContext";
 import { useAppTheme } from "../../context/ThemeContext";
 import { supabase } from "../../lib/supabase";
+import { captureSupabaseError } from "../../lib/sentryInit";
+import { formatTime24 as formatTime } from "../../lib/formatters";
 import {
   borderWidth,
   colors,
@@ -27,12 +29,6 @@ const DAY_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
 
 function dayLabel(d: number): string {
   return DAY_SHORT[d] ?? String(d);
-}
-
-function formatTime(t: string): string {
-  const s = String(t).trim();
-  if (s.length >= 5) return s.slice(0, 5);
-  return s;
 }
 
 function formatPounds(pence: number | null | undefined): string {
@@ -161,6 +157,7 @@ export default function AvailableQuizzesScreen() {
     ]);
 
     if (allowRes.error) {
+      captureSupabaseError("host.available.allowlisted_by_email", allowRes.error);
       setLoadError(allowRes.error.message);
       setQuizzes([]);
       return;
@@ -170,12 +167,14 @@ export default function AvailableQuizzesScreen() {
     setDefaultFeePence(feeRaw != null && Number.isFinite(Number(feeRaw)) ? Number(feeRaw) : 0);
 
     if (eventsRes.error) {
+      captureSupabaseError("host.available.active_events_list", eventsRes.error);
       setLoadError(eventsRes.error.message);
       setQuizzes([]);
       return;
     }
 
     if (claimsRes.error) {
+      captureSupabaseError("host.available.active_claims_list", claimsRes.error);
       setLoadError(claimsRes.error.message);
       setQuizzes([]);
       return;
@@ -225,6 +224,7 @@ export default function AvailableQuizzesScreen() {
           await load();
           return;
         }
+        captureSupabaseError("host.available.claim_insert", error, { quiz_event_id: quizEventId });
         setClaimErrorBanner(error.message);
         return;
       }

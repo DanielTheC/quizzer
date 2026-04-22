@@ -2,6 +2,7 @@
 
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
 import { captureSupabaseError } from "@/lib/observability/supabaseErrors";
+import { formatTime24 as formatTime } from "@/lib/formatters";
 import type { CSSProperties } from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
@@ -61,12 +62,6 @@ const DAY_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
 
 function dayLabel(d: number): string {
   return DAY_SHORT[d] ?? String(d);
-}
-
-function formatTime(t: string): string {
-  const s = String(t).trim();
-  if (s.length >= 5) return s.slice(0, 5);
-  return s;
 }
 
 function formatDefaultFeePence(pence: number): string {

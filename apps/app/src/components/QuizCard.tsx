@@ -6,6 +6,7 @@ import { useAppTheme } from "../context/ThemeContext";
 import { heartScalePeak, heartSpringIn, heartSpringOut } from "../lib/heartPressAnimation";
 import { hapticLight, hapticSavedQuiz } from "../lib/playerHaptics";
 import { postcodeOutwardOrArea } from "../lib/venueLocationSnippet";
+import { formatPrizePill } from "../lib/formatters";
 import {
   colors,
   fonts,
@@ -65,13 +66,6 @@ const HeartToggleButton = React.memo(function HeartToggleButton({
 const stylesStatic = StyleSheet.create({
   heartWrap: { padding: spacing.xs },
 });
-
-function formatPrizePill(prize: string): string {
-  const raw = prize?.replace(/_/g, " ").trim() || "Prize TBC";
-  const words = raw.split(/\s+/).filter(Boolean);
-  const upper = words.map((w) => w.toUpperCase()).join(" ");
-  return upper.length > 28 ? `${upper.slice(0, 26)}…` : upper;
-}
 
 function createQuizCardStyles(semantic: SemanticTheme, isDark: boolean) {
   return StyleSheet.create({

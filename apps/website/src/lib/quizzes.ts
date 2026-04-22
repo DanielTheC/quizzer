@@ -1,4 +1,10 @@
 import { getSupabaseSafe } from "./supabase";
+import { captureSupabaseError } from "./observability/supabaseErrors";
+import { runSupabase } from "./observability/runSupabase";
+import {
+  formatTime12 as formatTime,
+  formatFeePenceOrFree as formatEntryFee,
+} from "@/lib/formatters";
 import type { City, Quiz, QuizDetail, VenueImage } from "@/data/types";
 
 const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
@@ -61,22 +67,6 @@ type SupabaseQuizRow = {
 
 const QUIZ_EVENT_DETAIL_SELECT =
   "id, venue_id, day_of_week, start_time, entry_fee_pence, fee_basis, prize, turn_up_guidance, host_cancelled_at, venues(name, address, postcode, city, borough, lat, lng, what_to_expect)";
-
-function formatTime(s: string): string {
-  const str = String(s).trim();
-  const parts = str.split(/[:.]/);
-  const h = parseInt(parts[0], 10) || 0;
-  const m = parseInt(parts[1], 10) || 0;
-  const hour = h % 12 || 12;
-  const ampm = h < 12 ? "AM" : "PM";
-  return `${hour}:${m.toString().padStart(2, "0")} ${ampm}`;
-}
-
-function formatEntryFee(pence: number | null | undefined): string {
-  const n = Number(pence);
-  if (!Number.isFinite(n) || n === 0) return "Free";
-  return `£${(n / 100).toFixed(2)}`;
-}
 
 function toCitySlug(city: string | null): string {
   if (!city || !city.trim()) return "other";
@@ -160,20 +150,20 @@ export async function fetchQuizzesFromSupabase(): Promise<Quiz[]> {
 
   const query =
     "id, day_of_week, start_time, entry_fee_pence, prize, venues(name, address, postcode, city, borough, lat, lng)";
-  const { data, error } = await supabase
-    .from("quiz_events")
-    .select(query)
-    .eq("is_active", true)
-    .order("day_of_week", { ascending: true })
-    .order("start_time", { ascending: true });
-
-  if (error) {
-    console.error("[website] Supabase quizzes fetch error:", error.message);
+  try {
+    const data = await runSupabase<unknown[]>("marketing.quizzes_list", () =>
+      supabase
+        .from("quiz_events")
+        .select(query)
+        .eq("is_active", true)
+        .order("day_of_week", { ascending: true })
+        .order("start_time", { ascending: true }),
+    );
+    const rows = data as unknown as SupabaseQuizRow[];
+    return rows.map(rowToQuiz);
+  } catch {
     return [];
   }
-
-  const rows = (data as unknown as SupabaseQuizRow[]) ?? [];
-  return rows.map(rowToQuiz);
 }
 
 /**
@@ -192,10 +182,11 @@ export async function fetchQuizByIdFromSupabase(id: string): Promise<Quiz | null
     .eq("is_active", true)
     .maybeSingle();
 
-  if (error || !data) {
-    if (error) console.error("[website] Supabase quiz by id error:", error.message);
+  if (error) {
+    captureSupabaseError("marketing.quiz_by_id", error);
     return null;
   }
+  if (!data) return null;
 
   return rowToQuiz(data as unknown as SupabaseQuizRow);
 }
@@ -214,39 +205,41 @@ export async function fetchQuizDetailById(id: string): Promise<QuizDetail | null
     .eq("is_active", true)
     .maybeSingle();
 
-  if (quizError || !quizRow) {
-    if (quizError) console.error("[website] Supabase quiz detail by id error:", quizError.message);
+  if (quizError) {
+    captureSupabaseError("marketing.quiz_detail_by_id", quizError);
     return null;
   }
+  if (!quizRow) return null;
 
   const row = quizRow as unknown as SupabaseQuizRow;
   const venueId = row.venue_id ?? null;
 
   let venueImages: VenueImage[] = [];
   if (venueId) {
-    const { data: imageRows, error: imagesError } = await supabase
-      .from("venue_images")
-      .select("id, venue_id, storage_path, alt_text, sort_order")
-      .eq("venue_id", venueId)
-      .order("sort_order", { ascending: true });
-
-    if (imagesError) {
-      console.error("[website] Supabase venue_images fetch error:", imagesError.message);
-    } else {
-      venueImages = (
-        (imageRows ?? []) as Array<{
+    try {
+      const imageRows = await runSupabase<
+        Array<{
           id: string;
           venue_id: string;
           storage_path: string;
           alt_text: string | null;
           sort_order: number;
         }>
-      ).map((img) => ({
+      >("marketing.venue_images_list", () =>
+        supabase
+          .from("venue_images")
+          .select("id, venue_id, storage_path, alt_text, sort_order")
+          .eq("venue_id", venueId)
+          .order("sort_order", { ascending: true }),
+      );
+      venueImages = imageRows.map((img) => ({
         id: img.id,
         storagePath: img.storage_path,
         altText: img.alt_text,
         sortOrder: img.sort_order,
       }));
+    } catch {
+      // preserve prior behavior: continue with empty venueImages on error
     }
   }
 
@@ -300,14 +293,15 @@ export async function getCities(): Promise<City[]> {
   const supabase = getSupabaseSafe();
   if (!supabase) return [];
 
-  const { data, error } = await supabase.from("venues").select("city, borough, address");
-
-  if (error) {
-    console.error("[website] Supabase cities fetch error:", error.message);
+  let rows: SupabaseVenueAreaRow[] = [];
+  try {
+    rows = await runSupabase<SupabaseVenueAreaRow[]>("marketing.cities_list", () =>
+      supabase.from("venues").select("city, borough, address"),
+    );
+  } catch {
     return [];
   }
 
-  const rows = (data as unknown as SupabaseVenueAreaRow[]) ?? [];
   const unique = new Map<string, City>();
   for (const row of rows) {
     const label = resolveVenueCityLabel({

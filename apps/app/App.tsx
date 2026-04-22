@@ -1,4 +1,4 @@
-import React, { Component, ErrorInfo, ReactNode, useEffect } from "react";
+import React, { Component, ErrorInfo, ReactNode, useEffect, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { useFonts, Anton_400Regular } from "@expo-google-fonts/anton";
 import * as SplashScreen from "expo-splash-screen";
@@ -9,6 +9,7 @@ import { ThemeProvider } from "./src/context/ThemeContext";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { initSentry } from "./src/lib/sentryInit";
 import RootNavigator from "./src/navigation/RootNavigator";
+import SplashAnimated from "./src/components/SplashAnimated";
 
 initSentry();
 
@@ -58,6 +59,7 @@ const styles = StyleSheet.create({
 
 function AppRoot() {
   const [fontsLoaded] = useFonts({ Anton_400Regular });
+  const [splashAnimDone, setSplashAnimDone] = useState(false);
 
   useEffect(() => {
     if (fontsLoaded) {
@@ -76,6 +78,9 @@ function AppRoot() {
           <AuthProvider>
             <SavedQuizzesProvider>
               <RootNavigator />
+              {!splashAnimDone && (
+                <SplashAnimated onFinished={() => setSplashAnimDone(true)} />
+              )}
             </SavedQuizzesProvider>
           </AuthProvider>
         </ThemeProvider>

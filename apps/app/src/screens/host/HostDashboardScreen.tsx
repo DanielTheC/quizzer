@@ -17,6 +17,7 @@ import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { HostStackParamList } from "../../navigation/RootNavigator";
 import { supabase } from "../../lib/supabase";
+import { captureSupabaseError } from "../../lib/sentryInit";
 import { ScreenTitle } from "../../components/ScreenTitle";
 import { colors, semantic, spacing, radius, borderWidth, shadow, typography } from "../../theme";
 import { computeNextOccurrence, formatNextOccurrenceLabel } from "../../lib/nextOccurrence";
@@ -108,6 +109,9 @@ export default function HostDashboardScreen() {
 
       setHostedSessionsCount(hostedCount);
 
+      if (summaryResult.error) {
+        captureSupabaseError("host.dashboard_summary_rpc", summaryResult.error);
+      }
       if (summaryResult.error || !summaryResult.data) {
         setTotalEarningsPence(null);
         setTotalSessions(null);
@@ -124,6 +128,7 @@ export default function HostDashboardScreen() {
         .not("quiz_event_id", "is", null);
 
       if (appsError) {
+        captureSupabaseError("host.dashboard_approved_applications", appsError);
         setClaimsLoadError(appsError.message);
       }
 
@@ -134,6 +139,7 @@ export default function HostDashboardScreen() {
       setMyClaimedQuizEventIds(new Set([...fromApps, ...manualIds]));
 
       if (rpcResult.error) {
+        captureSupabaseError("host.dashboard_rows_rpc", rpcResult.error);
         setErrorMsg(rpcResult.error.message);
         setRows([]);
         return;
@@ -189,6 +195,7 @@ export default function HostDashboardScreen() {
       });
       setSavingId(null);
       if (error) {
+        captureSupabaseError("host.dashboard_patch_note_rpc", error, { quiz_event_id: quizEventId });
         setErrorMsg(error.message);
         return;
       }
@@ -215,6 +222,7 @@ export default function HostDashboardScreen() {
       });
       setSavingId(null);
       if (error) {
+        captureSupabaseError("host.dashboard_patch_cancelled_rpc", error, { quiz_event_id: quizEventId });
         setErrorMsg(error.message);
         return;
       }

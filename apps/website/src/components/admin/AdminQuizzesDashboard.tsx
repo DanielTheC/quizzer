@@ -3,6 +3,13 @@
 import Image from "next/image";
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
 import { captureSupabaseError } from "@/lib/observability/supabaseErrors";
+import {
+  formatTime24 as formatTimeDisplay,
+  toTimeInputValue,
+  normalizeStartTimeForDb,
+  formatFeePenceOrDash as formatFeePence,
+  formatPrizeDisplay,
+} from "@/lib/formatters";
 import type { CSSProperties } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -64,32 +71,6 @@ type QuizEventRow = {
   prize_3rd: string | null;
   turn_up_guidance: string | null;
 };
-
-function formatTimeDisplay(t: string) {
-  const x = t.trim();
-  if (/^\d{2}:\d{2}/.test(x)) return x.slice(0, 5);
-  return x;
-}
-
-function toTimeInputValue(t: string) {
-  return formatTimeDisplay(t);
-}
-
-function normalizeStartTimeForDb(value: string): string {
-  const v = value.trim();
-  if (/^\d{2}:\d{2}$/.test(v)) return `${v}:00`;
-  return v;
-}
-
-function formatFeePence(p: number | null) {
-  if (p == null || Number.isNaN(Number(p))) return "—";
-  return `£${(Number(p) / 100).toFixed(2)}`;
-}
-
-function formatPrizeDisplay(p: string | null) {
-  if (!p) return "—";
-  return p.replace(/_/g, " ");
-}
 
 function venueNameById(venues: VenueRow[], id: string) {
   return venues.find((v) => v.id === id)?.name ?? id;

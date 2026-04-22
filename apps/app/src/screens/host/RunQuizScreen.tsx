@@ -33,6 +33,7 @@ import {
   DEFAULT_STATE,
 } from "../../lib/runQuizStorage";
 import { supabase } from "../../lib/supabase";
+import { captureSupabaseError } from "../../lib/sentryInit";
 import { buildRoundLabelsFromPack, getCachedPack } from "../../lib/quizPack";
 import { ScreenTitle } from "../../components/ScreenTitle";
 import { colors, semantic, spacing, radius, borderWidth, shadow, typography } from "../../theme";
@@ -135,6 +136,7 @@ export default function RunQuizScreen() {
         .single();
       if (cancelled) return;
       if (error) {
+        captureSupabaseError("host.run.venue_prizes_by_venue", error, { venue_id: state.venueId });
         setPrize1st(null);
         setPrize2nd(null);
         setPrize3rd(null);
@@ -242,7 +244,14 @@ export default function RunQuizScreen() {
                 p_total_player_count: totalPlayerCount,
               })
             )
-              .then(() => {})
+              .then((res) => {
+                if (res && res.error) {
+                  captureSupabaseError("host.run.record_session_rpc", res.error, {
+                    venue_id: state.venueId,
+                    pack_id: state.packId,
+                  });
+                }
+              })
               .catch(() => {});
           }
           await clearRunQuizState();

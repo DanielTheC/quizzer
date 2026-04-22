@@ -9,6 +9,8 @@ import Constants from "expo-constants";
 import { Platform } from "react-native";
 import { supabase } from "./supabase";
 import { getNotificationPreferences } from "./notificationPreferences";
+import { formatTime24 as formatTime } from "./formatters";
+import { captureSupabaseError } from "./sentryInit";
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -32,13 +34,6 @@ export type ScheduleOptions = {
   onlyWithinMiles: number | null;
   userLatLng?: { lat: number; lng: number } | null;
 };
-
-function formatTime(time: string): string {
-  const s = String(time);
-  if (s.length >= 5) return s.slice(0, 5);
-  if (s.length >= 2) return `${s.slice(0, 2)}:${s.slice(2)}`;
-  return s;
-}
 
 function prizeLabel(prize: string): string {
   if (!prize) return "—";
@@ -105,7 +100,11 @@ export async function scheduleTodaysQuizNotifications(
     .eq("day_of_week", today)
     .is("host_cancelled_at", null);
 
-  if (error || !data?.length) return;
+  if (error) {
+    captureSupabaseError("notifications.saved_today_events", error);
+    return;
+  }
+  if (!data?.length) return;
 
   let events = data as unknown as QuizRow[];
 
@@ -116,10 +115,13 @@ export async function scheduleTodaysQuizNotifications(
     events.length > 0
   ) {
     const { haversineMiles } = await import("./haversine");
-    const { data: withVenues } = await supabase
+    const { data: withVenues, error: withVenuesError } = await supabase
       .from("quiz_events")
       .select("id, venues ( lat, lng )")
       .in("id", events.map((e) => e.id));
+    if (withVenuesError) {
+      captureSupabaseError("notifications.saved_today_coords", withVenuesError);
+    }
     type VenueRow = { id: string; venues: { lat: number | null; lng: number | null } | null };
     const withCoords = (withVenues ?? []) as unknown as VenueRow[];
     const byId = new Map(withCoords.map((r) => [r.id, r.venues]));
@@ -253,6 +255,7 @@ export async function syncExpoPushTokenIfNeeded(): Promise<void> {
       { onConflict: "user_id,token" }
     );
     if (error) {
+      captureSupabaseError("notifications.push_token_upsert", error);
       console.warn("push_tokens upsert:", error.message);
     }
   } catch (e) {

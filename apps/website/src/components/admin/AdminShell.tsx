@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
+import { captureSupabaseError } from "@/lib/observability/supabaseErrors";
 
 const NAV = [
   { href: "/admin", label: "Home" },
@@ -43,6 +44,9 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
             .select("id", { count: "exact", head: true })
             .eq("status", "pending"),
         ]);
+        if (appRes.error) captureSupabaseError("admin.shell.pending_applications_count", appRes.error);
+        if (msgRes.error) captureSupabaseError("admin.shell.open_messages_count", msgRes.error);
+        if (claimsRes.error) captureSupabaseError("admin.shell.pending_claims_count", claimsRes.error);
         if (active) {
           setTriageCount(appRes.count ?? 0);
           setMessagesCount(msgRes.count ?? 0);

@@ -40,6 +40,7 @@ import { useAppTheme } from "../../context/ThemeContext";
 import type { NearbyStackParamList } from "../../navigation/RootNavigator";
 import { heartScalePeak, heartSpringIn, heartSpringOut } from "../../lib/heartPressAnimation";
 import { hapticLight, hapticMedium, hapticSavedQuiz } from "../../lib/playerHaptics";
+import { formatTime24 as formatTime } from "../../lib/formatters";
 import {
   colors,
   fonts,
@@ -62,13 +63,6 @@ const DAY_FULL = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Frida
 
 function dayNameShort(day: number) {
   return DAY_SHORT[day] ?? String(day);
-}
-
-function formatTime(time: string): string {
-  const s = String(time);
-  if (s.length >= 5) return s.slice(0, 5);
-  if (s.length >= 2) return `${s.slice(0, 2)}:${s.slice(2)}`;
-  return s;
 }
 
 function prizeLabel(prize: string): string {

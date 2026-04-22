@@ -1,5 +1,6 @@
 import { supabase } from "./supabase";
 import { haversineMiles } from "./haversine";
+import { runSupabase } from "./runSupabase";
 
 export type ClosestOtherQuizRow = {
   id: string;
@@ -35,18 +36,19 @@ export async function fetchClosestOtherQuizzes(
 ): Promise<ClosestOtherQuizRow[]> {
   if (count < 1) return [];
 
-  const { data, error } = await supabase
-    .from("quiz_events")
-    .select("id, day_of_week, start_time, venues ( name, lat, lng, city )")
-    .eq("is_active", true)
-    .neq("id", excludeQuizEventId);
-
-  if (error) {
-    console.warn("fetchClosestOtherQuizzes:", error.message);
+  let rows: EventRow[];
+  try {
+    const data = await runSupabase<unknown[]>("player.closest_other_quizzes", () =>
+      supabase
+        .from("quiz_events")
+        .select("id, day_of_week, start_time, venues ( name, lat, lng, city )")
+        .eq("is_active", true)
+        .neq("id", excludeQuizEventId),
+    );
+    rows = data as unknown as EventRow[];
+  } catch {
     return [];
   }
-
-  const rows = (data ?? []) as unknown as EventRow[];
   const scored: { row: EventRow; miles: number }[] = [];
 
   for (const row of rows) {

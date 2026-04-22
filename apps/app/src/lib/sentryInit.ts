@@ -19,12 +19,16 @@ export function isSentryEnabled(): boolean {
   return Boolean(process.env.EXPO_PUBLIC_SENTRY_DSN?.trim());
 }
 
-export function captureSupabaseError(operation: string, error: { message: string; code?: string }): void {
+export function captureSupabaseError(
+  operation: string,
+  error: { message: string; code?: string },
+  extras?: Record<string, unknown>,
+): void {
   if (!isSentryEnabled()) return;
   const err = new Error(`Supabase ${operation}: ${error.message}`);
   err.name = "SupabaseError";
   Sentry.captureException(err, {
     tags: { supabase: "true", operation },
-    extra: { code: error.code },
+    extra: { code: error.code, ...extras },
   });
 }

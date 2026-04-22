@@ -17,7 +17,9 @@ import type { User } from "@supabase/supabase-js";
 import { useAuth } from "../../context/AuthContext";
 import { authEmailForHost } from "../../lib/hostAccess";
 import { supabase } from "../../lib/supabase";
+import { captureSupabaseError } from "../../lib/sentryInit";
 import { getHostSessionHistory, type HostCompletedSessionRecord } from "../../lib/runQuizStorage";
+import { formatTime24 as formatTime } from "../../lib/formatters";
 import { ScreenTitle } from "../../components/ScreenTitle";
 import { HostStackParamList } from "../../navigation/RootNavigator";
 import {
@@ -35,12 +37,6 @@ const DAY_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
 
 function dayLabel(d: number): string {
   return DAY_SHORT[d] ?? String(d);
-}
-
-function formatTime(t: string): string {
-  const s = String(t).trim();
-  if (s.length >= 5) return s.slice(0, 5);
-  return s;
 }
 
 function formatClaimDate(iso: string): string {
@@ -204,6 +200,7 @@ export default function HostProfileScreen() {
     ]);
 
     if (allowRes.error) {
+      captureSupabaseError("host.profile_allowlisted_by_email", allowRes.error);
       if (__DEV__) console.warn("host_allowlisted_emails:", allowRes.error.message);
       setHostAllow(null);
       setFirstNameDraft("");
@@ -216,6 +213,7 @@ export default function HostProfileScreen() {
     }
 
     if (claimsRes.error) {
+      captureSupabaseError("host.profile_claims_by_host", claimsRes.error);
       if (__DEV__) console.warn("quiz_claims profile:", claimsRes.error.message);
       setClaims([]);
     } else {
@@ -242,6 +240,12 @@ export default function HostProfileScreen() {
         : Promise.resolve({ data: [] as { id: string; name: string }[], error: null }),
     ]);
 
+    if (venuesRes.error) {
+      captureSupabaseError("host.profile_venues_by_ids", venuesRes.error);
+    }
+    if (packsRes.error) {
+      captureSupabaseError("host.profile_packs_by_ids", packsRes.error);
+    }
     const venueById = new Map((venuesRes.data ?? []).map((r) => [r.id, r.name?.trim() || ""]));
     const packById = new Map((packsRes.data ?? []).map((r) => [r.id, r.name?.trim() || ""]));
 
@@ -252,6 +256,9 @@ export default function HostProfileScreen() {
     }));
     setSessions(sessionRows);
 
+    if (hostRpc.error) {
+      captureSupabaseError("host.profile_is_allowlisted_rpc", hostRpc.error);
+    }
     setIsAllowlisted(hostRpc.error ? null : hostRpc.data === true);
     setLoading(false);
   }, [session]);
@@ -281,6 +288,7 @@ export default function HostProfileScreen() {
       .eq("email", email);
     setNameSaveBusy(false);
     if (error) {
+      captureSupabaseError("host.profile_allowlisted_update", error);
       if (__DEV__) console.warn("host_allowlisted_emails update:", error.message);
       return;
     }

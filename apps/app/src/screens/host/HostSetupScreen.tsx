@@ -14,6 +14,7 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { HostStackParamList } from "../../navigation/RootNavigator";
 import { useAuth } from "../../context/AuthContext";
 import { supabase } from "../../lib/supabase";
+import { runSupabase } from "../../lib/runSupabase";
 import { fetchIsAllowlistedHost } from "../../lib/hostAccess";
 import { getLatestPackOrFallback } from "../../lib/quizPack";
 import type { QuizPack } from "../../lib/quizPack";
@@ -77,13 +78,22 @@ export default function HostSetupScreen() {
     let cancelled = false;
     setVenuesLoading(true);
     void (async () => {
-      const { data } = await supabase
-        .from("venues")
-        .select("id, name, address, postcode")
-        .order("name", { ascending: true });
-      if (!cancelled) {
-        setVenues((data as VenueRow[]) ?? []);
-        setVenuesLoading(false);
+      try {
+        const data = await runSupabase<VenueRow[]>("host.setup.venues_list", () =>
+          supabase
+            .from("venues")
+            .select("id, name, address, postcode")
+            .order("name", { ascending: true }),
+        );
+        if (!cancelled) {
+          setVenues(data);
+          setVenuesLoading(false);
+        }
+      } catch {
+        if (!cancelled) {
+          setVenues([]);
+          setVenuesLoading(false);
+        }
       }
     })();
     return () => {

@@ -1,5 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { supabase } from "./supabase";
+import { captureSupabaseError } from "./sentryInit";
 
 export const INTEREST_SYNC_QUEUE_KEY = "quiz_interest_sync_queue";
 
@@ -117,6 +118,7 @@ export async function flushInterestQueue(opts: {
 export async function upsertInterestOrQueue(quizEventId: string, userId: string): Promise<void> {
   const err = await runUpsert(quizEventId, userId);
   if (err) {
+    captureSupabaseError("player.interest.upsert", err);
     if (__DEV__) console.warn("quiz_event_interests upsert (queued):", err.message);
     await appendInterestQueue({ kind: "upsert", quizEventId, userId });
   }
@@ -144,6 +146,7 @@ export async function upsertInterestsOrQueue(quizEventIds: string[], userId: str
       onConflict: "quiz_event_id,user_id",
     });
     if (error) {
+      captureSupabaseError("player.interest.bulk_upsert", error);
       if (__DEV__) console.warn("quiz_event_interests bulk upsert (per-id fallback):", error.message);
       for (const id of chunk) {
         await upsertInterestOrQueue(id, userId);
@@ -156,6 +159,7 @@ export async function upsertInterestsOrQueue(quizEventIds: string[], userId: str
 export async function deleteInterestOrQueue(quizEventId: string): Promise<void> {
   const err = await runDelete(quizEventId);
   if (err) {
+    captureSupabaseError("player.interest.delete", err);
     if (__DEV__) console.warn("quiz_event_interests delete (queued):", err.message);
     await appendInterestQueue({ kind: "delete", quizEventId });
   }
@@ -166,6 +170,7 @@ export async function deleteInterestsOrQueue(quizEventIds: string[]): Promise<vo
   if (quizEventIds.length === 0) return;
   const { error } = await supabase.from("quiz_event_interests").delete().in("quiz_event_id", quizEventIds);
   if (error) {
+    captureSupabaseError("player.interest.bulk_delete", error);
     if (__DEV__) console.warn("quiz_event_interests bulk delete (queued):", error.message);
     for (const quizEventId of quizEventIds) {
       await appendInterestQueue({ kind: "delete", quizEventId });

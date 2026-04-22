@@ -7,6 +7,7 @@ import Animated, { FadeInDown } from "react-native-reanimated";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { supabase } from "../../lib/supabase";
+import { captureSupabaseError } from "../../lib/sentryInit";
 import { prefetchQuizEventDetail } from "../../lib/quizEventDetailCache";
 import { setPendingTonightOnNearby } from "../../lib/pendingTonightStorage";
 import { hapticLight, hapticMedium, hapticRefreshDone } from "../../lib/playerHaptics";
@@ -200,6 +201,7 @@ export default function SavedScreen() {
       .eq("is_active", true);
 
     if (error) {
+      captureSupabaseError("player.saved_events_list", error);
       setErrorMsg(error.message);
       setQuizzes([]);
       setMissingCount(0);
