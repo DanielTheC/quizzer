@@ -63,6 +63,7 @@ type VenueRow = {
   postcode: string | null;
   borough: string | null;
   what_to_expect: string | null;
+  google_maps_url: string | null;
   lat: number | null;
   lng: number | null;
 };
@@ -171,8 +172,10 @@ export function AdminQuizzesDashboard() {
   const [venueAddress, setVenueAddress] = useState("");
   const [venueCity, setVenueCity] = useState("");
   const [venuePostcode, setVenuePostcode] = useState("");
-  const [venueLat, setVenueLat] = useState("");
-  const [venueLng, setVenueLng] = useState("");
+  const [venueGoogleMapsUrl, setVenueGoogleMapsUrl] = useState("");
+  const [venueResolvedCoords, setVenueResolvedCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [venueResolveBusy, setVenueResolveBusy] = useState(false);
+  const [venueResolveError, setVenueResolveError] = useState<string | null>(null);
   const [venueBoroughState, setVenueBoroughState] = useState("");
   const [venueWhatToExpect, setVenueWhatToExpect] = useState("");
   const [venueImages, setVenueImages] = useState<VenueImage[]>([]);
@@ -218,8 +221,9 @@ export function AdminQuizzesDashboard() {
     setVenueAddress("");
     setVenueCity("");
     setVenuePostcode("");
-    setVenueLat("");
-    setVenueLng("");
+    setVenueGoogleMapsUrl("");
+    setVenueResolvedCoords(null);
+    setVenueResolveError(null);
     setVenueBoroughState("");
     setVenueWhatToExpect("");
     setVenueImages([]);
@@ -250,8 +254,11 @@ export function AdminQuizzesDashboard() {
     setVenueAddress(row.address ?? "");
     setVenueCity(row.city ?? "");
     setVenuePostcode(row.postcode ?? "");
-    setVenueLat(row.lat != null ? String(row.lat) : "");
-    setVenueLng(row.lng != null ? String(row.lng) : "");
+    setVenueGoogleMapsUrl(row.google_maps_url ?? "");
+    setVenueResolvedCoords(
+      row.lat != null && row.lng != null ? { lat: row.lat, lng: row.lng } : null,
+    );
+    setVenueResolveError(null);
     setVenueBoroughState(row.borough ?? "");
     setVenueWhatToExpect(row.what_to_expect ?? "");
     setVenueImages([]);
@@ -313,7 +320,9 @@ export function AdminQuizzesDashboard() {
       const [v, q] = await Promise.all([
         supabase
           .from("venues")
-          .select("id, name, city, address, postcode, borough, what_to_expect, lat, lng")
+          .select(
+            "id, name, city, address, postcode, borough, what_to_expect, google_maps_url, lat, lng",
+          )
           .order("name", { ascending: true })
           .abortSignal(signal),
         supabase
@@ -540,10 +549,52 @@ export function AdminQuizzesDashboard() {
     }
   }
 
+  async function resolveGoogleMapsUrl() {
+    const raw = venueGoogleMapsUrl.trim();
+    if (!raw) {
+      setVenueResolveError("Paste a Google Maps URL first.");
+      return;
+    }
+    setVenueResolveBusy(true);
+    setVenueResolveError(null);
+    try {
+      const res = await fetch("/api/admin/resolve-google-maps-url", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: raw }),
+      });
+      const body = (await res.json()) as {
+        ok?: boolean;
+        error?: string;
+        lat?: number;
+        lng?: number;
+      };
+      if (!res.ok || !body?.ok) {
+        setVenueResolvedCoords(null);
+        setVenueResolveError(body?.error ?? "Could not resolve URL.");
+        return;
+      }
+      if (typeof body.lat === "number" && typeof body.lng === "number") {
+        setVenueResolvedCoords({ lat: body.lat, lng: body.lng });
+      } else {
+        setVenueResolvedCoords(null);
+        setVenueResolveError("Could not resolve URL.");
+      }
+    } catch {
+      setVenueResolveError("Network error.");
+    } finally {
+      setVenueResolveBusy(false);
+    }
+  }
+
   async function saveVenue() {
     const name = venueName.trim();
     if (!name) {
       setError("Venue name is required.");
+      return;
+    }
+    if (venueGoogleMapsUrl.trim() && !venueResolvedCoords) {
+      setError("Press Use to resolve the Google Maps URL before saving.");
       return;
     }
     setVenueSaveBusy(true);
@@ -557,8 +608,9 @@ export function AdminQuizzesDashboard() {
         postcode: venuePostcode.trim() || null,
         borough: venueBoroughState.trim() || null,
         what_to_expect: venueWhatToExpect.trim() || null,
-        lat: venueLat.trim() !== "" ? parseFloat(venueLat) : null,
-        lng: venueLng.trim() !== "" ? parseFloat(venueLng) : null,
+        google_maps_url: venueGoogleMapsUrl.trim() || null,
+        lat: venueResolvedCoords?.lat ?? null,
+        lng: venueResolvedCoords?.lng ?? null,
       };
       if (editingVenue) {
         const { error: e } = await supabase.from("venues").update(payload).eq("id", editingVenue.id);
@@ -1353,44 +1405,44 @@ export function AdminQuizzesDashboard() {
                 className="mt-1 w-full rounded-[var(--radius-button)] border-[3px] border-quizzer-black bg-quizzer-white px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-quizzer-yellow"
               />
             </label>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <label className="block text-xs font-medium text-quizzer-black">
-                Latitude
-                <input
-                  type="number"
-                  step="any"
-                  value={venueLat}
-                  onChange={(e) => setVenueLat(e.target.value)}
-                  placeholder="e.g. 51.5234"
-                  className="mt-1 w-full rounded-[var(--radius-button)] border-[3px] border-quizzer-black bg-quizzer-white px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-quizzer-yellow"
-                />
+            <div className="space-y-2">
+              <label className="block text-xs font-semibold uppercase text-quizzer-black">
+                Google Maps URL
               </label>
-              <label className="block text-xs font-medium text-quizzer-black">
-                Longitude
-                <input
-                  type="number"
-                  step="any"
-                  value={venueLng}
-                  onChange={(e) => setVenueLng(e.target.value)}
-                  placeholder="e.g. -0.0755"
-                  className="mt-1 w-full rounded-[var(--radius-button)] border-[3px] border-quizzer-black bg-quizzer-white px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-quizzer-yellow"
-                />
-              </label>
-            </div>
-            {venueLat.trim() && venueLng.trim() ? (
-              <a
-                href={`https://www.google.com/maps?q=${venueLat.trim()},${venueLng.trim()}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-block text-xs font-semibold text-quizzer-black underline"
-              >
-                Verify on Google Maps ↗
-              </a>
-            ) : (
-              <p className="text-[10px] text-quizzer-black/40">
-                Coordinates power distance sorting in the app. Find them by right-clicking the venue on Google Maps.
+              <p className="text-xs text-quizzer-black/70">
+                Open this venue in Google Maps, tap Share, copy the link, and paste it here. The mobile Maps
+                button will open the business listing directly.
               </p>
-            )}
+              <div className="flex gap-2">
+                <input
+                  type="url"
+                  value={venueGoogleMapsUrl}
+                  onChange={(e) => {
+                    setVenueGoogleMapsUrl(e.target.value);
+                    setVenueResolvedCoords(null);
+                    setVenueResolveError(null);
+                  }}
+                  placeholder="https://maps.app.goo.gl/..."
+                  className="flex-1 rounded-[var(--radius-button)] border-[3px] border-quizzer-black bg-quizzer-white px-3 py-2 text-sm text-quizzer-black outline-none focus:ring-2 focus:ring-quizzer-yellow"
+                />
+                <button
+                  type="button"
+                  onClick={() => void resolveGoogleMapsUrl()}
+                  disabled={venueResolveBusy || !venueGoogleMapsUrl.trim()}
+                  className="rounded-[var(--radius-button)] border-[3px] border-quizzer-black bg-quizzer-yellow px-3 py-2 text-xs font-semibold text-quizzer-black shadow-[var(--shadow-button)] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[var(--shadow-button-hover)] disabled:opacity-50"
+                >
+                  {venueResolveBusy ? "Resolving…" : "Use"}
+                </button>
+              </div>
+              {venueResolvedCoords ? (
+                <p className="text-xs text-quizzer-black/70">
+                  Coordinates set: {venueResolvedCoords.lat.toFixed(6)}, {venueResolvedCoords.lng.toFixed(6)}
+                </p>
+              ) : null}
+              {venueResolveError ? (
+                <p className="text-xs text-quizzer-red">{venueResolveError}</p>
+              ) : null}
+            </div>
             <label className="block text-xs font-medium text-quizzer-black">
               Borough
               <input

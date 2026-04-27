@@ -760,17 +760,27 @@ export default function QuizDetailScreen() {
     if (!quiz) return;
     hapticMedium();
     const venue = quiz.venues;
-    const venueName = venue?.name ?? "Venue";
-    const fullAddress = fullVenueAddress(venue);
-    const lat = venue?.lat;
-    const lng = venue?.lng;
-    const hasCoords = lat != null && lng != null && Number.isFinite(lat) && Number.isFinite(lng);
-    const query = hasCoords ? `${lat},${lng}` : (fullAddress ? `${venueName}, ${fullAddress}` : venueName);
-    const encoded = encodeURIComponent(query);
-    const url = Platform.OS === "ios" ? `maps://?q=${encoded}` : `geo:0,0?q=${encoded}`;
-    Linking.openURL(url).catch(() => {
-      Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${encoded}`).catch(() => {});
-    });
+    const placeUrl = venue?.google_maps_url?.trim();
+
+    const fallbackOpen = () => {
+      const venueName = venue?.name ?? "Venue";
+      const fullAddress = fullVenueAddress(venue);
+      const lat = venue?.lat;
+      const lng = venue?.lng;
+      const hasCoords = lat != null && lng != null && Number.isFinite(lat) && Number.isFinite(lng);
+      const query = hasCoords ? `${lat},${lng}` : (fullAddress ? `${venueName}, ${fullAddress}` : venueName);
+      const encoded = encodeURIComponent(query);
+      const url = Platform.OS === "ios" ? `maps://?q=${encoded}` : `geo:0,0?q=${encoded}`;
+      Linking.openURL(url).catch(() => {
+        Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${encoded}`).catch(() => {});
+      });
+    };
+
+    if (placeUrl) {
+      Linking.openURL(placeUrl).catch(fallbackOpen);
+      return;
+    }
+    fallbackOpen();
   }, [quiz]);
 
   const shareQuiz = useCallback(() => {

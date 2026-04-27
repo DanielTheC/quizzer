@@ -19,6 +19,7 @@ export type QuizEventDetail = {
     borough?: string | null;
     lat?: number | null;
     lng?: number | null;
+    google_maps_url: string | null;
     /** Line breaks become bullet items in the quiz detail card. */
     what_to_expect: string | null;
     venue_images?: { storage_path: string; alt_text: string | null; sort_order: number }[] | null;
@@ -42,6 +43,7 @@ const QUIZ_EVENT_DETAIL_SELECT = `
             city,
             lat,
             lng,
+            google_maps_url,
             what_to_expect,
             venue_images (
               storage_path,
