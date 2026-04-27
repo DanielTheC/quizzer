@@ -43,9 +43,9 @@ const DEFAULT_HOST_FAQS = [
     a: "Yes. You keep your questions and style. We help with listing, reminders, and optional in-app play and leaderboards.",
   },
 ];
-const DEFAULT_CONTACT_TITLE = "Get in touch";
+const DEFAULT_CONTACT_TITLE = "Tell us about your venue";
 const DEFAULT_CONTACT_COPY =
-  "Tell us about your venue and quiz night. We'll get back to you with next steps.";
+  "A few quick details and we'll come back to you within two working days with next steps.";
 const DEFAULT_CTA_TITLE = "Want to play instead?";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -105,7 +105,7 @@ export default async function HostAQuizPage() {
     <>
       <PageHero title={heroTitle} description={heroIntro} background="yellow">
         <Button href="#contact" size="lg">
-          Get in touch
+          List your venue
         </Button>
       </PageHero>
 
@@ -151,6 +151,22 @@ export default async function HostAQuizPage() {
           <p className="text-quizzer-black/80 mb-8 max-w-xl">
             {contactCopy}
           </p>
+          <div className="mb-10 rounded-[var(--radius-card)] border-[3px] border-quizzer-black border-solid bg-quizzer-yellow/40 p-6 shadow-[var(--shadow-card)]">
+            <h3 className="font-heading text-2xl text-quizzer-black mb-6">
+              What happens next
+            </h3>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+              <FeatureCard title="We review your enquiry" accent="white">
+                Within 2 working days.
+              </FeatureCard>
+              <FeatureCard title="Quick call" accent="cream">
+                We learn about your venue and quiz night.
+              </FeatureCard>
+              <FeatureCard title="You go live" accent="green">
+                Listed on Quizzer with a host on board.
+              </FeatureCard>
+            </div>
+          </div>
           <HostQuizForm />
         </Container>
       </section>
