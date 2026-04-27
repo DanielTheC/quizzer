@@ -15,7 +15,9 @@ export function PortalSignInForm() {
     return "/portal";
   }
   const nextPath = safeNextPath(searchParams.get("next"));
-  const accessError = searchParams.get("error") === "no-access";
+  const errorParam = searchParams.get("error");
+  const accessError = errorParam === "no-access";
+  const callbackError = errorParam && !accessError ? errorParam : null;
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -35,6 +37,14 @@ export function PortalSignInForm() {
             <p className="mt-4 rounded-[var(--radius-button)] border-[3px] border-quizzer-orange bg-quizzer-cream px-3 py-2 text-sm text-quizzer-orange">
               This account doesn’t have publican portal access. If you were invited, make sure you’re using the same email
               as your invitation, or contact Quizzer support.
+            </p>
+          ) : null}
+          {callbackError ? (
+            <p
+              className="mt-4 rounded-[var(--radius-button)] border-[3px] border-quizzer-red bg-quizzer-cream px-3 py-2 text-sm text-quizzer-red"
+              role="alert"
+            >
+              {callbackError}
             </p>
           ) : null}
 

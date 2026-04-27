@@ -5,6 +5,22 @@ import {
 import { captureSupabaseError } from "@/lib/observability/supabaseErrors";
 import { NextResponse } from "next/server";
 
+const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
+const RATE_LIMIT_WINDOW_MS = 60_000;
+const RATE_LIMIT_MAX = 5;
+
+function checkRateLimit(userId: string): boolean {
+  const now = Date.now();
+  const entry = rateLimitMap.get(userId);
+  if (!entry || now > entry.resetAt) {
+    rateLimitMap.set(userId, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS });
+    return true;
+  }
+  if (entry.count >= RATE_LIMIT_MAX) return false;
+  entry.count++;
+  return true;
+}
+
 export async function POST(req: Request) {
   const supabase = await createServerSupabaseClientSafe();
   if (!supabase) {
@@ -25,6 +41,10 @@ export async function POST(req: Request) {
   }
   if (!isOperator) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  if (!checkRateLimit(user.id)) {
+    return NextResponse.json({ error: "Too many invites. Try again shortly." }, { status: 429 });
   }
 
   let body: unknown;
@@ -52,16 +72,43 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Service role not configured" }, { status: 500 });
   }
 
+  const origin =
+    req.headers.get("origin") ??
+    process.env.NEXT_PUBLIC_SITE_URL ??
+    new URL(req.url).origin;
+
   const { data: inviteData, error: authError } = await adminClient.auth.admin.inviteUserByEmail(email, {
     data: {
       first_name: first_name?.trim() || undefined,
       last_name: last_name?.trim() || undefined,
     },
+    redirectTo: `${origin}/auth/callback?next=${encodeURIComponent("/portal/welcome")}`,
   });
 
   const newUser = inviteData?.user;
   if (authError || !newUser) {
     return NextResponse.json({ error: authError?.message ?? "Failed to create user" }, { status: 400 });
+  }
+
+  const { data: existingProfile, error: existingProfileError } = await adminClient
+    .from("publican_profiles")
+    .select("id, venue_id")
+    .eq("id", newUser.id)
+    .maybeSingle();
+
+  if (existingProfileError) {
+    captureSupabaseError("api.admin.create_publican.profile_lookup", existingProfileError, {
+      user_id: newUser.id,
+      venue_id,
+    });
+    return NextResponse.json({ error: existingProfileError.message }, { status: 500 });
+  }
+
+  if (existingProfile) {
+    if (existingProfile.venue_id === venue_id) {
+      return NextResponse.json({ ok: true });
+    }
+    return NextResponse.json({ error: "Publican is already linked to another venue" }, { status: 400 });
   }
 
   const { error: profileError } = await adminClient.from("publican_profiles").insert({

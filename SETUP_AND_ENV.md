@@ -23,6 +23,7 @@ Copy `apps/website/.env.example` → `.env.local` and fill in.
 |----------|----------|-----------------|
 | `NEXT_PUBLIC_SUPABASE_URL` | Yes (portal/admin) | Supabase → Project Settings → API → Project URL |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Yes | Supabase → API → `anon` `public` key |
+| `NEXT_PUBLIC_SITE_URL` | Optional | Used as a fallback origin for `inviteUserByEmail` `redirectTo` when the request `Origin` header isn't present (e.g. local curl). Set in Vercel Production to the production domain. |
 | `NEXT_PUBLIC_SANITY_PROJECT_ID` | For CMS pages | Sanity manage → project id |
 | `NEXT_PUBLIC_SANITY_DATASET` | Optional | Default `production` |
 | `NEXT_PUBLIC_SANITY_API_VERSION` | Optional | e.g. `2024-01-01` |
@@ -114,3 +115,16 @@ Applied via **SQL Editor** or **CLI migrations** (your normal process).
 - **Vercel:** latest deployment built from `apps/website` root; env vars set for Production.
 
 If you add new `EXPO_PUBLIC_*` or `NEXT_PUBLIC_*` keys in code, update **this file** and the matching **`.env.example`** so the list stays accurate.
+
+---
+
+## 8. Supabase Auth — invite emails (publican onboarding)
+
+| Setting | Where | Value |
+|---|---|---|
+| SMTP host/user/pass/sender | Supabase → Authentication → Emails → SMTP Settings | A real provider (Resend, Postmark, SendGrid). The default Supabase shared SMTP is rate-limited to ~3 emails/hour and unsuitable for production. |
+| Site URL | Supabase → Authentication → URL Configuration | The production website origin, e.g. https://quizzerapp.co.uk |
+| Redirect URLs allowlist | Same screen | `https://quizzerapp.co.uk/auth/callback`, plus your preview/Vercel URL pattern, plus `http://localhost:3000/auth/callback` for dev |
+| Email template — Invite | Supabase → Authentication → Emails → Templates → Invite | Default template works. The button URL uses `{{ .ConfirmationURL }}` which Supabase generates against the `redirectTo` we pass in the API route. |
+
+If a publican never receives the invite email, check Supabase logs (Authentication → Logs) for the SMTP send result. The website's `/auth/callback` route is the destination — confirm it's in the Redirect URLs allowlist.
