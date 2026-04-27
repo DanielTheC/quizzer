@@ -82,7 +82,7 @@ export async function POST(req: Request) {
       first_name: first_name?.trim() || undefined,
       last_name: last_name?.trim() || undefined,
     },
-    redirectTo: `${origin}/auth/callback?next=${encodeURIComponent("/portal/welcome")}`,
+    redirectTo: `${origin}/portal/accept-invite?next=${encodeURIComponent("/portal/welcome")}`,
   });
 
   const newUser = inviteData?.user;

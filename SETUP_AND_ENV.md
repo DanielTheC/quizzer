@@ -23,6 +23,7 @@ Copy `apps/website/.env.example` → `.env.local` and fill in.
 |----------|----------|-----------------|
 | `NEXT_PUBLIC_SUPABASE_URL` | Yes (portal/admin) | Supabase → Project Settings → API → Project URL |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Yes | Supabase → API → `anon` `public` key |
+| `SUPABASE_SERVICE_ROLE_KEY` | Yes (publican invites) | Supabase → API → `service_role` (secret). Server-only; set in Vercel + `.env.local`. |
 | `NEXT_PUBLIC_SITE_URL` | Optional | Used as a fallback origin for `inviteUserByEmail` `redirectTo` when the request `Origin` header isn't present (e.g. local curl). Set in Vercel Production to the production domain. |
 | `NEXT_PUBLIC_SANITY_PROJECT_ID` | For CMS pages | Sanity manage → project id |
 | `NEXT_PUBLIC_SANITY_DATASET` | Optional | Default `production` |
@@ -39,6 +40,7 @@ Copy `apps/website/.env.example` → `.env.local` and fill in.
 
 1. **Project → Settings → General → Root Directory:** `apps/website` (required for `/admin`, `/portal` routes).
 2. **Settings → Environment Variables:** add the `NEXT_PUBLIC_*` (and optional Sentry build vars) for Production + Preview.
+3. Add `SUPABASE_SERVICE_ROLE_KEY` as a **secret** env var (Production + Preview). Server-only — do not check "Available in browser".
 
 ---
 
