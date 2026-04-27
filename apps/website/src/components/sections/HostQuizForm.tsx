@@ -90,7 +90,7 @@ export function HostQuizForm() {
   if (sent) {
     return (
       <div className="rounded-[var(--radius-card)] border-[3px] border-quizzer-black border-solid bg-quizzer-green p-6 text-quizzer-black">
-        <p className="font-semibold">Thanks! We'll be in touch soon.</p>
+        <p className="font-semibold">Thanks! We&apos;ll be in touch soon.</p>
       </div>
     );
   }
