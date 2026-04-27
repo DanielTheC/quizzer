@@ -1318,6 +1318,15 @@ export type Database = {
         }
         Returns: Json
       }
+      publican_dashboard_event_interest: {
+        Args: { p_venue_id: string }
+        Returns: {
+          next_occurrence_date: string | null
+          next_occurrence_interest_count: number
+          quiz_event_id: string
+          upcoming_interest_count: number
+        }[]
+      }
       publican_venue_quiz_interest_counts: {
         Args: { p_venue_id: string }
         Returns: {

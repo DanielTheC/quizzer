@@ -60,18 +60,37 @@ export default async function PortalDashboardPage() {
   const eventRows = events ?? [];
   const eventIds = eventRows.map((e) => e.id);
 
-  const interestByEventId = new Map<string, number>();
-  if (eventIds.length > 0) {
-    const { data: interestRows, error: intErr } = await supabase
-      .from("quiz_event_interests")
-      .select("quiz_event_id")
-      .in("quiz_event_id", eventIds);
-    if (intErr) {
-      captureSupabaseError("portal.dashboard_interests_by_events", intErr);
+  const interestByEventId = new Map<
+    string,
+    {
+      upcoming_interest_count: number;
+      next_occurrence_date: string | null;
+      next_occurrence_interest_count: number;
     }
-    for (const r of interestRows ?? []) {
-      const qid = r.quiz_event_id as string;
-      interestByEventId.set(qid, (interestByEventId.get(qid) ?? 0) + 1);
+  >();
+  if (eventIds.length > 0) {
+    const { data: interestRows, error: intErr } = await supabase.rpc(
+      "publican_dashboard_event_interest",
+      { p_venue_id: venueId },
+    );
+    if (intErr) {
+      captureSupabaseError("portal.dashboard_interest_summary", intErr, {
+        venue_id: venueId,
+      });
+    }
+    for (const raw of (interestRows ?? []) as Array<{
+      quiz_event_id?: string | null;
+      upcoming_interest_count?: number | string | null;
+      next_occurrence_date?: string | null;
+      next_occurrence_interest_count?: number | string | null;
+    }>) {
+      const qid = String(raw.quiz_event_id ?? "");
+      if (!qid) continue;
+      interestByEventId.set(qid, {
+        upcoming_interest_count: Number(raw.upcoming_interest_count ?? 0) || 0,
+        next_occurrence_date: raw.next_occurrence_date ? String(raw.next_occurrence_date) : null,
+        next_occurrence_interest_count: Number(raw.next_occurrence_interest_count ?? 0) || 0,
+      });
     }
   }
 
@@ -102,7 +121,9 @@ export default async function PortalDashboardPage() {
     start_time: e.start_time,
     entry_fee_pence: e.entry_fee_pence,
     is_active: Boolean(e.is_active),
-    interest_count: interestByEventId.get(e.id) ?? 0,
+    upcoming_interest_count: interestByEventId.get(e.id)?.upcoming_interest_count ?? 0,
+    next_occurrence_date: interestByEventId.get(e.id)?.next_occurrence_date ?? null,
+    next_occurrence_interest_count: interestByEventId.get(e.id)?.next_occurrence_interest_count ?? 0,
     claim: claimByEventId.get(e.id) ?? null,
   }));
 

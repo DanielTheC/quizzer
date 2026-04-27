@@ -30,7 +30,9 @@ export type PublicanDashboardProps = {
     start_time: string;
     entry_fee_pence: number | null;
     is_active: boolean;
-    interest_count: number;
+    upcoming_interest_count: number;
+    next_occurrence_date: string | null;
+    next_occurrence_interest_count: number;
     claim: { status: string; host_email: string } | null;
   }>;
   recentMessages: Array<{
@@ -53,6 +55,17 @@ function formatWhen(iso: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "—";
   return d.toLocaleString("en-GB", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
+}
+
+function formatOccurrenceDate(isoDate: string): string {
+  const d = new Date(`${isoDate}T12:00:00Z`);
+  if (Number.isNaN(d.getTime())) return isoDate;
+  return d.toLocaleDateString("en-GB", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    timeZone: "Europe/London",
+  });
 }
 
 function hostStatusPill(claim: { status: string; host_email: string } | null) {
@@ -187,7 +200,16 @@ export function PublicanDashboard({ venue, profile, quizEvents, recentMessages }
                         ) : null}
                       </td>
                       <td className="px-3 py-3 align-top">{formatFeePence(row.entry_fee_pence)}</td>
-                      <td className="px-3 py-3 align-top tabular-nums">{row.interest_count}</td>
+                      <td className="px-3 py-3 align-top">
+                        <p className="font-medium tabular-nums">
+                          {row.upcoming_interest_count} total upcoming
+                        </p>
+                        <p className="mt-1 text-xs text-quizzer-black/55">
+                          {row.next_occurrence_date
+                            ? `${row.next_occurrence_interest_count} for ${formatOccurrenceDate(row.next_occurrence_date)}`
+                            : "No upcoming dates"}
+                        </p>
+                      </td>
                       <td className="px-3 py-3 align-top">{hostStatusPill(row.claim)}</td>
                     </tr>
                   );
