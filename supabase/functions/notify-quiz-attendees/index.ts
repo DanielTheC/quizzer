@@ -1,4 +1,4 @@
-// Notify players who saved a quiz: Expo Push API. Gated by JWT + is_publican() + publican_venues for the quiz's venue.
+// Notify players who saved a quiz: Expo Push API. Gated by JWT + publican_profiles or publican_venues for the quiz's venue.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 
 const corsHeaders: Record<string, string> = {
@@ -114,14 +114,27 @@ Deno.serve(async (req: Request) => {
   const venueName = venueNameFromQuiz(quiz as { venues?: unknown });
   const prefixedBody = `${venueName}: ${messageRaw}`;
 
-  const { data: venueLink, error: linkErr } = await admin
-    .from("publican_venues")
-    .select("id")
-    .eq("user_id", user.id)
-    .eq("venue_id", venueId)
-    .maybeSingle();
+  const [profileRes, legacyRes] = await Promise.all([
+    admin
+      .from("publican_profiles")
+      .select("id")
+      .eq("id", user.id)
+      .eq("venue_id", venueId)
+      .maybeSingle(),
+    admin
+      .from("publican_venues")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("venue_id", venueId)
+      .maybeSingle(),
+  ]);
 
-  if (linkErr || !venueLink) {
+  if (profileRes.error || legacyRes.error) {
+    console.warn("publican venue membership:", profileRes.error?.message ?? legacyRes.error?.message);
+  }
+  const authorised = Boolean(profileRes.data) || Boolean(legacyRes.data);
+
+  if (!authorised) {
     return jsonResponse(
       { ok: false, error: "You do not manage this quiz's venue", code: "forbidden" },
       403
