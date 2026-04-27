@@ -1,12 +1,23 @@
 import { withSentryConfig } from "@sentry/nextjs";
 import type { NextConfig } from "next";
 
-// Next.js requires 'unsafe-inline' for hydration scripts until nonce-based CSP is configured
 const cspGlobal =
-  "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.sanity.io; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://cdn.sanity.io https://*.supabase.co; connect-src 'self' https://*.supabase.co https://api.sanity.io wss://*.supabase.co; frame-ancestors 'none';";
+  "default-src 'self'; " +
+  "script-src 'self' https://cdn.sanity.io; " +
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
+  "font-src 'self' https://fonts.gstatic.com; " +
+  "img-src 'self' data: blob: https://cdn.sanity.io https://*.supabase.co; " +
+  "connect-src 'self' https://*.supabase.co https://cdn.sanity.io https://*.sentry.io; " +
+  "frame-ancestors 'none'";
 
 const cspStudio =
-  "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.sanity.io https://core.sanity-cdn.com https://*.sanity-cdn.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https://cdn.sanity.io https://*.sanity.io https://*.supabase.co; connect-src 'self' https://*.supabase.co https://api.sanity.io https://*.api.sanity.io https://*.apicdn.sanity.io https://www.sanity.io wss://*.api.sanity.io wss://*.supabase.co; worker-src 'self' blob:; frame-src 'self' https://*.sanity.io; frame-ancestors 'none';";
+  "default-src 'self'; " +
+  "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.sanity.io; " +
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
+  "font-src 'self' https://fonts.gstatic.com; " +
+  "img-src 'self' data: blob: https://cdn.sanity.io; " +
+  "connect-src 'self' https://*.sanity.io https://cdn.sanity.io wss://*.sanity.io; " +
+  "frame-ancestors 'none'";
 
 const baseSecurityHeaders = [
   { key: "X-Frame-Options", value: "DENY" },
