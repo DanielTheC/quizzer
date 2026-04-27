@@ -20,7 +20,10 @@ Use the **`preview`** profile for builds you share with testers before a public 
    ```bash
    npx eas-cli env:create --name EXPO_PUBLIC_SUPABASE_URL --value "https://YOUR_PROJECT.supabase.co" --environment preview --visibility plaintext
    npx eas-cli env:create --name EXPO_PUBLIC_SUPABASE_ANON_KEY --value "YOUR_ANON_KEY" --environment preview --visibility sensitive
+   npx eas-cli env:create --name EXPO_PUBLIC_WEBSITE_URL --value "https://www.quizzerapp.co.uk" --environment preview --visibility plaintext
    ```
+
+   `EXPO_PUBLIC_WEBSITE_URL` is the base URL the mobile app calls for service-role operations (currently account deletion). Use the production website URL even for `preview` builds — the API route there talks to the same Supabase project. Repeat the command with `--environment production` before any App Store / Play Store submission.
 
    Optionally mirror the same for **`development`** if you use the dev-client profile.
 
@@ -51,3 +54,4 @@ npm run build:dev-client            # Expo dev client + internal distribution
 
 - Supabase **RLS** on tables the app reads/writes (`quiz_events`, `venues`, packs).
 - **Redirect URLs** for Google auth include your production scheme and any EAS deep links you use.
+- **Account deletion** end-to-end on a fresh test user (Settings → Danger zone → Delete). Apple App Review will reject if the button is missing or fails — confirm `EXPO_PUBLIC_WEBSITE_URL` is set in the EAS environment for the build profile you're submitting.
