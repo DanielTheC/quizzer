@@ -5,6 +5,7 @@ export type QuizEventDetail = {
   id: string;
   day_of_week: number;
   start_time: string;
+  frequency: "weekly" | "monthly" | "quarterly" | "one_off";
   cadence_pill_label: string | null;
   entry_fee_pence: number;
   fee_basis: string;
@@ -28,6 +29,7 @@ const QUIZ_EVENT_DETAIL_SELECT = `
           id,
           day_of_week,
           start_time,
+          frequency,
           cadence_pill_label,
           entry_fee_pence,
           fee_basis,

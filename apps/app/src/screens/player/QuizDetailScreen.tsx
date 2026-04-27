@@ -41,6 +41,7 @@ import type { NearbyStackParamList } from "../../navigation/RootNavigator";
 import { heartScalePeak, heartSpringIn, heartSpringOut } from "../../lib/heartPressAnimation";
 import { hapticLight, hapticMedium, hapticSavedQuiz } from "../../lib/playerHaptics";
 import { formatTime24 as formatTime } from "../../lib/formatters";
+import { todayUkPlusDaysISO } from "../../lib/dateUtils";
 import {
   colors,
   fonts,
@@ -656,7 +657,7 @@ export default function QuizDetailScreen() {
     void (async () => {
       const { data, error } = await supabase.rpc("get_upcoming_quiz_occurrences", {
         p_quiz_event_id: quizEventId,
-        p_limit: 3,
+        p_limit: 6,
       });
       if (cancelled) return;
       if (error) {
@@ -674,16 +675,33 @@ export default function QuizDetailScreen() {
           interest_count: Number(r.interest_count ?? 0) || 0,
         }))
         .filter((r) => r.occurrence_date.length > 0);
-      setUpcomingOccurrences(rows);
+      const cap = (() => {
+        switch (quiz.frequency) {
+          case "weekly":
+            return { byDate: todayUkPlusDaysISO(21), maxCount: 6 };
+          case "monthly":
+            return { byDate: null, maxCount: 3 };
+          case "quarterly":
+            return { byDate: null, maxCount: 3 };
+          case "one_off":
+            return { byDate: null, maxCount: 1 };
+          default:
+            return { byDate: todayUkPlusDaysISO(21), maxCount: 3 };
+        }
+      })();
+      const filtered = rows
+        .filter((r) => cap.byDate == null || r.occurrence_date <= cap.byDate)
+        .slice(0, cap.maxCount);
+      setUpcomingOccurrences(filtered);
       await primeInterestedOccurrences(
         quizEventId,
-        rows.map((r) => r.occurrence_date)
+        filtered.map((r) => r.occurrence_date)
       );
     })();
     return () => {
       cancelled = true;
     };
-  }, [quizEventId, quiz?.id, retryCount, primeInterestedOccurrences]);
+  }, [quizEventId, quiz?.id, quiz?.frequency, retryCount, primeInterestedOccurrences]);
 
   useEffect(() => {
     if (!quizEventId || !quiz || quiz.id !== quizEventId) {

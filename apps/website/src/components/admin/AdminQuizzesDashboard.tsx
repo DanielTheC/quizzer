@@ -36,6 +36,23 @@ const DAY_OPTIONS = [
   { v: 6, label: "Saturday" },
 ] as const;
 
+function recurrenceHelperText(
+  frequency: "weekly" | "monthly" | "quarterly" | "one_off",
+  day: number,
+): string {
+  const weekday = DAY_OPTIONS.find((d) => d.v === day)?.label ?? "day";
+  switch (frequency) {
+    case "weekly":
+      return `Every ${weekday}`;
+    case "monthly":
+      return `First ${weekday} of the month`;
+    case "quarterly":
+      return `First ${weekday} of every third month`;
+    case "one_off":
+      return "Just the start date";
+  }
+}
+
 const PRIZE_OPTIONS = ["cash", "bar_tab", "drinks", "voucher", "other"] as const;
 
 type VenueRow = {
@@ -606,12 +623,14 @@ export function AdminQuizzesDashboard() {
     setError(null);
     try {
       const supabase = createBrowserSupabaseClient();
+      const nthWeek =
+        qFrequency === "monthly" || qFrequency === "quarterly" ? 1 : null;
       const payload = {
         venue_id: venueId,
         day_of_week: qDay,
         start_time: start,
         frequency: qFrequency,
-        nth_week: qFrequency === "monthly" || qFrequency === "quarterly" ? 1 : null,
+        nth_week: nthWeek,
         start_date: startDate,
         occurrences_planned: occurrences,
         entry_fee_pence,
@@ -939,12 +958,9 @@ export function AdminQuizzesDashboard() {
                   className="mt-1 w-full rounded-[var(--radius-button)] border-[3px] border-quizzer-black bg-quizzer-white px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-quizzer-yellow"
                 />
               </label>
-              {qFrequency === "monthly" || qFrequency === "quarterly" ? (
-                <p className="text-xs text-quizzer-black/70 sm:col-span-2">
-                  Recurrence rule: First {DAY_OPTIONS.find((d) => d.v === qDay)?.label ?? "day"} of the month
-                  (nth week set automatically to 1).
-                </p>
-              ) : null}
+              <p className="text-xs text-quizzer-black/70 sm:col-span-2">
+                Recurrence rule: {recurrenceHelperText(qFrequency, qDay)}.
+              </p>
               <label className="block text-xs font-medium text-quizzer-black">
                 Entry fee (pence)
                 <input
