@@ -40,26 +40,19 @@ type FeedRow = {
   occurrence_date?: string | null;
   venue_id?: string | null;
   venue_name?: string | null;
+  venue_address?: string | null;
+  venue_postcode?: string | null;
+  venue_city?: string | null;
+  venue_lat?: number | string | null;
+  venue_lng?: number | string | null;
+  day_of_week?: number | string | null;
+  start_time?: string | null;
+  entry_fee_pence?: number | string | null;
+  prize?: string | null;
   cadence_pill_label?: string | null;
   cancelled?: boolean | null;
   interest_count?: number | string | null;
   has_host?: boolean | null;
-};
-
-type SeriesMetaRow = {
-  id: string;
-  day_of_week: number;
-  start_time: string;
-  entry_fee_pence: number | null;
-  prize: string | null;
-  venues?: {
-    name?: string | null;
-    address?: string | null;
-    postcode?: string | null;
-    city?: string | null;
-    lat?: number | null;
-    lng?: number | null;
-  } | null;
 };
 
 export function useNearbyQuizzes() {
@@ -96,50 +89,24 @@ export function useNearbyQuizzes() {
       return;
     }
 
-    const uniqueSeriesIds = Array.from(new Set(feedRows.map((r) => r.quiz_event_id)));
-
-    const metaRes = await supabase
-      .from("quiz_events")
-      .select(
-        "id, day_of_week, start_time, entry_fee_pence, prize, venues(name, address, postcode, city, lat, lng)",
-      )
-      .in("id", uniqueSeriesIds);
-
-    if (metaRes.error) {
-      captureSupabaseError("nearby.quiz_events_meta_for_feed", metaRes.error);
-      setErrorMsg(metaRes.error.message);
-      setQuizzes([]);
-      return;
-    }
-
-    const metaById = new Map<string, SeriesMetaRow>();
-    for (const row of (metaRes.data as unknown as SeriesMetaRow[]) ?? []) {
-      if (row?.id) metaById.set(row.id, row);
-    }
-
-    const joined: QuizEvent[] = [];
+    const quizzes: QuizEvent[] = [];
     for (const r of feedRows) {
-      const meta = metaById.get(r.quiz_event_id);
-      if (!meta) continue;
-      const venueBase = meta.venues ?? null;
-      const venues: Venue | null = venueBase
+      const venues: Venue | null = r.venue_name
         ? {
-            name: venueBase.name ?? r.venue_name ?? "Unknown venue",
-            address: venueBase.address ?? "",
-            postcode: venueBase.postcode ?? null,
-            city: venueBase.city ?? null,
-            lat: venueBase.lat ?? null,
-            lng: venueBase.lng ?? null,
+            name: r.venue_name,
+            address: r.venue_address ?? "",
+            postcode: r.venue_postcode ?? null,
+            city: r.venue_city ?? null,
+            lat: Number(r.venue_lat ?? NaN) || null,
+            lng: Number(r.venue_lng ?? NaN) || null,
           }
-        : r.venue_name
-          ? { name: r.venue_name, address: "" }
-          : null;
-      joined.push({
+        : null;
+      quizzes.push({
         id: r.quiz_event_id,
-        day_of_week: Number(meta.day_of_week ?? 0),
-        start_time: String(meta.start_time ?? ""),
-        entry_fee_pence: Number(meta.entry_fee_pence ?? 0) || 0,
-        prize: String(meta.prize ?? ""),
+        day_of_week: Number(r.day_of_week ?? 0) || 0,
+        start_time: String(r.start_time ?? ""),
+        entry_fee_pence: Number(r.entry_fee_pence ?? 0) || 0,
+        prize: String(r.prize ?? ""),
         venues,
         occurrence_date: r.occurrence_date,
         cancelled: Boolean(r.cancelled),
@@ -149,7 +116,7 @@ export function useNearbyQuizzes() {
       });
     }
 
-    setQuizzes(joined);
+    setQuizzes(quizzes);
   }, []);
 
   useEffect(() => {

@@ -1188,12 +1188,30 @@ export type Database = {
         Returns: {
           cadence_pill_label: string
           cancelled: boolean
+          day_of_week: number
+          entry_fee_pence: number
           has_host: boolean
           interest_count: number
           occurrence_date: string
+          prize: string
           quiz_event_id: string
+          start_time: string
+          venue_address: string
+          venue_city: string
           venue_id: string
+          venue_lat: number
+          venue_lng: number
           venue_name: string
+          venue_postcode: string
+        }[]
+      }
+      get_upcoming_occurrences_by_venue: {
+        Args: { p_limit_per_event?: number; p_venue_id: string }
+        Returns: {
+          cancelled: boolean
+          interest_count: number
+          occurrence_date: string
+          quiz_event_id: string
         }[]
       }
       get_upcoming_quiz_occurrences: {

@@ -68,33 +68,34 @@ export default async function PublicanVenueSchedulePage({ params }: PageProps) {
   const rows = (events ?? []) as VenueQuizEventRow[];
 
   const occurrencesByEventId = new Map<string, UpcomingOccurrence[]>();
+  for (const row of rows) {
+    occurrencesByEventId.set(row.id, []);
+  }
   if (rows.length > 0) {
-    const results = await Promise.all(
-      rows.map(async (r) => {
-        const res = await supabase.rpc("get_upcoming_quiz_occurrences", {
-          p_quiz_event_id: r.id,
-          p_limit: OCCURRENCE_LOOKAHEAD,
-        });
-        return { id: r.id, res };
-      }),
+    const { data: occRows, error: occErr } = await supabase.rpc(
+      "get_upcoming_occurrences_by_venue",
+      { p_venue_id: venueId, p_limit_per_event: OCCURRENCE_LOOKAHEAD },
     );
-    for (const { id, res } of results) {
-      if (res.error) {
-        captureSupabaseError("portal.get_upcoming_quiz_occurrences", res.error, { quiz_event_id: id });
-        occurrencesByEventId.set(id, []);
-        continue;
-      }
-      const raw = (res.data ?? []) as Array<{
-        occurrence_date?: string | null;
-        cancelled?: boolean | null;
-        interest_count?: number | string | null;
-      }>;
-      const normalized: UpcomingOccurrence[] = raw.map((o) => ({
-        occurrence_date: String(o.occurrence_date ?? ""),
-        cancelled: Boolean(o.cancelled),
-        interest_count: Number(o.interest_count ?? 0) || 0,
-      }));
-      occurrencesByEventId.set(id, normalized);
+    if (occErr) {
+      captureSupabaseError("portal.get_upcoming_occurrences_by_venue", occErr, {
+        venue_id: venueId,
+      });
+    }
+    for (const raw of (occRows ?? []) as Array<{
+      quiz_event_id?: string | null;
+      occurrence_date?: string | null;
+      cancelled?: boolean | null;
+      interest_count?: number | string | null;
+    }>) {
+      const id = String(raw.quiz_event_id ?? "");
+      if (!id) continue;
+      const list = occurrencesByEventId.get(id) ?? [];
+      list.push({
+        occurrence_date: String(raw.occurrence_date ?? ""),
+        cancelled: Boolean(raw.cancelled),
+        interest_count: Number(raw.interest_count ?? 0) || 0,
+      });
+      occurrencesByEventId.set(id, list);
     }
   }
 
