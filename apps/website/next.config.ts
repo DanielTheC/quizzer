@@ -3,7 +3,7 @@ import type { NextConfig } from "next";
 
 const cspGlobal =
   "default-src 'self'; " +
-  "script-src 'self' https://cdn.sanity.io; " +
+  "script-src 'self' 'unsafe-inline' https://cdn.sanity.io; " +
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
   "font-src 'self' https://fonts.gstatic.com; " +
   "img-src 'self' data: blob: https://cdn.sanity.io https://*.supabase.co; " +
