@@ -274,7 +274,10 @@ export default function NearbyScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.screenRoot} edges={["bottom", "left", "right"]}>
+    <SafeAreaView
+      style={styles.screenRoot}
+      edges={nearbyView === "map" ? ["left", "right"] : ["bottom", "left", "right"]}
+    >
       <StatusBar style="dark" />
       <View
         style={[
