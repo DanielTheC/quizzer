@@ -1,9 +1,9 @@
 export const PUBLICAN_MESSAGE_TYPE_OPTIONS = [
-  { value: "cancellation_request", label: "Cancellation request" },
-  { value: "special_request", label: "Special request" },
-  { value: "complaint", label: "Complaint" },
-  { value: "host_request", label: "Request a host" },
   { value: "general", label: "General" },
+  { value: "host_request", label: "Host request" },
+  { value: "special_request", label: "Special request" },
+  { value: "cancellation_request", label: "Cancellation request" },
+  { value: "complaint", label: "Complaint" },
 ] as const;
 
 export type PublicanMessageTypeValue = (typeof PUBLICAN_MESSAGE_TYPE_OPTIONS)[number]["value"];

@@ -14,9 +14,11 @@ import { PortalSignOutButton } from "./PortalSignOutButton";
 const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
 
 const MESSAGE_TYPE_OPTIONS = [
-  { value: "general_enquiry", label: "General enquiry" },
-  { value: "booking_request", label: "Booking request" },
-  { value: "other", label: "Other" },
+  { value: "general", label: "General" },
+  { value: "host_request", label: "Host request" },
+  { value: "special_request", label: "Special request" },
+  { value: "cancellation_request", label: "Cancellation request" },
+  { value: "complaint", label: "Complaint" },
 ] as const;
 
 type MessageTypeValue = (typeof MESSAGE_TYPE_OPTIONS)[number]["value"];
@@ -97,7 +99,7 @@ export function PublicanDashboard({ venue, profile, quizEvents, recentMessages }
   const addressLine = [venue.address?.trim(), venue.postcode?.trim()].filter(Boolean).join(" · ") || null;
 
   const [composeOpen, setComposeOpen] = useState(false);
-  const [messageType, setMessageType] = useState<MessageTypeValue>("general_enquiry");
+  const [messageType, setMessageType] = useState<MessageTypeValue>("general");
   const [body, setBody] = useState("");
   const [sendBusy, setSendBusy] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
@@ -131,7 +133,7 @@ export function PublicanDashboard({ venue, profile, quizEvents, recentMessages }
           return;
         }
         setBody("");
-        setMessageType("general_enquiry");
+        setMessageType("general");
         setComposeOpen(false);
         setSendOk(true);
         router.refresh();
