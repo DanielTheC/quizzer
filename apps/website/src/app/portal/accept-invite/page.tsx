@@ -18,10 +18,9 @@ function safeNextPath(raw: string): string {
 export default async function AcceptInvitePage({ searchParams }: { searchParams: SearchParams }) {
   const params = await searchParams;
   const tokenHash = firstParam(params.token_hash).trim();
-  const email = firstParam(params.email).trim();
   const next = safeNextPath(firstParam(params.next) || "/portal/welcome");
 
-  if (!tokenHash || !email) {
+  if (!tokenHash) {
     return (
       <Container className="max-w-md py-16">
         <div className="border-[3px] border-quizzer-red bg-quizzer-cream p-6 text-quizzer-red shadow-[var(--shadow-card)]">
@@ -40,7 +39,7 @@ export default async function AcceptInvitePage({ searchParams }: { searchParams:
         You&apos;ve been invited to manage your venue in the publican portal. Click below to confirm your email and set your
         password.
       </p>
-      <AcceptInviteButton tokenHash={tokenHash} email={email} next={next} />
+      <AcceptInviteButton tokenHash={tokenHash} next={next} />
     </Container>
   );
 }

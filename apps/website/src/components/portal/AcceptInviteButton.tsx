@@ -7,11 +7,10 @@ import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
 
 type Props = {
   tokenHash: string;
-  email: string;
   next: string;
 };
 
-export function AcceptInviteButton({ tokenHash, email, next }: Props) {
+export function AcceptInviteButton({ tokenHash, next }: Props) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
@@ -42,12 +41,11 @@ export function AcceptInviteButton({ tokenHash, email, next }: Props) {
               const params = {
                 type: "invite" as const,
                 token_hash: tokenHash,
-                email,
               };
               const { error: verifyError } = await supabase.auth.verifyOtp(params);
 
               if (verifyError) {
-                captureSupabaseError("portal.accept_invite.verify", verifyError, { email });
+                captureSupabaseError("portal.accept_invite.verify", verifyError);
                 setError(verifyError.message);
                 setPending(false);
                 return;
