@@ -332,22 +332,6 @@ function createQuizDetailStyles(semantic: SemanticTheme, detail: DetailScreenThe
       color: colors.yellow,
       textAlign: "center",
     },
-    ticketHeaderCadencePill: {
-      paddingVertical: spacing.xs + 1,
-      paddingHorizontal: spacing.sm + 2,
-      borderRadius: radius.pill,
-      borderWidth: borderWidth.default,
-      borderColor: semantic.borderPrimary,
-      backgroundColor: semantic.accentYellow,
-    },
-    ticketHeaderCadencePillText: {
-      fontSize: 10,
-      fontWeight: "800",
-      letterSpacing: 0.85,
-      color: colors.black,
-      textTransform: "uppercase",
-      fontFamily: fonts.display,
-    },
     ticketActionsFooter: {
       marginTop: spacing.lg,
       paddingTop: spacing.lg,
@@ -460,21 +444,26 @@ function createQuizDetailStyles(semantic: SemanticTheme, detail: DetailScreenThe
       lineHeight: 22,
       color: semantic.textSecondary,
     },
-    upcomingSection: {
-      marginTop: spacing.md,
-      paddingTop: spacing.md,
-      borderTopWidth: borderWidth.thin,
-      borderTopColor: isDark ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.12)",
+    upcomingCard: {
+      backgroundColor: semantic.bgPrimary,
+      borderRadius: radius.brutal,
+      borderWidth: borderWidth.default,
+      borderColor: semantic.borderPrimary,
+      padding: spacing.lg,
+      marginBottom: spacing.lg,
+      ...shadow.large,
     },
-    upcomingHeader: {
+    upcomingCardHeader: {
       ...typography.labelUppercase,
-      marginBottom: spacing.sm,
+      marginBottom: spacing.md,
       color: semantic.textPrimary,
     },
-    upcomingRow: {
-      flexDirection: "row",
+    upcomingScroll: {
+      marginHorizontal: -spacing.lg,
+    },
+    upcomingScrollContent: {
+      paddingHorizontal: spacing.lg,
       gap: spacing.sm,
-      flexWrap: "wrap",
     },
     upcomingChip: {
       minWidth: 118,
@@ -486,6 +475,10 @@ function createQuizDetailStyles(semantic: SemanticTheme, detail: DetailScreenThe
       borderColor: semantic.borderPrimary,
       backgroundColor: semantic.bgPrimary,
       ...shadow.small,
+    },
+    upcomingChipHorizontal: {
+      width: 150,
+      flexGrow: 0,
     },
     upcomingChipPressed: {
       transform: [{ translateY: 2 }],
@@ -875,11 +868,6 @@ export default function QuizDetailScreen() {
                       <Text style={styles.ticketHeaderPostcode}>{` · ${locationSnippet}`}</Text>
                     ) : null}
                   </Text>
-                  {quiz.cadence_pill_label ? (
-                    <View style={styles.ticketHeaderCadencePill}>
-                      <Text style={styles.ticketHeaderCadencePillText}>{quiz.cadence_pill_label}</Text>
-                    </View>
-                  ) : null}
                 </View>
                 <View style={styles.ticketHeaderPills}>
                   <View style={styles.ticketHeaderTimePill}>
@@ -903,57 +891,6 @@ export default function QuizDetailScreen() {
                 <MaterialCommunityIcons name="trophy-outline" size={20} color={detail.ticketInkPrimary} style={styles.factIcon} />
                 <Text style={styles.factText}>Prize · {prize}</Text>
               </View>
-              {upcomingOccurrences.length > 0 ? (
-                <View style={styles.upcomingSection}>
-                  <Text style={styles.upcomingHeader}>Upcoming dates</Text>
-                  <View style={styles.upcomingRow}>
-                    {upcomingOccurrences.map((occ) => {
-                      const key = `${quizEventId}|${occ.occurrence_date}`;
-                      const interested = quizEventId ? isInterestedOccurrence(quizEventId, occ.occurrence_date) : false;
-                      const disabled = occ.cancelled || chipBusyKey === key || !quizEventId;
-                      return (
-                        <Pressable
-                          key={occ.occurrence_date}
-                          onPress={() => void onToggleOccurrenceChip(occ.occurrence_date)}
-                          disabled={disabled}
-                          style={({ pressed }) => [
-                            styles.upcomingChip,
-                            interested && !occ.cancelled ? styles.upcomingChipInterested : null,
-                            occ.cancelled ? styles.upcomingChipCancelled : null,
-                            pressed && !disabled ? styles.upcomingChipPressed : null,
-                          ]}
-                          accessibilityRole="button"
-                          accessibilityLabel={`${formatOccurrenceChipTitle(occ.occurrence_date, quiz.start_time)} ${interestCountLabel(
-                            occ.interest_count
-                          )}${occ.cancelled ? ", cancelled" : interested ? ", interested" : ""}`}
-                          accessibilityState={{ disabled, selected: interested }}
-                        >
-                          <Text
-                            style={[
-                              styles.upcomingChipTitle,
-                              interested && !occ.cancelled ? styles.upcomingChipInterestedTitle : null,
-                            ]}
-                            numberOfLines={2}
-                          >
-                            {formatOccurrenceChipTitle(occ.occurrence_date, quiz.start_time)}
-                          </Text>
-                          <Text
-                            style={[
-                              styles.upcomingChipCount,
-                              interested && !occ.cancelled ? styles.upcomingChipInterestedCount : null,
-                            ]}
-                          >
-                            {interestCountLabel(occ.interest_count)}
-                          </Text>
-                          {occ.cancelled ? (
-                            <Text style={styles.upcomingChipCancelledText}>Cancelled</Text>
-                          ) : null}
-                        </Pressable>
-                      );
-                    })}
-                  </View>
-                </View>
-              ) : null}
               {quiz.venues?.venue_images && quiz.venues.venue_images.length > 0 ? (
                 <ScrollView
                   horizontal
@@ -1036,6 +973,64 @@ export default function QuizDetailScreen() {
               ) : null}
             </View>
           </Animated.View>
+
+          {upcomingOccurrences.length > 0 ? (
+            <View style={styles.upcomingCard}>
+              <Text style={styles.upcomingCardHeader}>Upcoming dates</Text>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={styles.upcomingScroll}
+                contentContainerStyle={styles.upcomingScrollContent}
+              >
+                {upcomingOccurrences.map((occ) => {
+                  const key = `${quizEventId}|${occ.occurrence_date}`;
+                  const interested = quizEventId ? isInterestedOccurrence(quizEventId, occ.occurrence_date) : false;
+                  const disabled = occ.cancelled || chipBusyKey === key || !quizEventId;
+                  return (
+                    <Pressable
+                      key={occ.occurrence_date}
+                      onPress={() => void onToggleOccurrenceChip(occ.occurrence_date)}
+                      disabled={disabled}
+                      style={({ pressed }) => [
+                        styles.upcomingChip,
+                        styles.upcomingChipHorizontal,
+                        interested && !occ.cancelled ? styles.upcomingChipInterested : null,
+                        occ.cancelled ? styles.upcomingChipCancelled : null,
+                        pressed && !disabled ? styles.upcomingChipPressed : null,
+                      ]}
+                      accessibilityRole="button"
+                      accessibilityLabel={`${formatOccurrenceChipTitle(occ.occurrence_date, quiz.start_time)} ${interestCountLabel(
+                        occ.interest_count
+                      )}${occ.cancelled ? ", cancelled" : interested ? ", interested" : ""}`}
+                      accessibilityState={{ disabled, selected: interested }}
+                    >
+                      <Text
+                        style={[
+                          styles.upcomingChipTitle,
+                          interested && !occ.cancelled ? styles.upcomingChipInterestedTitle : null,
+                        ]}
+                        numberOfLines={2}
+                      >
+                        {formatOccurrenceChipTitle(occ.occurrence_date, quiz.start_time)}
+                      </Text>
+                      <Text
+                        style={[
+                          styles.upcomingChipCount,
+                          interested && !occ.cancelled ? styles.upcomingChipInterestedCount : null,
+                        ]}
+                      >
+                        {interestCountLabel(occ.interest_count)}
+                      </Text>
+                      {occ.cancelled ? (
+                        <Text style={styles.upcomingChipCancelledText}>Cancelled</Text>
+                      ) : null}
+                    </Pressable>
+                  );
+                })}
+              </ScrollView>
+            </View>
+          ) : null}
 
           {otherNearby && otherNearby.length > 0 ? (
             <View style={styles.nearbySection} accessibilityLabel="Other quizzes nearby">
