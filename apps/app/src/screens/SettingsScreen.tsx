@@ -15,6 +15,7 @@ import { useRole } from "../context/RoleContext";
 import { useSavedQuizzes } from "../context/SavedQuizzesContext";
 import { setStoredRole, clearStoredRole } from "../lib/roleStorage";
 import type { QuizzerRole } from "../lib/roleStorage";
+import { deleteAccount } from "../lib/deleteAccount";
 import {
   getNotificationPreferences,
   setNotificationPreferences,
@@ -113,6 +114,45 @@ export default function SettingsScreen() {
     },
     [updatePrefs]
   );
+
+  const onDeleteAccount = useCallback(() => {
+    Alert.alert(
+      "Delete account?",
+      "This permanently deletes your account, saved quizzes, host applications, and all your data. This cannot be undone.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete account",
+          style: "destructive",
+          onPress: () => {
+            Alert.alert(
+              "Are you absolutely sure?",
+              "Tap Delete to permanently remove your account.",
+              [
+                { text: "Cancel", style: "cancel" },
+                {
+                  text: "Delete",
+                  style: "destructive",
+                  onPress: async () => {
+                    const result = await deleteAccount();
+                    if (!result.ok) {
+                      Alert.alert("Couldn't delete account", result.error);
+                      return;
+                    }
+                    try { await cancelAllQuizzerNotifications(); } catch {}
+                    try { clearSaved(); } catch {}
+                    try { await clearStoredRole(); } catch {}
+                    try { await signOut(); } catch {}
+                    setRole(null);
+                  },
+                },
+              ]
+            );
+          },
+        },
+      ]
+    );
+  }, [signOut, clearSaved, setRole]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -239,6 +279,21 @@ export default function SettingsScreen() {
           <Text style={styles.devNote}>Clears saved quizzes + role. Dev only.</Text>
         </View>
       )}
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Danger zone</Text>
+        <Text style={styles.sectionDesc}>
+          Permanently delete your Quizzer account and all your data. This cannot be undone.
+        </Text>
+        <Pressable
+          style={({ pressed }) => [styles.deleteButton, pressed && styles.btnPressed]}
+          onPress={onDeleteAccount}
+          accessibilityRole="button"
+          accessibilityLabel="Delete account"
+        >
+          <Text style={styles.deleteButtonText}>Delete account</Text>
+        </Pressable>
+      </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -319,4 +374,16 @@ const styles = StyleSheet.create({
   btnPressed: { transform: [{ translateY: 2 }], shadowOffset: { width: 1, height: 1 } },
   resetButtonText: { color: semantic.danger, ...typography.bodyStrong },
   devNote: { ...typography.label, color: semantic.textSecondary, marginTop: spacing.sm },
+  deleteButton: {
+    backgroundColor: semantic.danger,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.xl,
+    borderRadius: radius.medium,
+    borderWidth: borderWidth.default,
+    borderColor: semantic.borderPrimary,
+    alignSelf: "flex-start",
+    marginTop: spacing.sm,
+    ...shadow.small,
+  },
+  deleteButtonText: { color: colors.white, ...typography.bodyStrong },
 });

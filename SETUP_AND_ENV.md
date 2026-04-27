@@ -52,6 +52,7 @@ Copy `apps/app/.env.example` → `.env` and fill in.
 |----------|----------|--------|
 | `EXPO_PUBLIC_SUPABASE_URL` | Yes | Same Supabase project URL as website |
 | `EXPO_PUBLIC_SUPABASE_ANON_KEY` | Yes | Same anon key as website |
+| `EXPO_PUBLIC_WEBSITE_URL` | Yes | Production website base URL, e.g. `https://www.quizzerapp.co.uk`; used by mobile to call website API routes that need service-role. |
 | `EXPO_PUBLIC_DEV_SKIP_AUTH` | Dev only | `1` / `true` — **omit in production**; skips login with a fake user |
 | `EXPO_PUBLIC_GOOGLE_MAPS_ANDROID_KEY` | Android maps | Google Cloud → APIs → Maps SDK for Android |
 | `EXPO_PUBLIC_SENTRY_DSN` | Optional | Sentry RN project DSN |
