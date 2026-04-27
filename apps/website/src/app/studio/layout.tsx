@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { createServerSupabaseClientSafe } from "@/lib/supabase/server";
 
 /**
  * Studio is shown full-viewport so it isn't cramped by the site nav/footer.
@@ -10,18 +10,22 @@ export default async function StudioLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const supabase = await createServerSupabaseClient();
+  const supabase = await createServerSupabaseClientSafe();
+  if (!supabase) {
+    redirect("/admin/sign-in?next=/studio");
+  }
+
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect("/admin/sign-in");
+    redirect("/admin/sign-in?next=/studio");
   }
 
-  const { data: isOp } = await supabase.rpc("is_operator");
-  if (!isOp) {
-    redirect("/admin/sign-in");
+  const { data: isOp, error } = await supabase.rpc("is_operator");
+  if (error || !isOp) {
+    redirect("/admin/sign-in?next=/studio");
   }
 
   return (

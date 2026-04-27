@@ -8,6 +8,7 @@ import { Container } from "@/components/ui/Container";
 function safeNextPath(raw: string | null): string {
   const t = raw?.trim() ?? "";
   if (t.startsWith("/admin") && !t.startsWith("//")) return t;
+  if (t.startsWith("/studio") && !t.startsWith("//")) return t;
   return "/admin";
 }
 
