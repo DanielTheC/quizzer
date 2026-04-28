@@ -7,7 +7,7 @@ import { Container } from "@/components/ui/Container";
 
 const navLinks = [
   { href: "/find-a-quiz", label: "Find a Quiz" },
-  { href: "/host-a-quiz", label: "Host a Quiz" },
+  { href: "/host-a-quiz", label: "For Venues" },
   { href: "/blog", label: "Blog" },
   { href: "/about-us", label: "About" },
   { href: "/faq", label: "FAQ" },

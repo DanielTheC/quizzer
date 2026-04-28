@@ -8,39 +8,39 @@ import { Accordion, AccordionItem } from "@/components/ui/Accordion";
 import { getHostPage, getSiteSettings, getAllFaqs } from "@/sanity/lib/fetch";
 import { buildPageMetadata } from "@/sanity/lib/metadata";
 
-const DEFAULT_HERO_TITLE = "Host a Quiz at Your Venue";
+const DEFAULT_HERO_TITLE = "Pub Quiz Nights, Hosted End-to-End";
 const DEFAULT_HERO_INTRO =
-  "Pull in more punters and run quiz nights the easy way. List your quiz, manage rounds on the app, and let players join on their phones.";
+  "We bring the host, the questions, and the players. You bring the room. Quizzer is a fully-managed pub quiz service — from booking the night to filling the seats.";
 const DEFAULT_BENEFITS = [
   {
-    title: "Increase footfall",
-    body: 'Get your quiz in front of players searching for "pub quiz near me". More visibility, more teams through the door.',
+    title: "We bring the players",
+    body: "Every quiz at your venue is listed on the Quizzer app — where thousands of players search for their next pub quiz night. Built-in marketing, no posters needed.",
     accent: "yellow",
   },
   {
-    title: "Simplify hosting",
-    body: "Run rounds and leaderboards through the app. Less admin, more time for your customers.",
+    title: "Hands-off hosting",
+    body: "A trained Quizzer host arrives ahead of the night and runs the whole show. You don't lift a finger — your team focus on the bar and the kitchen.",
     accent: "cream",
   },
   {
-    title: "Engage customers",
-    body: "Players answer on their phones and see live scores. Keeps the room engaged and coming back.",
+    title: "Quizzes that don't bore the room",
+    body: "We write fresh, entertaining rounds tailored to a pub crowd. Players answer on high-quality colour sheets — phones away, eyes up — and our host reports scores live so the leaderboard tension stays real.",
     accent: "green",
   },
 ];
 const DEFAULT_FAQ_INTRO = "FAQ for hosts";
 const DEFAULT_HOST_FAQS = [
   {
-    q: "How much does it cost to list our quiz?",
-    a: "We offer different options for venues. Get in touch and we'll outline what works for your size and frequency.",
+    q: "How does pricing work?",
+    a: "Pricing depends on whether you want a one-off quiz, a weekly slot, or something in between, and on the size of your venue. Get in touch and we'll send a quote within two working days.",
   },
   {
-    q: "Do we need special equipment?",
-    a: "Players use their own phones. You can run the quiz from a tablet or laptop. We'll guide you through setup.",
+    q: "What do we need to provide?",
+    a: "A space for around 8-15 teams, a working PA system or somewhere our host can be heard, and decent mobile signal so our host can report scores live. Our host brings the answer sheets, pens, and everything else.",
   },
   {
-    q: "Can we keep our existing quiz format?",
-    a: "Yes. You keep your questions and style. We help with listing, reminders, and optional in-app play and leaderboards.",
+    q: "Can you tailor the quiz to our crowd?",
+    a: "Yes — we'll chat about your regulars, your area, and the vibe you want before your first night. Whether your crowd is sport-mad, music-obsessed, or just wants the classics, we'll write to suit.",
   },
 ];
 const DEFAULT_CONTACT_TITLE = "Tell us about your venue";
@@ -57,9 +57,9 @@ export async function generateMetadata(): Promise<Metadata> {
     title: hostPage?.seoTitle,
     description: hostPage?.seoDescription,
     siteSettings,
-    fallbackTitle: "Host a Quiz – For Venues",
+    fallbackTitle: "Pub Quiz Nights for Your Venue – Quizzer",
     fallbackDescription:
-      "Run quiz nights at your venue with Quizzer. Increase footfall, simplify hosting, and engage customers. Get in touch.",
+      "Quizzer runs pub quiz nights at venues across the UK. We provide the host, write the quiz, supply the answer sheets, and list your venue on the Quizzer app for built-in player discovery.",
   });
 
   return {
@@ -105,14 +105,14 @@ export default async function HostAQuizPage() {
     <>
       <PageHero title={heroTitle} description={heroIntro} background="yellow">
         <Button href="#contact" size="lg">
-          List your venue
+          Get in touch
         </Button>
       </PageHero>
 
       <section className="py-16 bg-quizzer-white">
         <Container>
           <h2 className="font-heading text-3xl text-quizzer-black mb-8">
-            Why venues use Quizzer
+            Why venues choose Quizzer
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {benefits.map((b, i) => (
@@ -162,8 +162,8 @@ export default async function HostAQuizPage() {
               <FeatureCard title="Quick call" accent="cream">
                 We learn about your venue and quiz night.
               </FeatureCard>
-              <FeatureCard title="You go live" accent="green">
-                Listed on Quizzer with a host on board.
+              <FeatureCard title="Your first quiz night" accent="green">
+                Our host arrives, runs the night, and your venue is live on the Quizzer app.
               </FeatureCard>
             </div>
           </div>

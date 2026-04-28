@@ -9,7 +9,7 @@ const footerLinks = {
     { href: "/find-a-quiz/manchester", label: "Manchester" },
   ],
   "For Venues": [
-    { href: "/host-a-quiz", label: "Host a Quiz" },
+    { href: "/host-a-quiz", label: "For Venues" },
     { href: "/portal", label: "Venue portal" },
     { href: "/contact-us", label: "Contact" },
   ],

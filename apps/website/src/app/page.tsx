@@ -29,19 +29,19 @@ const DEFAULT_FEATURES = [
     accent: "yellow",
   },
   {
-    title: "Play live quizzes",
-    body: "Answer on your phone, see the leaderboard in real time, and compete with the room. No paper, no fuss.",
+    title: "Phones-away pub quiz",
+    body: "We're not trying to put the quiz on your phone. Quizzer is the real thing — a host, a room, high-quality colour answer sheets. The way pub quiz should be.",
     accent: "cream",
   },
   {
-    title: "Climb the leaderboard",
-    body: "Track your scores, save favourite venues, and get reminders so you never miss your regular quiz night.",
+    title: "Save your regulars",
+    body: "Save favourite venues and get reminders so you never miss your local. The app helps you find quiz night — then you put it away.",
     accent: "green",
   },
 ];
-const DEFAULT_HOST_TITLE = "For venues";
+const DEFAULT_HOST_TITLE = "Pub quiz hosting for your venue";
 const DEFAULT_HOST_COPY =
-  "Run quiz nights that pull in crowds and keep them coming back. Quizzer helps you list your quiz, manage rounds, and let players join on their phones. More footfall, less admin.";
+  "We run quiz nights at your venue, end to end. Our hosts bring the energy, the questions, and the answer sheets. Our app brings the players. You bring the room and the bar.";
 const DEFAULT_FINAL_CTA_TITLE = "Ready to play?";
 const DEFAULT_FINAL_CTA_COPY =
   "Find your next quiz night and download the Quizzer app for the best experience.";
@@ -55,8 +55,8 @@ const DEFAULT_FAQ_PREVIEW = [
     a: "Yes. Players can find and play quizzes for free. Some venues charge a small entry fee for the quiz itself.",
   },
   {
-    q: "How do venues host a quiz with Quizzer?",
-    a: "Venues can sign up to list their quiz and use our tools to run rounds and leaderboards. Get in touch via the Host a Quiz page.",
+    q: "What does Quizzer's hosting service include?",
+    a: "We provide the full package — a Quizzer host runs the night, we write and run the quiz, and your venue gets discovered through the Quizzer app. Get in touch via the For Venues page.",
   },
 ];
 
@@ -128,7 +128,7 @@ export default async function HomePage() {
             Find a Quiz
           </Button>
           <Button href="/host-a-quiz" variant="outline" size="lg">
-            Host a Quiz
+            For Venues
           </Button>
         </div>
       </PageHero>
@@ -219,8 +219,8 @@ export default async function HomePage() {
                 Turn up & play
               </h3>
               <p className="text-quizzer-black/80 text-sm">
-                Join on your phone. Answer each round and watch the live
-                leaderboard.
+                Grab a table, take your answer sheet, and play the proper way.
+                No screens, no apps — just you, your team, and the room.
               </p>
             </div>
             <div className="text-center">
@@ -228,12 +228,37 @@ export default async function HomePage() {
                 3
               </div>
               <h3 className="font-semibold text-quizzer-black mb-2">
-                Climb the board
+                Save your favourites
               </h3>
               <p className="text-quizzer-black/80 text-sm">
-                Score points, save your favourite venues, and get reminders for
-                next time.
+                Found a quiz you love? Save it in the app so you never miss
+                next week&apos;s round.
               </p>
+            </div>
+          </div>
+        </Container>
+      </Section>
+
+      <Section background="cream">
+        <Container>
+          <h2 className="font-heading text-3xl sm:text-4xl text-quizzer-black mb-10 text-center">
+            How venues work with us
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto">
+            <div className="text-center">
+              <div className="font-heading text-4xl text-quizzer-black mb-2">1</div>
+              <h3 className="font-semibold text-quizzer-black mb-2">Get in touch</h3>
+              <p className="text-quizzer-black/80 text-sm">Tell us about your venue and the kind of night you want to run.</p>
+            </div>
+            <div className="text-center">
+              <div className="font-heading text-4xl text-quizzer-black mb-2">2</div>
+              <h3 className="font-semibold text-quizzer-black mb-2">We send a host</h3>
+              <p className="text-quizzer-black/80 text-sm">A trained Quizzer host turns up with everything: the quiz, the answer sheets, the energy.</p>
+            </div>
+            <div className="text-center">
+              <div className="font-heading text-4xl text-quizzer-black mb-2">3</div>
+              <h3 className="font-semibold text-quizzer-black mb-2">Your venue fills up</h3>
+              <p className="text-quizzer-black/80 text-sm">Listed on the Quizzer app, found by players, packed out by 8pm.</p>
             </div>
           </div>
         </Container>
@@ -248,7 +273,7 @@ export default async function HomePage() {
             {hostSectionCopy}
           </p>
           <Button href="/host-a-quiz" variant="secondary">
-            Host a quiz
+            For Venues
           </Button>
         </Container>
       </Section>
@@ -286,7 +311,7 @@ export default async function HomePage() {
               Find a Quiz
             </Button>
             <Button href="/host-a-quiz" variant="secondary" size="lg">
-              Host a Quiz
+              For Venues
             </Button>
           </div>
         </Container>

@@ -5,8 +5,9 @@ import { PageHero } from "@/components/ui/PageHero";
 import { Accordion, AccordionItem } from "@/components/ui/Accordion";
 import { getAllFaqs, getSiteSettings } from "@/sanity/lib/fetch";
 import { buildPageMetadata } from "@/sanity/lib/metadata";
+import type { FaqDocument } from "@/sanity/lib/types";
 
-const DEFAULT_FAQS = [
+const DEFAULT_PLAYER_FAQS = [
   {
     q: "How do I find a pub quiz near me?",
     a: "Use the Quizzer app or this website to browse quizzes by city. In the app you can filter by distance, day, and more so you see what's on near you.",
@@ -16,8 +17,8 @@ const DEFAULT_FAQS = [
     a: "Yes. Players can find and play quizzes for free. Some venues charge a small entry fee for the quiz itself.",
   },
   {
-    q: "How do venues host a quiz with Quizzer?",
-    a: "Venues can sign up to list their quiz and use our tools to run rounds and leaderboards. Visit the Host a Quiz page and get in touch.",
+    q: "Do I need to use the app to play the quiz?",
+    a: "No — quite the opposite. The Quizzer app is for finding quizzes and getting reminders. The quiz itself is the proper old-school version: high-quality colour answer sheets, your team huddled around a table, phones away. Just turn up and grab a sheet.",
   },
   {
     q: "Which cities do you cover?",
@@ -28,6 +29,36 @@ const DEFAULT_FAQS = [
     a: "Yes. In the app you can save venues and get reminders so you never miss your regular quiz night.",
   },
 ];
+
+const DEFAULT_VENUE_FAQS = [
+  {
+    q: "How does the venue hosting service work?",
+    a: "We send a trained Quizzer host to your venue who runs the whole night — the quiz, the rounds, the answer sheets, the leaderboard. Your venue gets listed on the Quizzer app for free promotion. Get in touch via our For Venues page.",
+  },
+  {
+    q: "What's included in Quizzer's hosting service?",
+    a: "A trained host who runs the night, the quiz itself (written fresh by our team), high-quality colour answer sheets, and a free listing on the Quizzer app so players can find you.",
+  },
+  {
+    q: "How much does it cost for venues?",
+    a: "It depends on the size of your venue and whether you want a regular weekly slot or one-off events. Get in touch and we'll send a quote within two working days.",
+  },
+  {
+    q: "Do you do one-off quizzes — birthdays, fundraisers, work events?",
+    a: "Yes. Whether it's a private party, a charity night, or a Christmas event, we can put on a one-off quiz tailored to your group.",
+  },
+  {
+    q: "Where in the UK do you operate?",
+    a: "We're currently live in London, Birmingham, Manchester, Glasgow, and Edinburgh. If you're outside these cities, get in touch — we add new areas based on demand.",
+  },
+];
+
+function mapFaqDocs(docs: FaqDocument[]): { q: string; a: string }[] {
+  return docs.map((f) => ({
+    q: f.question ?? "",
+    a: f.answer ?? "",
+  }));
+}
 
 export async function generateMetadata(): Promise<Metadata> {
   const siteSettings = await getSiteSettings();
@@ -49,10 +80,15 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function FAQPage() {
   const faqsFromSanity = await getAllFaqs();
-  const faqs =
-    faqsFromSanity && faqsFromSanity.length > 0
-      ? faqsFromSanity.map((f) => ({ q: f.question ?? "", a: f.answer ?? "" }))
-      : DEFAULT_FAQS;
+  const all = faqsFromSanity ?? [];
+
+  const playerFromSanity = all.filter((f) => f.category === "players");
+  const venueFromSanity = all.filter((f) => f.category === "hosts");
+
+  const playerFaqs =
+    playerFromSanity.length > 0 ? mapFaqDocs(playerFromSanity) : DEFAULT_PLAYER_FAQS;
+  const venueFaqs =
+    venueFromSanity.length > 0 ? mapFaqDocs(venueFromSanity) : DEFAULT_VENUE_FAQS;
 
   return (
     <>
@@ -63,13 +99,24 @@ export default async function FAQPage() {
       />
       <section className="py-16 bg-quizzer-white">
         <Container>
+          <h2 className="font-heading text-2xl text-quizzer-black mb-6">For players</h2>
           <Accordion>
-            {faqs.map((item, i) => (
+            {playerFaqs.map((item, i) => (
               <AccordionItem key={i} title={item.q}>
                 {item.a}
               </AccordionItem>
             ))}
           </Accordion>
+
+          <h2 className="font-heading text-2xl text-quizzer-black mt-12 mb-6">For venues</h2>
+          <Accordion>
+            {venueFaqs.map((item, i) => (
+              <AccordionItem key={`v-${i}`} title={item.q}>
+                {item.a}
+              </AccordionItem>
+            ))}
+          </Accordion>
+
           <p className="mt-8 text-quizzer-black/80">
             Still stuck?{" "}
             <Link href="/contact-us" className="text-quizzer-blue underline">
