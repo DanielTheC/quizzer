@@ -397,7 +397,6 @@ export function NearbyMapView({ quizzes, userLocation, onOpenQuizDetail }: Props
               key={p.id}
               coordinate={{ latitude: p.latitude, longitude: p.longitude }}
               anchor={{ x: 0.5, y: 0.5 }}
-              tracksViewChanges={false}
               title={p.title}
               onPress={() => onMarkerPress(p.id)}
             >
