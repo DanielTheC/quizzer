@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { Container } from "@/components/ui/Container";
 import { PageHero } from "@/components/ui/PageHero";
 import { createServerSupabaseClientSafe } from "@/lib/supabase/server";
@@ -49,9 +50,9 @@ export default async function DeleteAccountPage({ searchParams }: { searchParams
                   nights have all been permanently removed. Sorry to see you go.
                 </p>
                 <p className="mt-4 text-quizzer-black/80">
-                  <a href="/" className="font-medium underline">
+                  <Link href="/" className="font-medium underline">
                     Back to Quizzer
-                  </a>
+                  </Link>
                 </p>
               </div>
             ) : userEmail ? (
@@ -87,9 +88,9 @@ export default async function DeleteAccountPage({ searchParams }: { searchParams
                 <div>
                   <h3 className="font-medium text-quizzer-black">Option 2 — Sign in here</h3>
                   <p className="mt-1 text-quizzer-black/80">
-                    <a href="/portal/sign-in?next=/account/delete" className="underline font-medium">
+                    <Link href="/portal/sign-in?next=/account/delete" className="underline font-medium">
                       Sign in
-                    </a>{" "}
+                    </Link>{" "}
                     and we&apos;ll show you the delete-account button on this page.
                   </p>
                 </div>
