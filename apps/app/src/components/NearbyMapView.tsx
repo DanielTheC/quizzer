@@ -225,7 +225,12 @@ function buildMapStyles(semantic: SemanticTheme) {
   });
 }
 
-/** Slight offset per quiz so stacked venues remain tappable. */
+/** ~11 m bucket — quizzes sharing the same bucket are treated as the same pin location. */
+function venueCoordBucketKey(lat: number, lng: number): string {
+  return `${lat.toFixed(4)},${lng.toFixed(4)}`;
+}
+
+/** Slight spread per quiz so overlapping markers at one venue remain tappable. Unused when alone. */
 function jitterCoord(quizId: string, lat: number, lng: number): { latitude: number; longitude: number } {
   let sum = 0;
   for (let i = 0; i < quizId.length; i++) sum = (sum + quizId.charCodeAt(i)) % 9973;
@@ -299,20 +304,39 @@ export function NearbyMapView({ quizzes, userLocation, onOpenQuizDetail }: Props
   }));
 
   const placemarks = useMemo(() => {
-    const out: { id: string; title: string; latitude: number; longitude: number }[] = [];
+    type Row = {
+      quizId: string;
+      title: string;
+      lat: number;
+      lng: number;
+    };
+    const raw: Row[] = [];
     for (const q of nextByQuizEvent) {
       const v = q.venues;
       if (!v) continue;
       const lat = v.lat;
       const lng = v.lng;
       if (lat == null || lng == null || !Number.isFinite(lat) || !Number.isFinite(lng)) continue;
-      const { latitude, longitude } = jitterCoord(q.id, lat, lng);
-      out.push({
-        id: q.id,
+      raw.push({
+        quizId: q.id,
         title: (v.name ?? "Quiz").trim() || "Quiz",
-        latitude,
-        longitude,
+        lat,
+        lng,
       });
+    }
+    const counts = new Map<string, number>();
+    for (const r of raw) {
+      const k = venueCoordBucketKey(r.lat, r.lng);
+      counts.set(k, (counts.get(k) ?? 0) + 1);
+    }
+
+    const out: { id: string; title: string; latitude: number; longitude: number }[] = [];
+    for (const r of raw) {
+      const needJitter = (counts.get(venueCoordBucketKey(r.lat, r.lng)) ?? 0) > 1;
+      const { latitude, longitude } = needJitter
+        ? jitterCoord(r.quizId, r.lat, r.lng)
+        : { latitude: r.lat, longitude: r.lng };
+      out.push({ id: r.quizId, title: r.title, latitude, longitude });
     }
     return out;
   }, [nextByQuizEvent]);

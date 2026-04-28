@@ -777,7 +777,9 @@ export default function QuizDetailScreen() {
     };
 
     if (placeUrl) {
-      Linking.openURL(placeUrl).catch(fallbackOpen);
+      // Never fall back to lat/lng when a listing URL exists — stale coords could point
+      // elsewhere; only use fallback when no URL is configured.
+      void Linking.openURL(placeUrl).catch(() => {});
       return;
     }
     fallbackOpen();
