@@ -9,19 +9,12 @@ import { FeatureCard } from "@/components/ui/FeatureCard";
 import { QuizCard } from "@/components/ui/QuizCard";
 import { Accordion, AccordionItem } from "@/components/ui/Accordion";
 import { fetchQuizzesFromSupabase } from "@/lib/quizzes";
-import { buildStatItems } from "@/lib/stats";
 import { getHomePage, getSiteSettings, getAllFaqs } from "@/sanity/lib/fetch";
 import { buildPageMetadata } from "@/sanity/lib/metadata";
 
 const DEFAULT_HERO_TITLE = "Find a Pub Quiz Near You";
 const DEFAULT_HERO_SUBTITLE =
   "Discover quiz nights at pubs near you. Play live, climb the leaderboard, and never miss a round. Download the Quizzer app or browse below.";
-const DEFAULT_STATS = [
-  { value: "500+", label: "Quizzes listed" },
-  { value: "5", label: "Cities live" },
-  { value: "10k+", label: "Teams playing" },
-  { value: "200+", label: "Pubs partnered" },
-];
 const DEFAULT_FEATURES = [
   {
     title: "Find quizzes nearby",
@@ -83,9 +76,7 @@ export default async function HomePage() {
 
   const heroTitle = homePage?.heroTitle?.trim() || DEFAULT_HERO_TITLE;
   const heroSubtitle = homePage?.heroSubtitle?.trim() || DEFAULT_HERO_SUBTITLE;
-  const statItems = homePage?.statItems?.length
-    ? homePage.statItems
-    : await buildStatItems(DEFAULT_STATS);
+  const statItems = homePage?.statItems ?? [];
   const featureCards =
     homePage?.featureCards?.length ? homePage.featureCards : DEFAULT_FEATURES;
   const hostSectionTitle =
@@ -133,19 +124,21 @@ export default async function HomePage() {
         </div>
       </PageHero>
 
-      <Section background="white">
-        <Container>
-          <div className="flex flex-wrap gap-6 justify-center">
-            {statItems.map((stat, i) => (
-              <StatBadge
-                key={i}
-                value={stat.value ?? ""}
-                label={stat.label ?? ""}
-              />
-            ))}
-          </div>
-        </Container>
-      </Section>
+      {statItems.length > 0 && (
+        <Section background="white">
+          <Container>
+            <div className="flex flex-wrap gap-6 justify-center">
+              {statItems.map((stat, i) => (
+                <StatBadge
+                  key={i}
+                  value={stat.value ?? ""}
+                  label={stat.label ?? ""}
+                />
+              ))}
+            </div>
+          </Container>
+        </Section>
+      )}
 
       <Section background="cream">
         <Container>
