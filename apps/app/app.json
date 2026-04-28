@@ -12,8 +12,26 @@
       "resizeMode": "contain",
       "backgroundColor": "#FFD400"
     },
+    "plugins": [
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Quizzer uses your location to show pub quizzes happening near you."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "defaultChannel": "quizzer-quiz-reminders"
+        }
+      ]
+    ],
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Quizzer uses your location to show pub quizzes happening near you.",
+        "NSUserNotificationsUsageDescription": "Quizzer sends a friendly reminder on the days your saved quizzes happen."
+      }
     },
     "android": {
       "adaptiveIcon": {

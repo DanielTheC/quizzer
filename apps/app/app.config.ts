@@ -4,26 +4,11 @@ import type { ExpoConfig } from "expo/config";
 export default ({ config }: { config: ExpoConfig }): ExpoConfig => ({
   ...config,
   userInterfaceStyle: "light",
-  plugins: [
-    ...(config.plugins ?? []),
-    "expo-apple-authentication",
-    "expo-web-browser",
-    [
-      "expo-notifications",
-      {
-        defaultChannel: "quizzer-quiz-reminders",
-      },
-    ],
-  ],
+  plugins: [...(config.plugins ?? []), "expo-apple-authentication", "expo-web-browser"],
   scheme: "quizzer",
   ios: {
     ...config.ios,
     bundleIdentifier: "uk.co.quizzerapp",
-    infoPlist: {
-      ...(config.ios as { infoPlist?: Record<string, string> })?.infoPlist,
-      NSLocationWhenInUseUsageDescription:
-        "Used to show distance to quiz venues and filter by radius.",
-    },
   },
   android: {
     ...config.android,
