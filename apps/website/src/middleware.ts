@@ -9,6 +9,8 @@ export async function middleware(request: NextRequest) {
 // an extra segment after `/:path*`, which skips the index routes and breaks cookie refresh.
 export const config = {
   matcher: [
+    "/account",
+    "/account/:path*",
     "/portal",
     "/portal/:path*",
     "/admin",

@@ -12,6 +12,7 @@ export function PortalSignInForm() {
   function safeNextPath(raw: string | null): string {
     const t = raw?.trim() ?? "";
     if (t.startsWith("/portal") && !t.startsWith("//")) return t;
+    if (t.startsWith("/account") && !t.startsWith("//")) return t;
     return "/portal";
   }
   const nextPath = safeNextPath(searchParams.get("next"));
