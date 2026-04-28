@@ -12,11 +12,11 @@ export function AuthLegalNotice() {
     <View style={styles.wrap}>
       <Text style={styles.line}>
         By continuing, you agree to Quizzer&apos;s{" "}
-        <Text style={styles.link} onPress={() => Linking.openURL(TERMS_AND_CONDITIONS_URL)}>
+        <Text style={styles.link} onPress={() => { Linking.openURL(TERMS_AND_CONDITIONS_URL).catch(() => {}); }}>
           Terms &amp; Conditions
         </Text>{" "}
         and{" "}
-        <Text style={styles.link} onPress={() => Linking.openURL(PRIVACY_POLICY_URL)}>
+        <Text style={styles.link} onPress={() => { Linking.openURL(PRIVACY_POLICY_URL).catch(() => {}); }}>
           Privacy Policy
         </Text>
         .

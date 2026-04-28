@@ -28,9 +28,11 @@
     ],
     "ios": {
       "supportsTablet": true,
+      "buildNumber": "1",
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "Quizzer uses your location to show pub quizzes happening near you.",
-        "NSUserNotificationsUsageDescription": "Quizzer sends a friendly reminder on the days your saved quizzes happen."
+        "NSUserNotificationsUsageDescription": "Quizzer sends a friendly reminder on the days your saved quizzes happen.",
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
