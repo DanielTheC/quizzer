@@ -12,6 +12,7 @@ const NAV = [
   { href: "/admin/hosts", label: "Hosts" },
   { href: "/admin/messages", label: "Messages" },
   { href: "/admin/quizzes", label: "Quizzes" },
+  { href: "/admin/venue-enquiries", label: "Venue enquiries" },
   { href: "/admin/venues", label: "Venues" },
   { href: "/admin/packs", label: "Packs" },
   { href: "/admin/observability", label: "Observability" },
@@ -24,13 +25,14 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   const [triageCount, setTriageCount] = useState(0);
   const [messagesCount, setMessagesCount] = useState(0);
   const [claimsCount, setClaimsCount] = useState(0);
+  const [venueEnquiriesNewCount, setVenueEnquiriesNewCount] = useState(0);
 
   useEffect(() => {
     let active = true;
     async function fetchCounts() {
       try {
         const supabase = createBrowserSupabaseClient();
-        const [appRes, msgRes, claimsRes] = await Promise.all([
+        const [appRes, msgRes, claimsRes, venueEnqRes] = await Promise.all([
           supabase
             .from("host_applications")
             .select("id", { count: "exact", head: true })
@@ -43,14 +45,21 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
             .from("quiz_claims")
             .select("id", { count: "exact", head: true })
             .eq("status", "pending"),
+          supabase
+            .from("venue_enquiries")
+            .select("id", { count: "exact", head: true })
+            .eq("status", "new"),
         ]);
         if (appRes.error) captureSupabaseError("admin.shell.pending_applications_count", appRes.error);
         if (msgRes.error) captureSupabaseError("admin.shell.open_messages_count", msgRes.error);
         if (claimsRes.error) captureSupabaseError("admin.shell.pending_claims_count", claimsRes.error);
+        if (venueEnqRes.error)
+          captureSupabaseError("admin.shell.new_venue_enquiries_count", venueEnqRes.error);
         if (active) {
           setTriageCount(appRes.count ?? 0);
           setMessagesCount(msgRes.count ?? 0);
           setClaimsCount(claimsRes.count ?? 0);
+          setVenueEnquiriesNewCount(venueEnqRes.count ?? 0);
         }
       } catch {
         // counts are best-effort — silence errors
@@ -85,7 +94,9 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
                     ? messagesCount
                     : item.href === "/admin/hosts" && claimsCount > 0
                       ? claimsCount
-                      : null;
+                      : item.href === "/admin/venue-enquiries" && venueEnquiriesNewCount > 0
+                        ? venueEnquiriesNewCount
+                        : null;
 
               return (
                 <Link
